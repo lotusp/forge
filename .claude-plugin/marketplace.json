@@ -1,0 +1,13 @@
+{
+  "name": "forge",
+  "owner": {
+    "name": "Gordon"
+  },
+  "plugins": [
+    {
+      "name": "forge",
+      "source": ".",
+      "description": "AI-driven development workflow for existing codebases. Guides you from requirement to tested code through persistent artifacts."
+    }
+  ]
+}
