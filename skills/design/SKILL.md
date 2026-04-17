@@ -12,8 +12,8 @@ effort: high
 ---
 
 ## Runtime snapshot
-- Existing .forge artifacts: !`ls .forge/ 2>/dev/null || echo "(none)"`
-- Conventions available: !`test -f .forge/conventions.md && echo "YES — will enforce" || echo "NO — design will be unconstrained"`
+- Existing .forge features: !`ls .forge/features/ 2>/dev/null || echo "(none)"`
+- Conventions available: !`test -f .forge/context/conventions.md && echo "YES — will enforce" || echo "NO — design will be unconstrained"`
 
 ---
 
@@ -34,13 +34,13 @@ These rules have no exceptions.
 
 ### Required inputs (check in order)
 
-**1. Feature context** — try to read `.forge/clarify-{feature-slug}.md`.
+**1. Feature context** — try to read `.forge/features/{feature-slug}/clarify.md`.
 
 If it does not exist:
 ```
 [FORGE:DESIGN] Missing clarify artifact
 
-.forge/clarify-{feature-slug}.md not found.
+.forge/features/{feature-slug}/clarify.md not found.
 
 Options:
 1. Run /forge:clarify "{feature-slug}" first (recommended)
@@ -54,7 +54,7 @@ If the user chooses to proceed anyway, ask for:
 - The affected parts of the codebase (if known)
 - Any known constraints
 
-**2. Conventions** — try to read `.forge/conventions.md`.
+**2. Conventions** — try to read `.forge/context/conventions.md`.
 
 If it does not exist, note this and proceed. Flag clearly in the output
 that the design was made without convention constraints.
@@ -65,7 +65,7 @@ that the design was made without convention constraints.
 
 ### Step 1 — Understand the requirement
 
-Read `.forge/clarify-{feature-slug}.md` in full (or the user's context).
+Read `.forge/features/{feature-slug}/clarify.md` in full (or the user's context).
 Identify:
 - What capability is being added or changed
 - The affected components and data flows
@@ -75,7 +75,7 @@ Identify:
 
 ### Step 2 — Understand the conventions
 
-Read `.forge/conventions.md`. Extract constraints relevant to this feature:
+Read `.forge/context/conventions.md`. Extract constraints relevant to this feature:
 - Which layer owns the new logic
 - Naming rules for new files, classes, functions, DB tables
 - Error handling approach
@@ -92,7 +92,7 @@ agents in parallel**, each tasked with a different direction:
 - Agent 3 (optional): a genuinely alternative paradigm
 
 Each agent receives: the clarify artifact, relevant sections of
-conventions.md, and its assigned direction.
+`context/conventions.md`, and its assigned direction.
 
 For small, clearly-scoped features with no real architectural choice, skip
 multi-agent exploration and proceed directly to Step 4.
@@ -158,13 +158,13 @@ risk note for the plan.
 
 ### Step 7 — Write the design artifact
 
-Write `.forge/design-{feature-slug}.md` following the output template.
+Write `.forge/features/{feature-slug}/design.md` following the output template.
 
 ---
 
 ## Output
 
-**File:** `.forge/design-{feature-slug}.md`
+**File:** `.forge/features/{feature-slug}/design.md`
 
 See [output-template.md](reference/output-template.md) for the complete artifact template.
 
@@ -186,5 +186,5 @@ See [output-template.md](reference/output-template.md) for the complete artifact
 - Do not modify any source files.
 - Do not include implementation code (pseudocode and method signatures only).
 - Do not silently choose between viable options — always surface trade-offs.
-- If conventions.md exists, all choices must be consistent with it or
+- If `.forge/context/conventions.md` exists, all choices must be consistent with it or
   explicitly noted as deviations.

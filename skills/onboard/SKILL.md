@@ -15,7 +15,7 @@ effort: high
 
 ## Runtime snapshot
 - Root contents: !`ls -1 2>/dev/null`
-- Existing .forge artifacts: !`ls .forge/ 2>/dev/null || echo "(none)"`
+- Existing .forge artifacts: !`ls .forge/context/ .forge/features/ 2>/dev/null || echo "(none)"`
 - Source file counts: !`echo "Java: $(find . -name '*.java' 2>/dev/null | grep -v '.git' | grep -v build | wc -l | tr -d ' ') | TS: $(find . -name '*.ts' 2>/dev/null | grep -v node_modules | grep -v '.git' | wc -l | tr -d ' ') | Go: $(find . -name '*.go' 2>/dev/null | grep -v '.git' | wc -l | tr -d ' ')"`
 - Controller/Handler count: !`find . \( -name '*Controller*' -o -name '*Handler*' -o -name '*Router*' \) -name '*.java' -o -name '*.ts' -o -name '*.go' 2>/dev/null | grep -v '.git' | grep -v build | grep -v test | wc -l | tr -d ' '` files
 - Listener/Consumer count: !`find . \( -name '*Listener*' -o -name '*Consumer*' -o -name '*Subscriber*' \) -name '*.java' -o -name '*.ts' -o -name '*.go' 2>/dev/null | grep -v '.git' | grep -v build | wc -l | tr -d ' '` files
@@ -39,11 +39,11 @@ These rules have no exceptions.
 
 None. This is the first skill in the Forge workflow and has no dependencies.
 
-If `.forge/onboard.md` already exists, show the user:
+If `.forge/context/onboard.md` already exists, show the user:
 ```
 [FORGE:ONBOARD] Existing onboard artifact found
 
-.forge/onboard.md was last generated on {date from file header}.
+.forge/context/onboard.md was last generated on {date from file header}.
 
 Options:
 1. Regenerate (overwrites existing)
@@ -166,13 +166,13 @@ If any checkbox fails, address it before writing.
 
 ### Step 8 — Write the onboard artifact
 
-Write `.forge/onboard.md` following the output template below.
+Write `.forge/context/onboard.md` following the output template below.
 
 ---
 
 ## Output
 
-**File:** `.forge/onboard.md`
+**File:** `.forge/context/onboard.md`
 
 See [output-template.md](reference/output-template.md) for the complete artifact template.
 

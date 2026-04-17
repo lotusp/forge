@@ -1,6 +1,6 @@
 # clarify.md Output Template
 
-This file defines the exact structure for `.forge/clarify-{feature-slug}.md`.
+This file defines the exact structure for `.forge/features/{feature-slug}/clarify.md`.
 Referenced by `/forge:clarify` Step 8.
 
 ---

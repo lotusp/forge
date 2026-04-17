@@ -12,9 +12,9 @@ effort: high
 ---
 
 ## Runtime snapshot
-- Existing .forge artifacts: !`ls .forge/ 2>/dev/null || echo "(none)"`
-- Onboard available: !`test -f .forge/onboard.md && echo "YES" || echo "NO — exploration will take longer"`
-- Conventions available: !`test -f .forge/conventions.md && echo "YES" || echo "NO"`
+- Existing .forge features: !`ls .forge/features/ 2>/dev/null || echo "(none)"`
+- Onboard available: !`test -f .forge/context/onboard.md && echo "YES" || echo "NO — exploration will take longer"`
+- Conventions available: !`test -f .forge/context/conventions.md && echo "YES" || echo "NO"`
 
 ---
 
@@ -32,11 +32,11 @@ These rules have no exceptions.
 
 ## Prerequisites
 
-Read `.forge/onboard.md` if it exists — it provides the module map and entry
+Read `.forge/context/onboard.md` if it exists — it provides the module map and entry
 points needed to locate relevant code quickly. If it does not exist, proceed
 without it; exploration will take longer.
 
-Read `.forge/conventions.md` if it exists — useful context for understanding
+Read `.forge/context/conventions.md` if it exists — useful context for understanding
 whether the requirement fits or conflicts with current patterns.
 
 ---
@@ -59,7 +59,7 @@ the interpretation is confirmed.
 Generate a feature slug: 2–4 English words, kebab-case, capturing the essence
 of the requirement. Example: `phone-verification`, `order-export-csv`.
 
-Check that no existing `.forge/clarify-{slug}.md` uses the same slug. If a
+Check that no existing `.forge/features/{slug}/` directory uses the same slug. If a
 collision exists, append a disambiguating word.
 
 ### Step 3 — Locate entry points
@@ -134,13 +134,13 @@ if there is one.
 ### Step 8 — Write the clarify artifact
 
 Once all batches are resolved (or the user chooses to stop), write
-`.forge/clarify-{feature-slug}.md` following the output template.
+`.forge/features/{feature-slug}/clarify.md` following the output template.
 
 ---
 
 ## Output
 
-**File:** `.forge/clarify-{feature-slug}.md`
+**File:** `.forge/features/{feature-slug}/clarify.md`
 
 See [output-template.md](reference/output-template.md) for the complete artifact template.
 

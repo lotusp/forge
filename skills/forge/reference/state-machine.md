@@ -20,14 +20,17 @@ is the canonical record that a stage is complete.
 
 | Artifact | Stage completed |
 |----------|----------------|
-| `.forge/onboard.md` | onboard |
-| `.forge/conventions.md` | calibrate |
-| `.forge/clarify-{slug}.md` | clarify for {slug} |
-| `.forge/design-{slug}.md` | design for {slug} |
-| `.forge/plan-{slug}.md` | tasking for {slug} |
-| `.forge/code-{taskId}-summary.md` | code for {taskId} |
-| `.forge/review-{slug}.md` | inspect for {slug} |
-| `.forge/test-{slug}.md` | test for {slug} |
+| `.forge/context/onboard.md` | onboard |
+| `.forge/context/conventions.md` | calibrate (conventions dimension) |
+| `.forge/context/testing.md` | calibrate (testing dimension) |
+| `.forge/context/architecture.md` | calibrate (architecture dimension) |
+| `.forge/context/constraints.md` | calibrate (constraints dimension) |
+| `.forge/features/{slug}/clarify.md` | clarify for {slug} |
+| `.forge/features/{slug}/design.md` | design for {slug} |
+| `.forge/features/{slug}/plan.md` | tasking for {slug} |
+| `.forge/features/{slug}/tasks/{taskId}-summary.md` | code for {taskId} |
+| `.forge/features/{slug}/inspect.md` | inspect for {slug} |
+| `.forge/features/{slug}/test.md` | test for {slug} |
 
 ---
 
@@ -38,9 +41,9 @@ is the canonical record that a stage is complete.
 ```
 [start]
   │
-  ├── .forge/onboard.md missing?  → run /forge:onboard
+  ├── .forge/context/onboard.md missing?  → run /forge:onboard
   │
-  └── .forge/conventions.md missing?  → run /forge:calibrate
+  └── .forge/context/conventions.md missing?  → run /forge:calibrate
 ```
 
 These are hard gates. No feature work can proceed without both artifacts.
@@ -52,20 +55,20 @@ These are hard gates. No feature work can proceed without both artifacts.
   │
   ▼
 CLARIFY — run /forge:clarify {slug}
-  │ produces: .forge/clarify-{slug}.md
+  │ produces: .forge/features/{slug}/clarify.md
   ▼
 DESIGN — run /forge:design {slug}
-  │ produces: .forge/design-{slug}.md
+  │ produces: .forge/features/{slug}/design.md
   ▼
 TASKING — run /forge:tasking {slug}
-  │ produces: .forge/plan-{slug}.md  (contains T001..TN task list)
+  │ produces: .forge/features/{slug}/plan.md  (contains T001..TN task list)
   ▼
 CODE (loop) — run /forge:code {task-id}  ← repeat for each pending task
-  │ produces: .forge/code-{task-id}-summary.md per task
-  │ loop exits when all task IDs in plan-{slug}.md have a summary file
+  │ produces: .forge/features/{slug}/tasks/{task-id}-summary.md per task
+  │ loop exits when all task IDs in plan.md have a summary file
   ▼
 INSPECT — run /forge:inspect {slug}
-  │ produces: .forge/review-{slug}.md
+  │ produces: .forge/features/{slug}/inspect.md
   │ verdict: ready / needs-work / needs-redesign
   │
   ├── needs-work? → return to CODE for must-fix items, then re-run INSPECT
@@ -73,7 +76,7 @@ INSPECT — run /forge:inspect {slug}
   │
   ▼
 TEST — run /forge:test {slug}
-  │ produces: .forge/test-{slug}.md
+  │ produces: .forge/features/{slug}/test.md
   ▼
 [complete]
 ```
@@ -85,8 +88,8 @@ TEST — run /forge:test {slug}
 The `scripts/status.mjs` script applies this logic:
 
 ```
-1. If no onboard.md → suggest onboard
-2. If no conventions.md → suggest calibrate
+1. If no context/onboard.md → suggest onboard
+2. If no context/conventions.md → suggest calibrate
 3. If explicit task ID given (T001) → suggest code {task-id}
 4. If explicit feature slug given:
      - Find slug's current phase (highest artifact present)
@@ -118,9 +121,9 @@ a new one from scratch.
 ## Edge cases
 
 ### "needs-work" after inspect
-The `review-{slug}.md` file exists but the verdict is `needs-work`.
+The `features/{slug}/inspect.md` file exists but the verdict is `needs-work`.
 The orchestrator detects this by reading the first few lines of the
-review artifact. If `needs-work` is found, it routes back to `code`
+inspect artifact. If `needs-work` is found, it routes back to `code`
 with the task IDs from the "Findings" section.
 
 (TODO: implement this edge case in `status.mjs` — currently it routes

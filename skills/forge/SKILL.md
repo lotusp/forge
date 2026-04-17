@@ -11,13 +11,14 @@ effort: high
 ---
 
 ## Runtime snapshot
-- Onboard: !`test -f .forge/onboard.md && echo "✓" || echo "✗ missing"`
-- Conventions: !`test -f .forge/conventions.md && echo "✓" || echo "✗ missing"`
-- Features with clarify: !`ls .forge/clarify-*.md 2>/dev/null | sed 's|.*/clarify-||;s|\.md||' | tr '\n' ', ' || echo "(none)"`
-- Features with design: !`ls .forge/design-*.md 2>/dev/null | sed 's|.*/design-||;s|\.md||' | tr '\n' ', ' || echo "(none)"`
-- Features with plan: !`ls .forge/plan-*.md 2>/dev/null | sed 's|.*/plan-||;s|\.md||' | tr '\n' ', ' || echo "(none)"`
-- Completed tasks: !`ls .forge/code-T*-summary.md 2>/dev/null | grep -oE 'T[0-9]+' | tr '\n' ', ' || echo "(none)"`
-- Inspect results: !`ls .forge/review-*.md 2>/dev/null | sed 's|.*/review-||;s|\.md||' | tr '\n' ', ' || echo "(none)"`
+- Onboard: !`test -f .forge/context/onboard.md && echo "✓" || echo "✗ missing"`
+- Conventions: !`test -f .forge/context/conventions.md && echo "✓" || echo "✗ missing"`
+- Features: !`ls .forge/features/ 2>/dev/null | tr '\n' ', ' || echo "(none)"`
+- Features with clarify: !`ls .forge/features/*/clarify.md 2>/dev/null | sed 's|.forge/features/||;s|/clarify.md||' | tr '\n' ', ' || echo "(none)"`
+- Features with design: !`ls .forge/features/*/design.md 2>/dev/null | sed 's|.forge/features/||;s|/design.md||' | tr '\n' ', ' || echo "(none)"`
+- Features with plan: !`ls .forge/features/*/plan.md 2>/dev/null | sed 's|.forge/features/||;s|/plan.md||' | tr '\n' ', ' || echo "(none)"`
+- Completed tasks: !`ls .forge/features/*/tasks/T*-summary.md 2>/dev/null | grep -oE 'T[0-9]+' | tr '\n' ', ' || echo "(none)"`
+- Inspect results: !`ls .forge/features/*/inspect.md 2>/dev/null | sed 's|.forge/features/||;s|/inspect.md||' | tr '\n' ', ' || echo "(none)"`
 - Status script: !`find ~/.claude -name "status.mjs" -path "*/forge/scripts/*" 2>/dev/null | head -1 || echo "(not found — will use manual detection)"`
 
 ---
@@ -29,7 +30,7 @@ These rules have no exceptions. Do not rationalise around them.
 - **The status script determines the next action — not your inference.** Run the status script (found via `find ~/.claude -name "status.mjs" -path "*/forge/scripts/*"`) and follow the `[ACTION]` line exactly. Never decide the next step from memory or context alone.
 - **Never skip onboard or calibrate.** If `[ACTION]` says `skill=onboard` or `skill=calibrate`, that is the only valid next step regardless of what the user asked for.
 - **Never chain skills without user confirmation.** After each skill completes, ask "Continue to the next step?" before proceeding. Never auto-chain silently.
-- **Never invent feature state.** If `.forge/` is empty or a feature has no artifacts, report it accurately — do not assume a prior step was done.
+- **Never invent feature state.** If `.forge/features/` is empty or a feature has no artifacts, report it accurately — do not assume a prior step was done.
 - **When executing a sub-skill, read its full SKILL.md first.** Do not execute from memory. Read `{SKILLS}/SKILL_NAME/SKILL.md` before starting its process.
 - **If the user says "just proceed" or "continue", re-run the status script** — do not continue from your own last remembered state.
 
@@ -88,7 +89,7 @@ Step 1b.
 If the status script is unavailable, manually inspect `.forge/`:
 
 ```bash
-ls .forge/ 2>/dev/null || echo "(no .forge/ directory)"
+ls .forge/context/ .forge/features/ 2>/dev/null || echo "(no .forge/ directory)"
 ```
 
 Then apply the routing rules from `reference/state-machine.md` to
@@ -204,6 +205,10 @@ The user can pass explicit skill names as the argument to jump directly:
 | `inspect {slug}` | /forge:inspect |
 | `test {slug}` | /forge:test |
 | `status` | Show dashboard only, no action |
+
+> **Artifact paths:** All project context lives under `.forge/context/` and
+> all feature artifacts live under `.forge/features/{slug}/`. See
+> `reference/state-machine.md` for the full path mapping.
 
 ---
 

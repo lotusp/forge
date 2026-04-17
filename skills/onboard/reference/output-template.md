@@ -1,6 +1,6 @@
 # onboard.md Output Template
 
-This file defines the exact structure for `.forge/onboard.md`.
+This file defines the exact structure for `.forge/context/onboard.md`.
 Referenced by `/forge:onboard` Step 8.
 
 ---
@@ -10,6 +10,7 @@ Referenced by `/forge:onboard` Step 8.
 
 > 生成时间：YYYY-MM-DD
 > 生成方式：/forge:onboard
+> 文件路径：.forge/context/onboard.md
 
 ---
 

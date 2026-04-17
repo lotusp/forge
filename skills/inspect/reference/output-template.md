@@ -1,15 +1,16 @@
 # inspect.md Output Template
 
-This file defines the exact structure for `.forge/review-{feature-slug}.md`.
+This file defines the exact structure for `.forge/features/{feature-slug}/inspect.md`.
 Referenced by `/forge:inspect` Step 6.
 
 ---
 
 ```markdown
-# Review: {feature-slug}
+# Inspect: {feature-slug}
 
 > 评审时间：YYYY-MM-DD
 > 评审范围：{list of files reviewed}
+> 文件路径：.forge/features/{feature-slug}/inspect.md
 > Conventions：{found / not found — reviewed for internal consistency only}
 
 ---
@@ -29,7 +30,7 @@ Referenced by `/forge:inspect` Step 6.
 #### [must-fix] {Short title}
 **位置：** Line N (or lines N–M)
 **问题：** {What is wrong}
-**依据：** conventions.md > {Section name} — "{relevant rule quoted}"
+**依据：** context/conventions.md > {Section name} — "{relevant rule quoted}"
 **建议：** {Specific change to make}
 
 #### [should-fix] {Short title}
@@ -65,7 +66,7 @@ _No findings above confidence threshold._
 
 ## Design Adherence
 
-{Was the implementation faithful to .forge/design-{slug}.md?
+{Was the implementation faithful to .forge/features/{slug}/design.md?
 Note any deviations — intentional or not.}
 
 _No design artifact available._ ← use this if design doc was not found

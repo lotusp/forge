@@ -3,9 +3,10 @@ name: calibrate
 description: |
   Extracts the project's implicit coding conventions and codifies them into
   authoritative constraints for all future development. Run after /forge:onboard
-  and before beginning any feature work. The resulting conventions.md is the
-  single source of truth referenced by /forge:code, /forge:review, and
-  /forge:test.
+  and before beginning any feature work. Produces four context files under
+  .forge/context/ (conventions.md, testing.md, architecture.md, constraints.md)
+  that serve as the collective source of truth referenced by /forge:code,
+  /forge:inspect, and /forge:test.
 argument-hint: ""
 allowed-tools: "Read Glob Grep Bash"
 model: sonnet
@@ -13,8 +14,8 @@ effort: max
 ---
 
 ## Runtime snapshot
-- Existing .forge artifacts: !`ls .forge/ 2>/dev/null || echo "(none)"`
-- Prior scan state: !`test -f .forge/calibrate-scan.md && echo "FOUND — prior scan exists, can resume from adjudication" || echo "(no prior scan — full scan required)"`
+- Existing .forge context artifacts: !`ls .forge/context/ 2>/dev/null || echo "(none)"`
+- Prior scan state: !`test -f .forge/_session/calibrate-scan.md && echo "FOUND — prior scan exists, can resume from adjudication" || echo "(no prior scan — full scan required)"`
 - Build files present: !`ls build.gradle pom.xml package.json go.mod Cargo.toml 2>/dev/null | tr '\n' ' ' || echo "(none found)"`
 - Source file count: !`find . \( -name "*.java" -o -name "*.ts" -o -name "*.py" -o -name "*.go" \) 2>/dev/null | grep -v node_modules | grep -v ".git" | grep -v build | wc -l | tr -d ' '` files
 
@@ -24,32 +25,32 @@ effort: max
 
 These rules have no exceptions. Do not rationalise around them.
 
-- **Never write `conventions.md` before all contradictions are adjudicated.** Partial conventions are worse than no conventions.
+- **Never write the context files before all contradictions are adjudicated.** Partial conventions are worse than no conventions.
 - **Never skip the build file read.** Declared dependencies can reveal active libraries (QueryDSL, MapStruct, event bus starters) that are invisible in source samples.
 - **URL versioning is always a mandatory contradiction check** — mixed `/api/` and `/api/v2/` paths must be presented as a conflict, not silently averaged.
-- **Every rule in `conventions.md` must cite a file:line** where it was observed. Invented rules are not conventions.
+- **Every rule in the context files must cite a file:line** where it was observed. Invented rules are not conventions.
 - **Every adjudicated decision must be recorded in the Decision Log.** Do not skip items that "seem obvious" — they aren't obvious to future contributors.
-- **If a prior scan state exists (`.forge/calibrate-scan.md`), load it instead of re-scanning.** Never discard completed work.
+- **If a prior scan state exists (`.forge/_session/calibrate-scan.md`), load it instead of re-scanning.** Never discard completed work.
 
 ---
 
 ## Prerequisites
 
-Read `.forge/onboard.md`. This provides the module map and tech stack needed
+Read `.forge/context/onboard.md`. This provides the module map and tech stack needed
 to guide sampling. If it does not exist:
 
 ```
 [FORGE:CALIBRATE] Missing prerequisite
 
-.forge/onboard.md not found. Please run /forge:onboard first so I have
+.forge/context/onboard.md not found. Please run /forge:onboard first so I have
 a module map to guide the codebase scan.
 ```
 
-If `.forge/conventions.md` already exists, show the user:
+If `.forge/context/conventions.md` already exists, show the user:
 ```
 [FORGE:CALIBRATE] Existing conventions found
 
-.forge/conventions.md was last generated on {date}.
+.forge/context/conventions.md was last generated on {date}.
 
 Options:
 1. Re-calibrate from scratch (overwrites existing)
@@ -59,7 +60,7 @@ Options:
 Which do you prefer?
 ```
 
-If `.forge/calibrate-scan.md` exists (prior scan was saved), show:
+If `.forge/_session/calibrate-scan.md` exists (prior scan was saved), show:
 ```
 [FORGE:CALIBRATE] Prior scan found
 
@@ -131,7 +132,7 @@ For each dimension, record:
 ### Step 3 — Save the scan state (mandatory checkpoint)
 
 After completing Steps 1–2 and before any user interaction, write
-`.forge/calibrate-scan.md`:
+`.forge/_session/calibrate-scan.md`:
 
 ```markdown
 # Calibrate Scan State
@@ -250,17 +251,22 @@ Common examples for legacy Java/Spring codebases:
 - Commented-out security annotations without explanation
 - `@Transactional` on Controller methods
 
-### Step 8 — Write the conventions artifact
+### Step 8 — Write context artifacts (4 files)
 
-See [output-template.md](reference/output-template.md) for the complete template.
+See [output-template.md](reference/output-template.md) for the complete templates.
 
-Write `.forge/conventions.md` following that template exactly.
+Write the following four files under `.forge/context/`:
+
+- `context/conventions.md` — naming, logging, error handling, validation, API design, DB access, messaging (7 dimensions)
+- `context/testing.md` — testing strategy: framework, isolation strategy, mock strategy, test data patterns, naming, coverage expectations (1 dimension, deep dive)
+- `context/architecture.md` — architecture and layering rules, inter-module communication, cross-cutting concerns, known tech debt (1 dimension)
+- `context/constraints.md` — hard non-negotiable rules, anti-patterns with file locations, security/compliance rules
 
 ---
 
 ## Self-check before writing
 
-Before writing `.forge/conventions.md`, verify:
+Before writing the context files, verify:
 
 - [ ] Build file was read and declared dependencies are reflected in the conventions
 - [ ] URL versioning pattern was explicitly adjudicated (not silently ignored)
@@ -268,10 +274,11 @@ Before writing `.forge/conventions.md`, verify:
 - [ ] Test isolation strategy was explicitly adjudicated
 - [ ] Every rule cites at least one file:line source
 - [ ] Every adjudicated decision is in the Decision Log
-- [ ] Anti-patterns section cites specific files (not vague warnings)
+- [ ] Anti-patterns in constraints.md cite specific files (not vague warnings)
 - [ ] Open Questions section captures any unresolved items
+- [ ] All 4 context files exist: conventions.md, testing.md, architecture.md, constraints.md
 
-If any checkbox is unchecked, address it before writing the file.
+If any checkbox is unchecked, address it before writing the files.
 
 ---
 

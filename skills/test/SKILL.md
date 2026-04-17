@@ -11,8 +11,9 @@ effort: high
 ---
 
 ## Runtime snapshot
-- Existing .forge artifacts: !`ls .forge/ 2>/dev/null || echo "(none)"`
-- Conventions available: !`test -f .forge/conventions.md && echo "YES" || echo "NO — cannot match testing patterns without conventions"`
+- Feature artifacts: !`ls .forge/features/ 2>/dev/null || echo "(none)"`
+- Testing conventions available: !`test -f .forge/context/testing.md && echo "YES" || echo "NO — cannot match testing patterns without conventions"`
+- Conventions available: !`test -f .forge/context/conventions.md && echo "YES" || echo "NO"`
 - Existing test files: !`find . -name '*Test*' -o -name '*.test.*' -o -name '*.spec.*' 2>/dev/null | grep -v '.git' | grep -v build | grep -v node_modules | wc -l | tr -d ' '` test files found
 
 ---
@@ -21,7 +22,7 @@ effort: high
 
 These rules have no exceptions.
 
-- **`conventions.md` testing section is mandatory input.** If it does not exist, stop and ask the user before proceeding — do not invent a testing approach.
+- **`context/testing.md` is mandatory input.** If it does not exist, stop and ask the user before proceeding — do not invent a testing approach.
 - **Confirm the test case list before writing any test code.** The user may know edge cases not visible from the code. The confirmation step is not optional.
 - **Never test implementation internals.** Only test observable behaviour: return values, thrown errors, side effects (DB writes, events emitted).
 - **Match existing test patterns exactly.** Never introduce a new test library, assertion style, or mock strategy without flagging it as a new pattern and getting confirmation.
@@ -33,27 +34,30 @@ These rules have no exceptions.
 
 ### Required
 
-Read `.forge/conventions.md`. The testing section defines:
+Read `.forge/context/testing.md`. This defines:
+- Which test types apply: unit / integration / end-to-end / contract
 - Where test files live (co-located vs separate directory)
 - Naming conventions for test methods
 - Mock strategy (what to mock, at which layer boundary)
 - Test data patterns (factories, fixtures, builders)
 - Base classes or test infrastructure to use
+- Coverage expectations
 
-If conventions.md does not exist:
+If testing.md does not exist:
 ```
-[FORGE:TEST] Missing conventions
+[FORGE:TEST] Missing testing conventions
 
-.forge/conventions.md not found. Without it I cannot match your project's
+.forge/context/testing.md not found. Without it I cannot match your project's
 testing patterns. Please run /forge:calibrate first, or describe your
 testing conventions so I can proceed.
 ```
 
 ### Recommended (read if they exist)
 
-- `.forge/design-{feature-slug}.md` — the intended behaviour to test against
-- `.forge/review-{feature-slug}.md` — may flag untested scenarios
-- `.forge/code-T*-summary.md` for the feature — to find implemented files
+- `.forge/context/conventions.md` — additional coding conventions
+- `.forge/features/{feature-slug}/design.md` — the intended behaviour to test against
+- `.forge/features/{feature-slug}/inspect.md` — may flag untested scenarios
+- `.forge/features/{feature-slug}/tasks/T*-summary.md` — to find implemented files
 - Existing test files adjacent to the feature's files — to match patterns exactly
 
 ---
@@ -62,13 +66,13 @@ testing conventions so I can proceed.
 
 ### Step 1 — Determine test strategy
 
-From `conventions.md`, extract the testing approach:
+From `context/testing.md`, extract the testing approach:
 - Which test types apply: unit / integration / end-to-end / contract
 - Where each type lives and how files are named
 - Mock strategy (e.g. mock at repository boundary, never mock internal services)
 - Test data tooling (factories, seeds, builders — use what exists)
 
-If conventions.md is silent on a test type this feature needs:
+If `context/testing.md` is silent on a test type this feature needs:
 ```
 [FORGE:TEST] Testing convention gap
 
@@ -154,19 +158,19 @@ test suite.
 
 ### Step 6 — Write the test plan artifact
 
-Write `.forge/test-{feature-slug}.md`.
+Write `.forge/features/{feature-slug}/test.md`.
 
 ---
 
 ## Output
 
-**Files:** Test source files (at paths per conventions) + `.forge/test-{feature-slug}.md`
+**Files:** Test source files (at paths per conventions) + `.forge/features/{feature-slug}/test.md`
 
 ```markdown
 # Test Plan: {feature-slug}
 
 > 生成时间：YYYY-MM-DD
-> 基于：design-{feature-slug}.md + conventions.md + implemented source files
+> 基于：features/{feature-slug}/design.md + context/testing.md + implemented source files
 
 ---
 

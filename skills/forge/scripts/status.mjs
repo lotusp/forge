@@ -32,24 +32,35 @@ import { join } from 'path';
 
 const forgeDir = '.forge';
 
-function exists(rel) {
+function forgeExists(rel) {
   return existsSync(join(forgeDir, rel));
 }
 
-function listMatching(pattern) {
-  if (!existsSync(forgeDir)) return [];
-  return readdirSync(forgeDir)
-    .filter(f => pattern.test(f))
+function listFeatureSlugs() {
+  const featuresDir = join(forgeDir, 'features');
+  if (!existsSync(featuresDir)) return [];
+  return readdirSync(featuresDir, { withFileTypes: true })
+    .filter(d => d.isDirectory())
+    .map(d => d.name)
     .sort();
 }
 
-function slugFrom(filename, prefix, suffix = '.md') {
-  return filename.replace(new RegExp(`^${prefix}-`), '').replace(new RegExp(`${suffix}$`), '');
+function featureHas(slug, filename) {
+  return existsSync(join(forgeDir, 'features', slug, filename));
 }
 
-function readForge(filename) {
-  try { return readFileSync(join(forgeDir, filename), 'utf8'); }
+function readFeatureFile(slug, filename) {
+  try { return readFileSync(join(forgeDir, 'features', slug, filename), 'utf8'); }
   catch { return ''; }
+}
+
+function listTaskSummaries(slug) {
+  const tasksDir = join(forgeDir, 'features', slug, 'tasks');
+  if (!existsSync(tasksDir)) return [];
+  return readdirSync(tasksDir)
+    .filter(f => /^T\d+-summary\.md$/.test(f))
+    .map(f => f.match(/^(T\d+)-summary\.md$/)[1])
+    .sort();
 }
 
 function parseTaskIds(planContent) {
@@ -75,45 +86,25 @@ for (let i = 0; i < args.length; i++) {
 
 // ── build state ───────────────────────────────────────────────────────────────
 
-const onboardExists     = exists('onboard.md');
-const conventionsExists = exists('conventions.md');
+const onboardExists     = forgeExists(join('context', 'onboard.md'));
+const conventionsExists = forgeExists(join('context', 'conventions.md'));
 
-const clarifyFiles  = listMatching(/^clarify-.+\.md$/);
-const designFiles   = listMatching(/^design-.+\.md$/);
-const planFiles     = listMatching(/^plan-.+\.md$/);
-const reviewFiles   = listMatching(/^review-.+\.md$/);
-const testFiles     = listMatching(/^test-.+\.md$/);
-const codeSummaries = listMatching(/^code-T\d+-summary\.md$/);
-
-const clarifiedFeatures = clarifyFiles.map(f => slugFrom(f, 'clarify'));
-const designedFeatures  = designFiles.map(f => slugFrom(f, 'design'));
-const plannedFeatures   = planFiles.map(f => slugFrom(f, 'plan'));
-const reviewedFeatures  = reviewFiles.map(f => slugFrom(f, 'review'));
-const testedFeatures    = testFiles.map(f => slugFrom(f, 'test'));
-
-const completedTaskIds  = codeSummaries.map(f => f.match(/code-(T\d+)-summary/)?.[1]).filter(Boolean);
-
-// Build per-feature state
-const allFeatures = [...new Set([
-  ...clarifiedFeatures,
-  ...designedFeatures,
-  ...plannedFeatures,
-  ...reviewedFeatures,
-  ...testedFeatures,
-])];
+const allSlugs = listFeatureSlugs();
 
 const featureStates = {};
-for (const slug of allFeatures) {
-  const hasClarify  = clarifiedFeatures.includes(slug);
-  const hasDesign   = designedFeatures.includes(slug);
-  const hasPlan     = plannedFeatures.includes(slug);
-  const hasReview   = reviewedFeatures.includes(slug);
-  const hasTest     = testedFeatures.includes(slug);
+for (const slug of allSlugs) {
+  const hasClarify  = featureHas(slug, 'clarify.md');
+  const hasDesign   = featureHas(slug, 'design.md');
+  const hasPlan     = featureHas(slug, 'plan.md');
+  const hasInspect  = featureHas(slug, 'inspect.md');
+  const hasTest     = featureHas(slug, 'test.md');
 
   let allTasks = [];
   let pendingTasks = [];
+  const completedTaskIds = listTaskSummaries(slug);
+
   if (hasPlan) {
-    const planContent = readForge(`plan-${slug}.md`);
+    const planContent = readFeatureFile(slug, 'plan.md');
     allTasks = parseTaskIds(planContent);
     pendingTasks = allTasks.filter(id => !completedTaskIds.includes(id));
   }
@@ -123,13 +114,14 @@ for (const slug of allFeatures) {
   if (hasDesign)   phase = 'tasking';
   if (hasPlan && pendingTasks.length > 0) phase = 'code';
   if (hasPlan && pendingTasks.length === 0 && allTasks.length > 0) phase = 'inspect';
-  if (hasReview)   phase = 'test';
+  if (hasInspect)  phase = 'test';
   if (hasTest)     phase = 'complete';
 
   featureStates[slug] = {
     slug,
-    hasClarify, hasDesign, hasPlan, hasReview, hasTest,
-    allTasks, pendingTasks, completedTasks: completedTaskIds.filter(id => allTasks.includes(id)),
+    hasClarify, hasDesign, hasPlan, hasInspect, hasTest,
+    allTasks, pendingTasks,
+    completedTasks: completedTaskIds.filter(id => allTasks.includes(id)),
     phase,
   };
 }
@@ -146,7 +138,7 @@ if (taskArg) {
     skill: 'code',
     arg: taskArg,
     reason: ownerSlug
-      ? `Implement task ${taskArg} from plan-${ownerSlug}.md`
+      ? `Implement task ${taskArg} from features/${ownerSlug}/plan.md`
       : `Implement task ${taskArg}`,
   };
 }
@@ -191,9 +183,9 @@ if (!action && featureArg) {
 // Priority 3: infer from global state
 if (!action) {
   if (!onboardExists) {
-    action = { skill: 'onboard', arg: '', reason: 'No onboard.md — map the codebase first' };
+    action = { skill: 'onboard', arg: '', reason: 'No context/onboard.md — map the codebase first' };
   } else if (!conventionsExists) {
-    action = { skill: 'calibrate', arg: '', reason: 'No conventions.md — extract coding standards first' };
+    action = { skill: 'calibrate', arg: '', reason: 'No context/conventions.md — extract coding standards first' };
   } else {
     // Find the most advanced in-progress feature
     const inProgress = Object.values(featureStates)
@@ -238,21 +230,14 @@ console.log('║           FORGE — Workflow Status                            
 console.log('╚══════════════════════════════════════════════════════════════╝');
 console.log('');
 console.log('PROJECT SETUP');
-console.log(`  onboard     ${onboardExists     ? '✓' : '✗ missing → run /forge:onboard first'}`);
-console.log(`  calibrate   ${conventionsExists ? '✓' : '✗ missing → run /forge:calibrate first'}`);
+console.log(`  onboard     ${onboardExists     ? '✓ (.forge/context/onboard.md)' : '✗ missing → run /forge:onboard first'}`);
+console.log(`  calibrate   ${conventionsExists ? '✓ (.forge/context/conventions.md)' : '✗ missing → run /forge:calibrate first'}`);
 console.log('');
 
-if (allFeatures.length > 0) {
+if (allSlugs.length > 0) {
   console.log('FEATURES');
   const phaseEmoji = { clarify: '🔍', design: '📐', tasking: '📋', code: '⚙️', inspect: '🔎', test: '🧪', complete: '✅' };
   for (const [slug, fs] of Object.entries(featureStates)) {
-    const phases = [
-      fs.hasClarify ? '✓clarify'  : ' clarify',
-      fs.hasDesign  ? '✓design'   : ' design',
-      fs.hasPlan    ? `✓tasking(${fs.completedTasks.length}/${fs.allTasks.length} tasks)` : ' tasking',
-      fs.hasReview  ? '✓inspect'  : ' inspect',
-      fs.hasTest    ? '✓test'     : ' test',
-    ];
     const nextLabel = fs.phase === 'complete' ? 'complete' : `→ next: ${fs.phase}`;
     console.log(`  ${phaseEmoji[fs.phase] || '·'} ${slug.padEnd(28)} ${nextLabel}`);
     if (fs.pendingTasks.length > 0) {

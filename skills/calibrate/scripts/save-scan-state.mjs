@@ -2,7 +2,7 @@
 /**
  * save-scan-state.mjs
  *
- * Creates (or resets) the .forge/calibrate-scan.md skeleton so that
+ * Creates (or resets) the .forge/_session/calibrate-scan.md skeleton so that
  * /forge:calibrate has a pre-structured file to fill in during the scan.
  *
  * Run ONCE at the start of a new calibration session, before reading
@@ -11,14 +11,14 @@
  * Usage:
  *   node ${CLAUDE_SKILL_DIR}/scripts/save-scan-state.mjs
  *
- * Writes: .forge/calibrate-scan.md
+ * Writes: .forge/_session/calibrate-scan.md
  */
 
 import { mkdirSync, writeFileSync } from 'fs';
 import { join } from 'path';
 
-const forgeDir = '.forge';
-mkdirSync(forgeDir, { recursive: true });
+const sessionDir = join('.forge', '_session');
+mkdirSync(sessionDir, { recursive: true });
 
 const today = new Date().toISOString().split('T')[0];
 
@@ -98,6 +98,6 @@ const skeleton = `# Calibrate Scan State
 |---|-----------|----------|--------|------|
 `;
 
-const outPath = join(forgeDir, 'calibrate-scan.md');
+const outPath = join(sessionDir, 'calibrate-scan.md');
 writeFileSync(outPath, skeleton, 'utf8');
 console.log(`Written: ${outPath}`);

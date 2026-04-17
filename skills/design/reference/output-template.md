@@ -1,6 +1,6 @@
 # design.md Output Template
 
-This file defines the exact structure for `.forge/design-{feature-slug}.md`.
+This file defines the exact structure for `.forge/features/{feature-slug}/design.md`.
 Referenced by `/forge:design` Step 7.
 
 ---
@@ -8,8 +8,9 @@ Referenced by `/forge:design` Step 7.
 ```markdown
 # Design: {feature-slug}
 
-> 基于：clarify-{feature-slug}.md + conventions.md
+> 基于：features/{feature-slug}/clarify.md + context/conventions.md
 > 生成时间：YYYY-MM-DD
+> 文件路径：.forge/features/{feature-slug}/design.md
 > [注：无 clarify artifact，需求来自用户直接描述] ← 删除如不适用
 > [注：无 conventions.md，设计不受约定约束] ← 删除如不适用
 

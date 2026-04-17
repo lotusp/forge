@@ -12,9 +12,9 @@ effort: high
 ---
 
 ## Runtime snapshot
-- Conventions available: !`test -f .forge/conventions.md && echo "YES — primary benchmark loaded" || echo "NO — reviewing for internal consistency only"`
-- Code summaries in .forge: !`ls .forge/code-T*-summary.md 2>/dev/null | wc -l | tr -d ' '` summaries found
-- Design artifacts: !`ls .forge/design-*.md 2>/dev/null | sed 's|.forge/design-||;s|.md||' | tr '\n' ' ' || echo "(none)"`
+- Conventions available: !`test -f .forge/context/conventions.md && echo "YES — primary benchmark loaded" || echo "NO — reviewing for internal consistency only"`
+- Code summaries in .forge: !`ls .forge/features/*/tasks/T*-summary.md 2>/dev/null | wc -l | tr -d ' '` summaries found
+- Design artifacts: !`ls .forge/features/*/design.md 2>/dev/null | sed 's|.forge/features/||;s|/design.md||' | tr '\n' ' ' || echo "(none)"`
 
 ---
 
@@ -22,7 +22,7 @@ effort: high
 
 These rules have no exceptions.
 
-- **Every `must-fix` finding must cite a specific section and rule from `conventions.md`.** If you cannot cite a rule, it is not a `must-fix` — downgrade to `should-fix`.
+- **Every `must-fix` finding must cite a specific section and rule from `context/conventions.md`.** If you cannot cite a rule, it is not a `must-fix` — downgrade to `should-fix`.
 - **Confidence < 80% means the finding is dropped.** Never include uncertain findings. Precision over recall.
 - **Never penalise deviations confirmed by the user.** If the code summary's "Deviations from Plan" section documents an intentional deviation, do not flag it.
 - **Line numbers are required for every finding.** Vague findings ("this file has naming issues") are not acceptable.
@@ -33,20 +33,20 @@ These rules have no exceptions.
 
 ## Prerequisites
 
-Read `.forge/conventions.md`. This is the primary benchmark for review.
+Read `.forge/context/conventions.md`. This is the primary benchmark for review.
 If it does not exist, note the absence and review only for internal
 consistency and general quality — not convention compliance.
 
 Determine the review scope from the argument:
 
 - **Feature slug** (e.g. `phone-verification`): review all files modified
-  by any `code-T*-summary.md` whose Feature field matches this slug.
+  by any task summary under `.forge/features/{slug}/tasks/` whose Feature field matches this slug.
 - **File path** (e.g. `src/auth/phone.ts`): review that specific file only.
 
 If the argument is a feature slug, read:
-- All matching `.forge/code-T*-summary.md` files to get the list of
+- All `.forge/features/{feature-slug}/tasks/T*-summary.md` files to get the list of
   changed files
-- `.forge/design-{feature-slug}.md` if it exists (to verify implementation
+- `.forge/features/{feature-slug}/design.md` if it exists (to verify implementation
   matches design intent)
 
 ---
@@ -64,7 +64,7 @@ has one entry.
 For each file in the list, spawn a **forge-reviewer** agent. Each agent
 receives:
 - The file content
-- The full `conventions.md`
+- The full `context/conventions.md`
 - The relevant section of the design document (if available)
 - The task description from the matching plan entry (if available)
 - The "Deviations from Plan" section from the matching code summary (to
@@ -85,7 +85,7 @@ issue from multiple agents. Group by file, then by severity.
 
 ### Step 4 — Assess design adherence
 
-If `.forge/design-{feature-slug}.md` exists, check:
+If `.forge/features/{feature-slug}/design.md` exists, check:
 - Were all components listed in "Component Changes" actually changed?
 - Do the changes match the described intent, or do they deviate?
 - Is there scope creep (files changed that are not in the design)?
@@ -101,13 +101,13 @@ If `.forge/design-{feature-slug}.md` exists, check:
 
 ### Step 6 — Write the review artifact
 
-Write `.forge/review-{feature-slug}.md` following the output template.
+Write `.forge/features/{feature-slug}/inspect.md` following the output template.
 
 ---
 
 ## Output
 
-**File:** `.forge/review-{feature-slug}.md`
+**File:** `.forge/features/{feature-slug}/inspect.md`
 
 See [output-template.md](reference/output-template.md) for the complete artifact template.
 
@@ -129,5 +129,5 @@ See [output-template.md](reference/output-template.md) for the complete artifact
 
 - Do not modify any source files. This skill is strictly read-only.
 - Only report findings with confidence ≥ 80. When in doubt, omit.
-- Do not penalise deliberate deviations documented in code summaries.
+- Do not penalise deliberate deviations documented in task summaries.
 - A `consider` finding must never block the workflow.

@@ -11,8 +11,8 @@ effort: medium
 ---
 
 ## Runtime snapshot
-- Existing plan files: !`ls .forge/plan-*.md 2>/dev/null || echo "(none)"`
-- Highest task ID in use: !`grep -rh "^### T[0-9]" .forge/plan-*.md 2>/dev/null | grep -oP 'T\d+' | sort -V | tail -1 || echo "none — start from T001"`
+- Existing plan files: !`ls .forge/features/*/plan.md 2>/dev/null || echo "(none)"`
+- Highest task ID in use: !`grep -rh "^### T[0-9]" .forge/features/*/plan.md 2>/dev/null | grep -oP 'T\d+' | sort -V | tail -1 || echo "none — start from T001"`
 
 ---
 
@@ -30,12 +30,12 @@ These rules have no exceptions.
 
 ## Prerequisites
 
-Before planning, read `.forge/design-{feature-slug}.md`. If it does not exist:
+Before planning, read `.forge/features/{feature-slug}/design.md`. If it does not exist:
 
 ```
 [FORGE:TASKING] Missing prerequisite
 
-Cannot find .forge/design-{feature-slug}.md.
+Cannot find .forge/features/{feature-slug}/design.md.
 Please run /forge:design {feature-slug} first.
 ```
 
@@ -53,7 +53,7 @@ these are resolved:
 Please resolve these in /forge:design, then retry.
 ```
 
-Also scan all existing `.forge/plan-*.md` files to find the highest Task ID
+Also scan all existing `.forge/features/*/plan.md` files to find the highest Task ID
 currently in use. New tasks continue from that ID.
 
 ---
@@ -62,7 +62,7 @@ currently in use. New tasks continue from that ID.
 
 ### Step 1 — Read the design
 
-Read `.forge/design-{feature-slug}.md` in full. Identify every distinct unit
+Read `.forge/features/{feature-slug}/design.md` in full. Identify every distinct unit
 of work:
 - New files to create
 - Existing files to modify
@@ -117,7 +117,7 @@ Tasks identified: N
 
 Execution order: T00X → T00Y → ...
 
-Ready to write .forge/plan-{feature-slug}.md? (yes / adjust first)
+Ready to write .forge/features/{feature-slug}/plan.md? (yes / adjust first)
 ```
 
 Wait for confirmation. If the user requests adjustments, revise and
@@ -125,13 +125,13 @@ re-confirm before writing.
 
 ### Step 7 — Write the plan artifact
 
-Write `.forge/plan-{feature-slug}.md` following the output template.
+Write `.forge/features/{feature-slug}/plan.md` following the output template.
 
 ---
 
 ## Output
 
-**File:** `.forge/plan-{feature-slug}.md`
+**File:** `.forge/features/{feature-slug}/plan.md`
 
 See [output-template.md](reference/output-template.md) for the complete artifact template.
 

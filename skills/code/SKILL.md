@@ -12,8 +12,9 @@ effort: high
 ---
 
 ## Runtime snapshot
-- Conventions available: !`test -f .forge/conventions.md && echo "YES — will enforce" || echo "NO — proceed without constraints"`
-- Plan files: !`ls .forge/plan-*.md 2>/dev/null || echo "(none found)"`
+- Conventions available: !`test -f .forge/context/conventions.md && echo "YES — will enforce" || echo "NO — proceed without constraints"`
+- Testing conventions available: !`test -f .forge/context/testing.md && echo "YES" || echo "NO"`
+- Plan files: !`ls .forge/features/*/plan.md 2>/dev/null || echo "(none found)"`
 
 ---
 
@@ -21,9 +22,9 @@ effort: high
 
 These rules have no exceptions.
 
-- **Read `conventions.md` before writing any code.** Never write code first and check conventions after.
+- **Read `context/conventions.md` and `context/testing.md` before writing any code.** Never write code first and check conventions after.
 - **Never modify files outside the task's scope list.** If an out-of-scope change is required, stop and invoke the Scope Creep Protocol.
-- **Never silently introduce a new pattern.** If the task requires a pattern not in `conventions.md` or the existing codebase, invoke the New Pattern Protocol and wait for confirmation.
+- **Never silently introduce a new pattern.** If the task requires a pattern not in `context/conventions.md` or the existing codebase, invoke the New Pattern Protocol and wait for confirmation.
 - **Never silently expand scope.** Even if an adjacent improvement is obvious, log it in the summary rather than making it.
 - **Never start a task with unmet dependencies.** Check that each dependency's summary file exists before writing a single line.
 - **One task at a time.** If the user provides multiple IDs, implement, summarise, and confirm each before starting the next.
@@ -34,16 +35,16 @@ These rules have no exceptions.
 
 ### Locate the task
 
-Search all `.forge/plan-*.md` files for the given task ID (e.g. `T003`).
+Search all `.forge/features/*/plan.md` files for the given task ID (e.g. `T003`).
 
 If not found:
 ```
 [FORGE:CODE] Task not found
 
-{task-id} was not found in any .forge/plan-*.md file.
+{task-id} was not found in any .forge/features/*/plan.md file.
 
 Available plan files:
-- .forge/plan-{slug}.md  (tasks T00X – T00Y)
+- .forge/features/{slug}/plan.md  (tasks T00X – T00Y)
 - ...
 
 Please check the task ID and try again.
@@ -55,21 +56,22 @@ acceptance criteria.
 ### Check dependencies
 
 If the task lists dependencies, verify each dependency's summary file exists
-at `.forge/code-{dep-id}-summary.md`.
+at `.forge/features/{feature-slug}/tasks/T{dep-id}-summary.md`.
 
 ```
 [FORGE:CODE] Dependency not met
 
 {task-id} depends on {dep-id}, which has not been completed.
-(.forge/code-{dep-id}-summary.md not found)
+(.forge/features/{feature-slug}/tasks/{dep-id}-summary.md not found)
 
 Complete {dep-id} first, then retry.
 ```
 
 ### Load conventions
 
-Read `.forge/conventions.md` in full. Every rule is binding. If it does not
-exist, note the absence in the summary and proceed — but flag it.
+Read `.forge/context/conventions.md` and `.forge/context/testing.md` in full.
+Every rule is binding. If they do not exist, note the absence in the summary
+and proceed — but flag it.
 
 ---
 
@@ -101,8 +103,7 @@ Note the existing:
 Write or edit each file in the scope list. Every decision must trace to
 either the task specification or the existing code patterns — not preference.
 
-**Naming:** Match conventions.md. If conventions.md is silent, match adjacent
-similar code.
+**Naming:** Match `context/conventions.md`. If silent, match adjacent similar code.
 
 **Patterns:** Replicate patterns from adjacent code. Never introduce a new
 pattern without flagging it first (New Pattern Protocol below).
@@ -121,8 +122,8 @@ than claiming they pass.
 
 ### Step 5 — Write the summary
 
-Write `.forge/code-{task-id}-summary.md`. This file is required — downstream
-tasks use it to verify dependency completion.
+Write `.forge/features/{feature-slug}/tasks/{task-id}-summary.md`. This file
+is required — downstream tasks use it to verify dependency completion.
 
 ---
 
@@ -179,7 +180,7 @@ Wait for confirmation before writing the code.
 
 **Files modified/created:** as specified in the task scope.
 
-**Summary file:** `.forge/code-{task-id}-summary.md`
+**Summary file:** `.forge/features/{feature-slug}/tasks/{task-id}-summary.md`
 
 ```markdown
 # Code Summary: {task-id}

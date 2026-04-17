@@ -1,6 +1,6 @@
 # tasking.md Output Template
 
-This file defines the exact structure for `.forge/plan-{feature-slug}.md`.
+This file defines the exact structure for `.forge/features/{feature-slug}/plan.md`.
 Referenced by `/forge:tasking` Step 7.
 
 ---
@@ -8,8 +8,9 @@ Referenced by `/forge:tasking` Step 7.
 ```markdown
 # Plan: {feature-slug}
 
-> 基于：design-{feature-slug}.md
+> 基于：features/{feature-slug}/design.md
 > 生成时间：YYYY-MM-DD
+> 文件路径：.forge/features/{feature-slug}/plan.md
 
 ---
 

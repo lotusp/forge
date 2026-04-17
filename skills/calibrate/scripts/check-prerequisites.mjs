@@ -3,9 +3,9 @@
  * check-prerequisites.mjs
  *
  * Checks whether the prerequisites for /forge:calibrate are met:
- *   1. .forge/onboard.md exists (required)
- *   2. .forge/calibrate-scan.md exists (optional — enables resume)
- *   3. .forge/conventions.md exists (warns that re-calibration will overwrite)
+ *   1. .forge/context/onboard.md exists (required)
+ *   2. .forge/_session/calibrate-scan.md exists (optional — enables resume)
+ *   3. .forge/context/conventions.md exists (warns that re-calibration will overwrite)
  *
  * Usage (from the target project root):
  *   node ${CLAUDE_SKILL_DIR}/scripts/check-prerequisites.mjs
@@ -20,9 +20,9 @@ import { join } from 'path';
 
 const forgeDir = '.forge';
 
-const onboardPath     = join(forgeDir, 'onboard.md');
-const scanStatePath   = join(forgeDir, 'calibrate-scan.md');
-const conventionsPath = join(forgeDir, 'conventions.md');
+const onboardPath     = join(forgeDir, 'context', 'onboard.md');
+const scanStatePath   = join(forgeDir, '_session', 'calibrate-scan.md');
+const conventionsPath = join(forgeDir, 'context', 'conventions.md');
 
 const onboardExists     = existsSync(onboardPath);
 const scanStateExists   = existsSync(scanStatePath);
