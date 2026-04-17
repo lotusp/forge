@@ -9,6 +9,11 @@ allowed-tools: "Read Glob Grep"
 context: fork
 model: sonnet
 effort: high
+## Runtime snapshot
+- Conventions available: !`test -f .forge/conventions.md && echo "YES — primary benchmark loaded" || echo "NO — reviewing for internal consistency only"`
+- Code summaries in .forge: !`ls .forge/code-T*-summary.md 2>/dev/null | wc -l | tr -d ' '` summaries found
+- Design artifacts: !`ls .forge/design-*.md 2>/dev/null | sed 's|.forge/design-||;s|.md||' | tr '\n' ' ' || echo "(none)"`
+
 ---
 
 ## IRON RULES
