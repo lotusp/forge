@@ -252,7 +252,7 @@ Common examples for legacy Java/Spring codebases:
 
 ### Step 8 — Write the conventions artifact
 
-See [output-template.md](output-template.md) for the complete template.
+See [output-template.md](reference/output-template.md) for the complete template.
 
 Write `.forge/conventions.md` following that template exactly.
 

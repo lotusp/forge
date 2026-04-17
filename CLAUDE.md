@@ -14,24 +14,45 @@ The core paradigm: AI is the developer, humans provide intent and context. Forge
 forge/
 ├── .claude-plugin/plugin.json
 ├── skills/
-│   ├── onboard/SKILL.md
-│   ├── calibrate/SKILL.md
-│   ├── clarify/SKILL.md
-│   ├── design/SKILL.md
-│   ├── plan/SKILL.md
+│   ├── onboard/
+│   │   ├── SKILL.md
+│   │   └── reference/output-template.md
+│   ├── calibrate/
+│   │   ├── SKILL.md
+│   │   ├── reference/
+│   │   │   ├── output-template.md
+│   │   │   ├── dimensions.md
+│   │   │   └── conflict-examples.md
+│   │   └── scripts/
+│   │       ├── check-prerequisites.mjs
+│   │       ├── save-scan-state.mjs
+│   │       └── validate-output.mjs
+│   ├── clarify/
+│   │   ├── SKILL.md
+│   │   └── reference/output-template.md
+│   ├── design/
+│   │   ├── SKILL.md
+│   │   └── reference/output-template.md
+│   ├── tasking/           ← formerly "plan" (renamed to avoid native /plan conflict)
+│   │   ├── SKILL.md
+│   │   └── reference/output-template.md
 │   ├── code/SKILL.md
-│   ├── review/SKILL.md
+│   ├── inspect/           ← formerly "review" (renamed to avoid native /review conflict)
+│   │   ├── SKILL.md
+│   │   └── reference/output-template.md
 │   └── test/SKILL.md
 └── README.md
 ```
 
-This structure does not exist yet — `docs/forge-plugin-design.md` is the original vision; `docs/detailed-design.md` is the implementation specification.
-
 ## Skill Flow
 
 ```
-onboard → calibrate → clarify → design → plan → code → review → test
+onboard → calibrate → clarify → design → tasking → code → inspect → test
 ```
+
+> Note: `tasking` was formerly `plan` and `inspect` was formerly `review`.
+> Both were renamed because Claude Code has native `/plan` and `/review` commands
+> that conflicted even under the `/forge:` namespace prefix.
 
 Each skill reads from and writes to `.forge/` artifacts in the **target project** (not this repo). Skills can run independently when context already exists.
 
@@ -50,7 +71,7 @@ When Forge is used in a target project, all persistent context lives in `.forge/
 
 ## Core Design Principles to Uphold When Implementing Skills
 
-1. **Conventions as single source of truth** — `calibrate` produces `.forge/conventions.md`. Every `code`, `review`, and `test` skill must read it before acting.
+1. **Conventions as single source of truth** — `calibrate` produces `.forge/conventions.md`. Every `code`, `inspect`, and `test` skill must read it before acting.
 2. **Pause before guessing** — when context is insufficient, surface a structured list of questions rather than assuming. Never silently assume.
 3. **Scope discipline** — `code` does not redesign; `design` does not implement. If a task requires broader scope than stated, stop and surface it.
 4. **Legacy-first** — work with existing inconsistencies; nudge new code toward better patterns without breaking existing code.

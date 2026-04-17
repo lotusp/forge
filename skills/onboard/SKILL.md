@@ -174,7 +174,7 @@ Write `.forge/onboard.md` following the output template below.
 
 **File:** `.forge/onboard.md`
 
-See [output-template.md](output-template.md) for the complete artifact template.
+See [output-template.md](reference/output-template.md) for the complete artifact template.
 
 ---
 

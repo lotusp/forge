@@ -166,7 +166,7 @@ Write `.forge/design-{feature-slug}.md` following the output template.
 
 **File:** `.forge/design-{feature-slug}.md`
 
-See [output-template.md](output-template.md) for the complete artifact template.
+See [output-template.md](reference/output-template.md) for the complete artifact template.
 
 ---
 

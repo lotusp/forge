@@ -142,7 +142,7 @@ Once all batches are resolved (or the user chooses to stop), write
 
 **File:** `.forge/clarify-{feature-slug}.md`
 
-See [output-template.md](output-template.md) for the complete artifact template.
+See [output-template.md](reference/output-template.md) for the complete artifact template.
 
 ---
 
