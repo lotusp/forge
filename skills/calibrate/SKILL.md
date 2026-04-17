@@ -7,9 +7,30 @@ description: |
   single source of truth referenced by /forge:code, /forge:review, and
   /forge:test.
 argument-hint: ""
-allowed-tools: "Read Glob Grep"
+allowed-tools: "Read Glob Grep Bash"
 model: sonnet
 effort: max
+---
+
+## Runtime snapshot
+- Existing .forge artifacts: !`ls .forge/ 2>/dev/null || echo "(none)"`
+- Prior scan state: !`test -f .forge/calibrate-scan.md && echo "FOUND — prior scan exists, can resume from adjudication" || echo "(no prior scan — full scan required)"`
+- Build files present: !`ls build.gradle pom.xml package.json go.mod Cargo.toml 2>/dev/null | tr '\n' ' ' || echo "(none found)"`
+- Source file count: !`find . \( -name "*.java" -o -name "*.ts" -o -name "*.py" -o -name "*.go" \) 2>/dev/null | grep -v node_modules | grep -v ".git" | grep -v build | wc -l | tr -d ' '` files
+
+---
+
+## IRON RULES
+
+These rules have no exceptions. Do not rationalise around them.
+
+- **Never write `conventions.md` before all contradictions are adjudicated.** Partial conventions are worse than no conventions.
+- **Never skip the build file read.** Declared dependencies can reveal active libraries (QueryDSL, MapStruct, event bus starters) that are invisible in source samples.
+- **URL versioning is always a mandatory contradiction check** — mixed `/api/` and `/api/v2/` paths must be presented as a conflict, not silently averaged.
+- **Every rule in `conventions.md` must cite a file:line** where it was observed. Invented rules are not conventions.
+- **Every adjudicated decision must be recorded in the Decision Log.** Do not skip items that "seem obvious" — they aren't obvious to future contributors.
+- **If a prior scan state exists (`.forge/calibrate-scan.md`), load it instead of re-scanning.** Never discard completed work.
+
 ---
 
 ## Prerequisites
@@ -38,11 +59,45 @@ Options:
 Which do you prefer?
 ```
 
+If `.forge/calibrate-scan.md` exists (prior scan was saved), show:
+```
+[FORGE:CALIBRATE] Prior scan found
+
+A codebase scan was saved on {date}. Resuming from adjudication step
+saves significant time.
+
+Options:
+1. Resume from adjudication (use saved scan — recommended)
+2. Re-scan from scratch (discards saved scan)
+
+Which do you prefer?
+```
+
 ---
 
 ## Process
 
-### Step 1 — Sample the codebase
+### Step 1 — Read the build file (mandatory)
+
+Before sampling any source files, read the project's primary build file in
+full:
+
+- **Java/Kotlin:** `build.gradle` / `build.gradle.kts` / `pom.xml`
+- **Node.js:** `package.json`
+- **Go:** `go.mod`
+- **Rust:** `Cargo.toml`
+- **Python:** `pyproject.toml` or `requirements.txt`
+
+From the build file, extract:
+- All declared dependencies (not just what appears in sampled source files)
+- Custom plugins or internal starters (these often encode patterns invisible in code)
+- Build profiles or environment-specific configurations
+
+Record: `dependencies-from-build-file: [list]`. These become evidence for
+the Logging, Messaging, and Testing dimensions even if the sampled code does
+not visibly use them.
+
+### Step 2 — Sample the codebase
 
 Using the module map from `onboard.md`, select representative files to read.
 
@@ -67,25 +122,67 @@ From each file, extract evidence for these **convention dimensions**:
 | Testing | Test file location, naming convention, assertion style, mock strategy, factory patterns |
 | API design | URL structure, HTTP verb usage, response envelope, status codes, pagination |
 | Database access | ORM vs raw queries, repository pattern, transaction boundaries, N+1 handling |
-| Code style | Async patterns (async/await vs callbacks vs promises), null handling, type usage |
+| Messaging & events | Internal event bus vs external MQ, which scenarios use which, consumer structure |
 
 For each dimension, record:
 - The pattern(s) observed (with file:line references)
 - Whether a single pattern dominates or multiple patterns coexist
 
-### Step 2 — Identify contradictions
+### Step 3 — Save the scan state (mandatory checkpoint)
+
+After completing Steps 1–2 and before any user interaction, write
+`.forge/calibrate-scan.md`:
+
+```markdown
+# Calibrate Scan State
+
+> Saved: YYYY-MM-DD
+> Status: scan-complete / adjudication-in-progress / complete
+
+## Build File Findings
+{dependencies and relevant build config}
+
+## Observed Patterns (per dimension)
+{all findings with file:line citations}
+
+## Contradictions Identified
+{list of all conflicts, with pattern A / pattern B for each}
+
+## Mandatory Checks Status
+- URL versioning: {checked / not applicable — reason}
+- Transaction boundaries: {checked / not applicable — reason}
+- Test isolation strategy: {checked / not applicable — reason}
+```
+
+This checkpoint means a session interruption during adjudication does not
+lose the scan work.
+
+### Step 4 — Identify contradictions
 
 A contradiction exists when two or more distinct patterns serve the same
 purpose in different parts of the codebase.
 
-Examples:
-- Some modules throw `AppError`, others return `{ success: false }`
-- Some files use `snake_case` for DB columns, others use `camelCase`
-- Some tests mock at the repository level, others mock at the service level
+**Mandatory contradiction checks** — always check these, regardless of
+whether an obvious conflict exists. Record the finding either way:
 
-List all contradictions found, noting which modules use which approach.
+1. **URL versioning** — Scan all route/controller annotations. Are versioned
+   paths (`/api/v2/`, `/v1/`) mixed with unversioned paths (`/api/`)? Even
+   if one is dominant, the minority must be addressed.
 
-### Step 3 — Adjudicate contradictions (interactive)
+2. **Transaction boundaries** — Are `@Transactional` / `BEGIN TRANSACTION`
+   annotations on Service methods only, or also on Controllers or Repositories?
+
+3. **Test isolation strategy** — Is rollback-after-test the standard, or
+   manual truncate? Or are both used? When is each used?
+
+Additional contradictions to detect:
+- Exception/error types thrown (typed exceptions vs generic vs error objects)
+- Logger declaration style (class-level annotation vs manual instantiation)
+- Mock strategy in tests (mock at repository vs service boundary)
+- HTTP response envelope (wrapped vs unwrapped)
+- DB column naming (camelCase vs snake_case in ORM mapping)
+
+### Step 5 — Adjudicate contradictions (interactive, one at a time)
 
 For each contradiction, present a structured question and wait for the user's
 answer before moving to the next.
@@ -94,207 +191,97 @@ Format:
 ```
 [FORGE:CALIBRATE] Convention conflict {N} of {M}
 
-Dimension: {Error handling}
+Dimension: {e.g. URL versioning}
 
 Pattern A — used in {Module X}, {Module Y}:
-  throw new AppError(ErrorCode.NOT_FOUND, "User not found")
-  (src/services/user.ts:34, src/services/order.ts:91)
+  {code example or description}
+  ({file:line}, {file:line})
 
 Pattern B — used in {Module Z}:
-  return { success: false, error: "User not found", code: "NOT_FOUND" }
-  (src/services/payment.ts:17)
+  {code example or description}
+  ({file:line})
 
 Recommendation: Pattern A
-Reason: Centralises error handling in a global middleware; callers cannot
-forget to check return values; aligns with Express error-handling conventions.
+Reason: {clear reason why Pattern A is better for new code}
 
 Options:
   1. Adopt Pattern A for all new code (recommended)
   2. Adopt Pattern B for all new code
-  3. Allow both — context-dependent
+  3. Allow both — context-dependent (specify when each applies)
   4. Neither — I'll describe what I want instead
 
 Your choice:
 ```
 
-Record the decision and the rationale. After all contradictions are resolved,
-proceed to Step 4.
+Record each decision in the scan state file under `## Adjudication Log`.
 
-### Step 4 — Confirm non-contradicted patterns
+### Step 6 — Confirm non-contradicted patterns
 
 For each dimension where a single pattern dominates without contradiction,
-briefly state the observed pattern and ask for confirmation or correction:
+briefly confirm with the user before ratifying:
 
 ```
 [FORGE:CALIBRATE] Confirming established patterns
 
-The following patterns were observed consistently. Please correct any that
-are wrong or should not apply to new code.
+The following patterns were observed consistently. Correct any that are
+wrong or should not apply to new code.
 
-Logging: Winston with structured JSON. Always include { service, requestId,
-userId? }. Use logger.error() for caught exceptions, logger.warn() for
-expected failures, logger.info() for significant state changes.
+{Dimension}: {pattern description} ({file:line example})
   → Correct? (yes / correct it)
 
-Naming — files: kebab-case (user-service.ts, auth-middleware.ts)
+{Dimension}: {pattern description}
   → Correct? (yes / correct it)
-
-...
 ```
 
-Accept corrections, then proceed.
+Accept corrections, record them.
 
-### Step 5 — Identify anti-patterns
+### Step 7 — Identify anti-patterns
 
-Review the sampled code for patterns that exist but should be avoided in new
-code. Common examples:
-- Direct DB queries bypassing the repository layer
-- Business logic inside route handlers
-- Catching errors and logging them without re-throwing or responding
-- Inconsistent use of `any` type in TypeScript
-- Synchronous file I/O in an async codebase
+Review the sampled code for patterns that exist but should not appear in
+new code. For each anti-pattern:
+- Describe it concisely
+- Cite where it was found (file:line)
+- Explain why new code should avoid it
 
-For each anti-pattern found, describe it and explain why new code should
-avoid it.
+Common examples for legacy Java/Spring codebases:
+- Repositories injected directly into Controllers
+- Business logic in event Listeners
+- Dual logger declarations (`@Slf4j` + manual `LoggerFactory`)
+- Commented-out security annotations without explanation
+- `@Transactional` on Controller methods
 
-### Step 6 — Write the conventions artifact
+### Step 8 — Write the conventions artifact
 
-Write `.forge/conventions.md` following the output template.
+See [output-template.md](output-template.md) for the complete template.
 
----
-
-## Output
-
-**File:** `.forge/conventions.md`
-
-```markdown
-# Project Conventions
-
-> 生成时间：YYYY-MM-DD
-> 生成方式：/forge:calibrate — 基于代码扫描 + 人工裁决
-> 更新方式：重新运行 /forge:calibrate
-
-**Important:** This file is the authoritative source of truth for all new
-development. /forge:code, /forge:review, and /forge:test all reference this
-document. If conventions change, regenerate this file.
+Write `.forge/conventions.md` following that template exactly.
 
 ---
 
-## Architecture & Layering
+## Self-check before writing
 
-{Rules about which layer calls which, where business logic lives, what each
-layer is responsible for. Include: what is NOT allowed (e.g. "routes must not
-contain business logic").}
+Before writing `.forge/conventions.md`, verify:
 
----
+- [ ] Build file was read and declared dependencies are reflected in the conventions
+- [ ] URL versioning pattern was explicitly adjudicated (not silently ignored)
+- [ ] Transaction boundaries were explicitly adjudicated
+- [ ] Test isolation strategy was explicitly adjudicated
+- [ ] Every rule cites at least one file:line source
+- [ ] Every adjudicated decision is in the Decision Log
+- [ ] Anti-patterns section cites specific files (not vague warnings)
+- [ ] Open Questions section captures any unresolved items
 
-## Naming Conventions
-
-### Files
-{Pattern with example: kebab-case — `user-service.ts`, `auth-middleware.ts`}
-
-### Classes
-{Pattern with example}
-
-### Functions & methods
-{Pattern with example}
-
-### Variables & constants
-{Pattern with example}
-
-### Database tables & columns
-{Pattern with example}
-
----
-
-## Logging
-
-- **Library:** {e.g. Winston, Pino, Zap}
-- **Format:** {structured JSON / plain text}
-- **Required fields:** {e.g. `service`, `requestId`, `userId` when available}
-- **Level semantics:**
-  - `error`: {when to use}
-  - `warn`: {when to use}
-  - `info`: {when to use}
-  - `debug`: {when to use}
-
----
-
-## Error Handling
-
-{Chosen pattern with a short code example. Include: where errors are caught,
-how they are converted to HTTP responses, how internal errors are distinguished
-from user-facing errors.}
-
----
-
-## Validation
-
-- **Location:** {e.g. route handler / middleware / service boundary}
-- **Library:** {e.g. Zod, Joi, class-validator}
-- **Error response format:** {example JSON}
-
----
-
-## Testing
-
-- **Test file location:** {e.g. co-located `*.test.ts` / `tests/` directory}
-- **Naming:** {e.g. `describe("UserService")` → `it("should return null when user not found")`}
-- **Mock strategy:** {e.g. mock at repository level using jest.mock(); never mock internal services}
-- **Test data:** {e.g. factory functions in `tests/factories/`}
-- **Coverage expectation:** {e.g. unit tests for all service methods; integration tests for all routes}
-
----
-
-## API Design
-
-- **URL structure:** {e.g. `/api/v1/{resource}/{id}`}
-- **HTTP verbs:** {how GET/POST/PUT/PATCH/DELETE are used}
-- **Response envelope:** {e.g. `{ data, meta }` for success / `{ error: { code, message } }` for failure}
-- **Pagination:** {e.g. cursor-based with `{ data, nextCursor, hasMore }`}
-- **Status codes:** {which codes are used for which situations}
-
----
-
-## Database Access
-
-- **Pattern:** {e.g. Repository pattern — all DB access through `*Repository` classes}
-- **ORM / query builder:** {e.g. Prisma, TypeORM, Knex, raw SQL}
-- **Transaction boundaries:** {e.g. transactions live in the service layer}
-- **Migration tool:** {e.g. Prisma Migrate, Flyway, golang-migrate}
-
----
-
-## What to Avoid
-
-{Anti-patterns found in the codebase that must not appear in new code.}
-
-- **{Anti-pattern name}:** {Description}. Found in {file} — do not replicate.
-- ...
-
----
-
-## Open Questions
-
-{Convention dimensions that could not be resolved during calibration.
-These require a follow-up decision before work in that area begins.}
-
-| Dimension | Question | Impact |
-|-----------|----------|--------|
-| {area} | {unresolved question} | {what it affects} |
-```
+If any checkbox is unchecked, address it before writing the file.
 
 ---
 
 ## Interaction Rules
 
-- **Never skip a contradiction** — every conflict in the codebase must be
-  resolved before writing the final artifact. Unresolved contradictions produce
-  inconsistent code that future reviews will flag.
-- **Present one contradiction at a time.** Do not dump all conflicts in one
-  message.
-- **Accept the user's choice without argument.** If they prefer a pattern you
-  did not recommend, record their choice with their stated reason.
+- **Never skip a contradiction** — every conflict must be resolved before
+  writing the final artifact.
+- **Present one contradiction at a time.** Do not dump all conflicts.
+- **Accept the user's choice without argument.** Record their choice and
+  stated reason faithfully.
 - After completing calibration, suggest the next step:
   - If there is a feature to work on: `/forge:clarify {feature}`
   - If starting fresh: `/forge:clarify` with a description of the first feature
@@ -304,7 +291,7 @@ These require a follow-up decision before work in that area begins.}
 ## Constraints
 
 - Do not modify any source files. This skill is strictly read-only.
-- Do not invent conventions. Every rule in the output must be traceable to
-  observed code or an explicit user decision made during this session.
+- Do not invent conventions. Every rule must be traceable to observed code
+  or an explicit user decision.
 - Do not carry over rules from previous calibration sessions unless the user
-  chooses "extend existing" at the start. A fresh calibration starts clean.
+  chooses "extend existing" at the start.

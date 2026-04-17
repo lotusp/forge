@@ -6,8 +6,22 @@ description: |
   or to review a specific file path.
 argument-hint: "<feature-slug or file-path>"
 allowed-tools: "Read Glob Grep"
+context: fork
 model: sonnet
 effort: high
+---
+
+## IRON RULES
+
+These rules have no exceptions.
+
+- **Every `must-fix` finding must cite a specific section and rule from `conventions.md`.** If you cannot cite a rule, it is not a `must-fix` — downgrade to `should-fix`.
+- **Confidence < 80% means the finding is dropped.** Never include uncertain findings. Precision over recall.
+- **Never penalise deviations confirmed by the user.** If the code summary's "Deviations from Plan" section documents an intentional deviation, do not flag it.
+- **Line numbers are required for every finding.** Vague findings ("this file has naming issues") are not acceptable.
+- **Spawn all forge-reviewer agents in parallel.** Never review files sequentially — it wastes time and context.
+- **`consider` findings are never blockers.** They must never use language like "problem" or "issue" — use "suggestion" or "opportunity" only.
+
 ---
 
 ## Prerequisites
@@ -38,7 +52,7 @@ Build the list of files to review. For a feature slug, union the "Changes
 Made" tables from all matching code summaries. For a file path, the list
 has one entry.
 
-### Step 2 — Spawn forge-reviewer agents (one per file)
+### Step 2 — Spawn forge-reviewer agents (one per file, all in parallel)
 
 For each file in the list, spawn a **forge-reviewer** agent. Each agent
 receives:
@@ -46,15 +60,16 @@ receives:
 - The full `conventions.md`
 - The relevant section of the design document (if available)
 - The task description from the matching plan entry (if available)
+- The "Deviations from Plan" section from the matching code summary (to
+  avoid penalising confirmed deviations)
 
-Agents run in parallel. Each returns a list of findings with:
+All agents run in parallel. Each returns a list of findings with:
 - Location (file + line number)
 - Severity: `must-fix` / `should-fix` / `consider`
 - Confidence score (0–100)
 - Description and suggested fix
 
-**Confidence filter:** Discard any finding with confidence < 80. This
-prevents noise from uncertain inferences.
+**Confidence filter:** Discard any finding with confidence < 80.
 
 ### Step 3 — Synthesise results
 
@@ -79,8 +94,7 @@ If `.forge/design-{feature-slug}.md` exists, check:
 
 ### Step 6 — Write the review artifact
 
-Write `.forge/review-{feature-slug}.md` (or `review-{filename}.md` for
-a single-file review) following the output template.
+Write `.forge/review-{feature-slug}.md` following the output template.
 
 ---
 
@@ -112,7 +126,7 @@ a single-file review) following the output template.
 #### [must-fix] {Short title}
 **位置：** Line N (or lines N–M)
 **问题：** {What is wrong}
-**依据：** conventions.md > {Section name} / design intent / general quality
+**依据：** conventions.md > {Section name} — "{relevant rule quoted}"
 **建议：** {Specific change to make}
 
 #### [should-fix] {Short title}
@@ -121,13 +135,13 @@ a single-file review) following the output template.
 **建议：** {Specific change}
 
 #### [consider] {Short title}
-**建议：** {Optional improvement, no obligation}
+**建议：** {Optional improvement suggestion — no obligation}
 
 ---
 
 ### `path/to/another-file.ts`
 
-_No findings._ ← use this when a file is clean
+_No findings above confidence threshold._
 
 ---
 
@@ -159,7 +173,7 @@ _No design artifact available._ ← use this if design doc was not found
 
 {Files changed that were not in the design or plan scope.}
 
-_None._ ← use this if no scope creep found
+_None._
 ```
 
 ---
@@ -179,9 +193,6 @@ _None._ ← use this if no scope creep found
 ## Constraints
 
 - Do not modify any source files. This skill is strictly read-only.
-- Only report findings with confidence ≥ 80. When in doubt, omit the
-  finding rather than report noise.
-- Do not penalise deliberate deviations that were confirmed by the user
-  during the code step (they will appear in the code summary's
-  "Deviations from Plan" section).
-- A `consider` finding must never block the workflow. It is advisory only.
+- Only report findings with confidence ≥ 80. When in doubt, omit.
+- Do not penalise deliberate deviations documented in code summaries.
+- A `consider` finding must never block the workflow.

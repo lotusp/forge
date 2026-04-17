@@ -2,13 +2,37 @@
 name: onboard
 description: |
   Generates a human-readable project map for anyone new to the codebase.
-  Use when starting work on an unfamiliar project, onboarding new team
-  members, or beginning a new Claude Code session on an existing codebase.
+  Use when starting work on an unfamiliar project, onboarding a new team
+  member, or beginning a new Claude Code session on an existing codebase.
   Run this before /forge:calibrate.
 argument-hint: ""
 allowed-tools: "Read Glob Grep Bash"
+context: fork
+agent: Explore
 model: sonnet
 effort: high
+---
+
+## Runtime snapshot
+- Root contents: !`ls -1 2>/dev/null`
+- Existing .forge artifacts: !`ls .forge/ 2>/dev/null || echo "(none)"`
+- Source file counts: !`echo "Java: $(find . -name '*.java' 2>/dev/null | grep -v '.git' | grep -v build | wc -l | tr -d ' ') | TS: $(find . -name '*.ts' 2>/dev/null | grep -v node_modules | grep -v '.git' | wc -l | tr -d ' ') | Go: $(find . -name '*.go' 2>/dev/null | grep -v '.git' | wc -l | tr -d ' ')"`
+- Controller/Handler count: !`find . \( -name '*Controller*' -o -name '*Handler*' -o -name '*Router*' \) -name '*.java' -o -name '*.ts' -o -name '*.go' 2>/dev/null | grep -v '.git' | grep -v build | grep -v test | wc -l | tr -d ' '` files
+- Listener/Consumer count: !`find . \( -name '*Listener*' -o -name '*Consumer*' -o -name '*Subscriber*' \) -name '*.java' -o -name '*.ts' -o -name '*.go' 2>/dev/null | grep -v '.git' | grep -v build | wc -l | tr -d ' '` files
+
+---
+
+## IRON RULES
+
+These rules have no exceptions.
+
+- **Never describe a module from its directory name alone.** Read at least one substantive source file per module before writing its description.
+- **Entry point counts are mandatory.** If a section lists listeners, controllers, or consumers, state the total count ("28 listeners total, 6 representative examples below") — do not silently list only a subset.
+- **Sub-systems must be listed separately.** If a sub-directory has its own complete adapter/service/repository layering (not just a few helper files), it is its own module entry — never fold it into its parent.
+- **URL versioning inconsistency must be noted explicitly.** If some routes use `/api/v2/` and others use `/api/`, state this in the Notes section rather than picking one and ignoring the other.
+- **Never copy-paste from README without verifying against code.** READMEs are often stale. Confirm claims against actual build files and source.
+- **Local development commands must come from actual config files** (Makefile, package.json scripts, build.gradle tasks) — not invented.
+
 ---
 
 ## Prerequisites
@@ -50,7 +74,7 @@ Scan the project root and common config locations for:
 | File | Information to extract |
 |------|----------------------|
 | `package.json` / `package-lock.json` | Language (Node.js), framework, scripts, main dependencies |
-| `pom.xml` / `build.gradle` | Language (Java/Kotlin), framework, dependencies |
+| `pom.xml` / `build.gradle` | Language (Java/Kotlin), framework, dependencies, exposed ports |
 | `go.mod` | Language (Go), module name, major dependencies |
 | `Cargo.toml` | Language (Rust), crate type, dependencies |
 | `pyproject.toml` / `setup.py` / `requirements.txt` | Language (Python), dependencies |
@@ -58,69 +82,91 @@ Scan the project root and common config locations for:
 | `docker-compose.yml` / `docker-compose.yaml` | Services, ports, infrastructure dependencies |
 | `.env.example` / `.env.sample` | Required environment variables |
 | `Dockerfile` | Runtime environment, exposed ports |
-| `kubernetes/` / `k8s/` / `helm/` | Deployment infrastructure |
-| `terraform/` / `infra/` | Cloud infrastructure |
-| `README.md` | Project description, setup instructions |
+| `README.md` | Project description, setup instructions (verify before using) |
 | `CLAUDE.md` | Project-specific AI guidance (high priority — read fully) |
 
 ### Step 3 — Identify entry points
 
-Scan for the places where the system starts receiving work:
+Scan for all places where the system receives work. For each type, **count
+the total** first, then select representative examples.
 
 **HTTP / REST APIs:**
-- Look for router definitions, Express/Fastify/Gin/Spring `@Controller` or
-  equivalent
+- Grep for `@Controller`, `@RestController`, `@RequestMapping`, `router.get`,
+  `app.post`, `func.*Handler`, or equivalent
+- Count total controller/handler files
 - Extract base URL patterns and main route groups
+- Note any URL versioning inconsistency (`/api/` vs `/api/v2/`)
 
-**GraphQL:**
-- Look for schema definitions and resolver registration
+**Message consumers / event listeners:**
+- Grep for `@EventListener`, `onApplicationEvent`, `@KafkaListener`,
+  `@RabbitListener`, `consumer.subscribe`, or equivalent
+- **Count the total number** — this is critical for understanding system complexity
+- List 5–8 representative examples
 
-**CLI:**
+**Background jobs / schedulers:**
+- Grep for `@Scheduled`, `cron.schedule`, `setInterval`, job definitions
+- List each with its schedule/trigger
+
+**CLI commands:**
 - Look for command definitions (`commander`, `cobra`, `click`, `argparse`)
 
-**Workers / consumers:**
-- Look for queue consumers, Kafka listeners, SQS handlers, cron schedulers
+**GraphQL / gRPC:**
+- Look for schema definitions and resolver/handler registration
 
-**Background jobs:**
-- Look for job definitions, schedulers, cron expressions
-
-**Events:**
-- Look for event emitters and listeners (internal event bus or external)
-
-For each entry point type found, note 3–5 representative examples with paths.
+For each entry point type found, state the total count and then list
+representative examples with file paths.
 
 ### Step 4 — Map modules and services
 
 For monorepos: list each package/service with its path and one-line purpose.
-For single applications: identify the main internal modules or layers (e.g.
-controllers / services / repositories, or domain / application / infrastructure).
 
-Read a small number of representative files from each module to verify the
-description is accurate.
+For single applications: identify the main internal modules or layers.
+
+**Critical: detect sub-systems.** A sub-system is a sub-directory that has
+its own complete layering (e.g. its own controllers, services, and
+repositories). Common in legacy monoliths. Each sub-system gets its own
+row in the module map — never fold it into the parent module.
+
+Read at least one representative file from each module or sub-system to
+verify the description is accurate before writing it.
 
 ### Step 5 — Extract local development commands
 
 Find and verify:
 - How to install dependencies
-- How to run the application locally
-- How to run tests (all tests, single test, single file)
+- How to run the application locally (note the port)
+- How to run tests (all tests, and a single test class/file)
 - How to build for production
 - How to run linting / formatting
+- Any prerequisite infrastructure setup (Docker commands, DB creation)
 
-Prefer commands from `Makefile`, `package.json` scripts, or README.
-If multiple options exist (e.g. `npm` and `make`), list the preferred one
-based on which appears in the project's own documentation.
+Source these from `Makefile`, `package.json` scripts, `build.gradle` tasks,
+or README. If a README command cannot be verified in a config file, flag it
+as "unverified."
 
 ### Step 6 — Identify key data flows
 
 Choose 2–3 of the most important or representative end-to-end flows.
 Describe each in 3–5 steps (not full call chains — those belong in clarify).
+Include at least one flow that crosses a significant system boundary
+(external API call, message queue, database write).
 
-Example: "User login: POST /auth/login → validate credentials → issue JWT → set cookie"
+### Step 7 — Self-check
 
-### Step 7 — Write the onboard artifact
+Before writing the artifact, verify:
 
-Write `.forge/onboard.md` following the output template.
+- [ ] Every module entry was verified by reading ≥1 source file
+- [ ] Entry point totals (not just examples) are stated for listeners/consumers
+- [ ] Sub-systems with their own layering are listed as separate modules
+- [ ] URL versioning inconsistency (if any) is noted
+- [ ] Local dev commands were sourced from actual config files
+- [ ] Notes section contains at least one non-obvious gotcha
+
+If any checkbox fails, address it before writing.
+
+### Step 8 — Write the onboard artifact
+
+Write `.forge/onboard.md` following the output template below.
 
 ---
 
@@ -148,69 +194,72 @@ this section.}
 
 | Layer | Technology |
 |-------|-----------|
-| Language | {e.g. TypeScript 5.x} |
-| Runtime | {e.g. Node.js 20 / JVM 21} |
-| Framework | {e.g. Express 4, Spring Boot 3} |
-| Database | {e.g. PostgreSQL 15, MongoDB 6} |
-| Cache | {e.g. Redis 7} |
-| Message queue | {e.g. RabbitMQ, Kafka, SQS} |
-| Infrastructure | {e.g. AWS ECS, Kubernetes, Railway} |
-| Key libraries | {notable domain-specific libraries} |
+| Language | {e.g. Java 8 / TypeScript 5} |
+| Runtime | {e.g. JVM 8 / Node.js 20} |
+| Framework | {e.g. Spring Boot 2.x / Express 4} |
+| Database | {e.g. MySQL 5.7, schema: xxx} |
+| Cache | {e.g. Redis 4} |
+| Messaging | {e.g. Azure Service Bus / Kafka} |
+| Service Discovery | {e.g. Nacos / Consul} |
+| Build | {e.g. Gradle 6.9 / npm} |
+| Key internal libraries | {custom starters, shared libs} |
 
 ---
 
 ## Module Map
 
-{For monorepos:}
-| Package / Service | Path | Responsibility |
-|-------------------|------|----------------|
-| `service-name` | `packages/service-name` | One sentence |
-
-{For single apps — list internal layers or major modules:}
 | Module | Path | Responsibility |
 |--------|------|----------------|
-| `ModuleName` | `src/module` | One sentence |
+| `ModuleName` | `src/module/` | One sentence |
+| `SubSystemName` ← sub-system | `src/subsystem/` | One sentence — note if has own full layering |
 
 ---
 
 ## Entry Points
 
 ### HTTP API
-Base URL pattern: `{e.g. /api/v1}`
+Base URL pattern: `{e.g. /api/ and /api/v2/ (mixed — see Notes)}`
+Total controllers: {N}
 Representative routes:
-- `POST /auth/login` — `src/routes/auth.ts`
-- `GET /users/:id` — `src/routes/users.ts`
+- `{METHOD} {path}` — `path/to/Controller.java:line`
+- ...
 
-### CLI
-- `{command}` — {what it does} (`src/cli/...`)
+### Event Listeners / Message Consumers
+Total: {N} listeners/consumers
+Representative examples:
+- `ListenerName` — triggers on {event} (`path/to/Listener.java`)
+- ...
 
-### Background Jobs
-- `{job name}` — {schedule / trigger} (`src/jobs/...`)
-
-### Event Consumers
-- `{topic / queue}` — {what it handles} (`src/consumers/...`)
+### Background Jobs ← omit section if none
+- `{job name}` — {schedule / trigger} (`path/to/job`)
 
 ---
 
 ## Local Development
 
 ```bash
-# Install dependencies
+# Prerequisites
+{docker run commands or brew install, etc.}
+
+# Copy config templates (if needed)
+{cp commands}
+
+# Create database (if needed)
+{sql or command}
+
+# Build
 {command}
 
-# Run locally
+# Run locally (port: {N})
+{command}
+
+# Run with migrations
 {command}
 
 # Run all tests
 {command}
 
-# Run a single test file
-{command}
-
-# Build
-{command}
-
-# Lint / format
+# Run a single test class / file
 {command}
 ```
 
@@ -218,27 +267,28 @@ Representative routes:
 
 ## Key Data Flows
 
-1. **{Flow name}:** {step 1} → {step 2} → {step 3}
+1. **{Flow name}:** {entry point} → {service} → {persistence/external} → {response/event}
 2. **{Flow name}:** {step 1} → {step 2} → {step 3}
+3. **{Flow name}:** {step 1} → {step 2} → {step 3}
 
 ---
 
 ## Notes
 
-{Anything unusual, non-obvious, or important that a new team member should
-know: deprecated systems still in use, known tech debt hotspots, gotchas,
-external dependencies that need credentials to test, etc.}
+{Non-obvious facts a new team member must know:}
+- {Gotcha 1}
+- {URL versioning note if mixed}
+- {Cert or credential setup required locally}
+- {Known tech debt hotspots}
+- {Port numbers, artifact registry access, etc.}
 ```
 
 ---
 
 ## Interaction Rules
 
-- If the project README contains a clear description, use it as a starting
-  point for "What This Is" rather than inferring from scratch.
-- If CLAUDE.md exists, read it fully — it may contain information that should
-  be reflected in the Notes section or that corrects what you would otherwise
-  infer.
+- If CLAUDE.md exists, read it fully — it may contain corrections to what
+  you would otherwise infer.
 - If a section has no data (e.g. no CLI entry points), omit that section
   rather than writing "None."
 - After writing the artifact, summarise what was found in 2–3 sentences and
@@ -250,7 +300,6 @@ external dependencies that need credentials to test, etc.}
 
 - Do not modify any source files. This skill is strictly read-only.
 - Do not guess at project purpose from directory names alone — read at least
-  one substantive file (README, main entry point, or core domain file) before
-  describing what the project does.
+  one substantive file before describing what a module does.
 - Do not list every file or every route — this is a map, not an inventory.
   Aim for the 20% of information that gives 80% of orientation.

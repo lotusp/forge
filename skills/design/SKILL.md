@@ -6,9 +6,28 @@ description: |
   has produced a clarify artifact, or when the user provides sufficient context
   directly.
 argument-hint: "<feature-slug>"
-allowed-tools: "Read Glob Grep"
+allowed-tools: "Read Glob Grep Bash"
 model: sonnet
 effort: high
+---
+
+## Runtime snapshot
+- Existing .forge artifacts: !`ls .forge/ 2>/dev/null || echo "(none)"`
+- Conventions available: !`test -f .forge/conventions.md && echo "YES — will enforce" || echo "NO — design will be unconstrained"`
+
+---
+
+## IRON RULES
+
+These rules have no exceptions.
+
+- **Never finalise a design with unresolved Open Decisions.** If the user explicitly asks to defer a decision, mark it "deferred with user acknowledgement" and flag the carrying task as elevated risk.
+- **Always present approach options before writing details** (for non-trivial features). Never silently choose an approach without surfacing the trade-off.
+- **Design stays at "what and why" level.** No specific variable names, no line-by-line algorithm internals — those belong in `/forge:code`.
+- **Every component must specify which conventions layer it belongs to.** A new class without a layer assignment violates the architecture rules.
+- **Any deviation from conventions.md must be explicitly flagged**, with the reason stated. Never silently violate a convention.
+- **Open Decisions block writing the artifact.** Only deferred-with-acknowledgement items are allowed to remain; all blocking questions must be answered.
+
 ---
 
 ## Prerequisites
@@ -30,16 +49,15 @@ Options:
 Which do you prefer?
 ```
 
-If the user chooses to proceed anyway, ask for a brief description of:
+If the user chooses to proceed anyway, ask for:
 - What needs to be built or changed
 - The affected parts of the codebase (if known)
 - Any known constraints
 
 **2. Conventions** — try to read `.forge/conventions.md`.
 
-If it does not exist, note this and proceed. Design decisions will be made
-without convention constraints, which is acceptable for new projects or
-early-stage work. Flag this clearly in the output.
+If it does not exist, note this and proceed. Flag clearly in the output
+that the design was made without convention constraints.
 
 ---
 
@@ -47,48 +65,41 @@ early-stage work. Flag this clearly in the output.
 
 ### Step 1 — Understand the requirement
 
-Read `.forge/clarify-{feature-slug}.md` in full (or use the context provided
-by the user). Identify:
-
+Read `.forge/clarify-{feature-slug}.md` in full (or the user's context).
+Identify:
 - What capability is being added or changed
 - The affected components and data flows
 - Gaps that still exist (things not yet implemented)
-- Any constraints or non-goals stated in the clarify artifact
+- Open Questions from the clarify artifact — if any are unresolved and
+  blocking, ask the user to resolve them before proceeding
 
 ### Step 2 — Understand the conventions
 
-Read `.forge/conventions.md`. Extract the constraints relevant to this feature:
-- Architectural layering rules (which layer owns what)
-- Naming conventions (files, classes, functions, DB tables)
+Read `.forge/conventions.md`. Extract constraints relevant to this feature:
+- Which layer owns the new logic
+- Naming rules for new files, classes, functions, DB tables
 - Error handling approach
 - Testing requirements
 - Any "What to Avoid" entries that apply here
 
-If conventions.md does not exist, skip this step.
-
-### Step 3 — Explore technical approaches (use forge-architect agents)
+### Step 3 — Explore technical approaches (forge-architect agents)
 
 For features with meaningful architectural choices, spawn **2–3 forge-architect
-agents in parallel**, each tasked with exploring a different direction:
+agents in parallel**, each tasked with a different direction:
 
 - Agent 1: the most straightforward extension of existing patterns
 - Agent 2: a cleaner approach that may require more upfront work
-- Agent 3 (optional): an alternative if there is a genuinely different paradigm
+- Agent 3 (optional): a genuinely alternative paradigm
 
-Each agent receives:
-- The clarify artifact (or the user's description)
-- The relevant sections of conventions.md
-- Its assigned direction to explore
-
-Collect the agents' outputs and synthesize them into a comparison.
+Each agent receives: the clarify artifact, relevant sections of
+conventions.md, and its assigned direction.
 
 For small, clearly-scoped features with no real architectural choice, skip
-the multi-agent exploration and proceed directly to Step 4.
+multi-agent exploration and proceed directly to Step 4.
 
-### Step 4 — Select and define the approach
+### Step 4 — Present options and confirm approach
 
-Present the options and your recommendation to the user if multiple approaches
-were explored:
+Present options and recommendation to the user:
 
 ```
 [FORGE:DESIGN] Approach options for {feature-slug}
@@ -106,36 +117,27 @@ Recommended: Option A, because {reason}.
 Confirm approach, or choose a different one?
 ```
 
-Once the approach is confirmed, define it in full detail:
-- Exactly which files will be created, modified, or deleted
+Once confirmed, define it in full detail:
+- Exact files to create, modify, or delete
 - What each change entails
 - API contract changes (endpoints, request/response shapes)
-- Data model changes (new tables, fields, indexes, migrations needed)
+- Data model changes (tables, fields, indexes, migrations)
+- The layer each new component belongs to (per conventions.md)
 
 ### Step 5 — Impact analysis
 
-Identify everything that could break or require updating as a result of
-this change:
-- Other features or modules that depend on the affected code
+Identify everything that could break or require updating:
+- Other modules depending on the affected code
 - Existing tests that will need updating
-- API consumers that may be affected by contract changes
+- API consumers affected by contract changes
 - Configuration or environment variable changes required
 
-Assign a risk level to each impact area: **Low / Medium / High**.
+Assign a risk level: **Low / Medium / High**.
 
 ### Step 6 — Surface open decisions
 
-Before writing the design document, identify any decisions that require
-human input. These are **blocking** — the design must not proceed past this
-point until they are resolved.
-
-Examples of open decisions:
-- A security-sensitive choice (auth strategy, data retention)
-- A choice that affects other teams or systems
-- A trade-off where you genuinely cannot recommend one option over another
-- A business rule not derivable from the codebase
-
-Present them as a numbered list and wait for answers:
+Identify decisions requiring human input before the design is finalised.
+These are blocking — do not write the artifact until they are resolved.
 
 ```
 [FORGE:DESIGN] Decisions needed before finalising design ({N} items)
@@ -147,16 +149,16 @@ Present them as a numbered list and wait for answers:
 2. {Question}
    ...
 
-Please answer each item. I will incorporate your answers into the design.
+Please answer each item.
 ```
 
-Record all answers in the "Key Decisions" section of the output.
-
-If there are no open decisions, proceed directly to Step 7.
+Record all answers in the "Key Decisions" section. If the user explicitly
+defers an item, mark it "deferred" and add it to Open Decisions with a
+risk note for the plan.
 
 ### Step 7 — Write the design artifact
 
-Write `.forge/design-{feature-slug}.md` following the output template below.
+Write `.forge/design-{feature-slug}.md` following the output template.
 
 ---
 
@@ -183,7 +185,7 @@ codebase and requirements.
 
 ## Approach Options
 
-Only include this section if multiple approaches were explored.
+Only include if multiple approaches were explored.
 
 | Option | Description | Pros | Cons | Verdict |
 |--------|-------------|------|------|---------|
@@ -196,9 +198,9 @@ Only include this section if multiple approaches were explored.
 
 ### New Components
 
-| Path | Type | Responsibility |
-|------|------|----------------|
-| `path/to/new-file` | class / function / module / config | What it does |
+| Path | Layer | Type | Responsibility |
+|------|-------|------|----------------|
+| `path/to/new-file` | service / repository / controller / ... | class / function / config | What it does |
 
 ### Modified Components
 
@@ -216,8 +218,7 @@ Only include this section if multiple approaches were explored.
 
 ## API Changes
 
-Describe any new, modified, or removed API endpoints or function signatures.
-Include request/response shapes where relevant.
+Describe new, modified, or removed API endpoints or function signatures.
 
 _None_ if no API changes.
 
@@ -242,9 +243,6 @@ _None_ if no data model changes.
 
 ## Key Decisions
 
-All decisions made during this design session, including those resolved
-through user input.
-
 | Decision | Options Considered | Chosen | Rationale |
 |----------|--------------------|--------|-----------|
 | ... | A / B | A | Because ... |
@@ -253,48 +251,45 @@ through user input.
 
 ## Constraints & Trade-offs
 
-What was ruled out and why. This section helps future readers understand
-why the design is what it is, not just what it is.
+What was ruled out and why. Helps future readers understand the design.
+
+---
+
+## Convention Deviations
+
+Any intentional deviation from conventions.md. If empty, write _None_.
+
+| Convention | Deviation | Reason |
+|------------|-----------|--------|
 
 ---
 
 ## Open Decisions
 
-Decisions that **must be resolved before planning can begin**.
-
-Leave this section empty (write _None_) if all decisions are resolved.
+Must be resolved before planning can begin. Write _None_ if all resolved.
 
 | # | Question | Context | Status |
 |---|----------|---------|--------|
-| 1 | ... | ... | ⏳ Pending / ✅ Resolved: {answer} |
+| 1 | ... | ... | ⏳ Deferred (user acknowledged) — risk: {level} |
 ```
 
 ---
 
 ## Interaction Rules
 
-- **Approach selection is always confirmed with the user** before proceeding
-  to write component details. Never assume the first approach is correct.
-- **Open Decisions block the process.** Do not write the final design artifact
-  until all blocking questions are answered.
-- If the clarify artifact contains a "Gaps" section with unresolved items,
-  treat each gap as a potential open decision — either design a solution for
-  it or flag it explicitly.
-- Keep the design at the **what and why** level. Implementation details
-  (specific variable names, algorithm internals) belong in the code step.
-- If the user asks to proceed without resolving an open decision, record the
-  decision as "deferred" with the user's acknowledgement, and add a note in
-  the plan that the task carrying the deferred decision carries elevated risk.
+- **Approach selection is always confirmed** before writing component details.
+- **Open Decisions block the artifact.** Only deferred-with-acknowledgement
+  items are permitted to remain unresolved.
+- Keep the design at the **what and why** level.
+- If the clarify artifact has unresolved Open Questions, treat each as a
+  potential blocking decision.
 
 ---
 
 ## Constraints
 
-- Do not modify any source files. This skill is read-only except for writing
-  the design artifact.
-- Do not include implementation details that pre-empt the `code` skill's
-  decisions (e.g. exact variable names, line-by-line logic).
-- Do not silently choose between equally viable options — always surface
-  the trade-off to the user.
-- If conventions.md exists, all component and naming choices must be
-  consistent with it. Flag any intentional deviation explicitly.
+- Do not modify any source files.
+- Do not include implementation code (pseudocode and method signatures only).
+- Do not silently choose between viable options — always surface trade-offs.
+- If conventions.md exists, all choices must be consistent with it or
+  explicitly noted as deviations.

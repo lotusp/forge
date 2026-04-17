@@ -11,13 +11,32 @@ model: sonnet
 effort: high
 ---
 
+## Runtime snapshot
+- Conventions available: !`test -f .forge/conventions.md && echo "YES — will enforce" || echo "NO — proceed without constraints"`
+- Plan files: !`ls .forge/plan-*.md 2>/dev/null || echo "(none found)"`
+
+---
+
+## IRON RULES
+
+These rules have no exceptions.
+
+- **Read `conventions.md` before writing any code.** Never write code first and check conventions after.
+- **Never modify files outside the task's scope list.** If an out-of-scope change is required, stop and invoke the Scope Creep Protocol.
+- **Never silently introduce a new pattern.** If the task requires a pattern not in `conventions.md` or the existing codebase, invoke the New Pattern Protocol and wait for confirmation.
+- **Never silently expand scope.** Even if an adjacent improvement is obvious, log it in the summary rather than making it.
+- **Never start a task with unmet dependencies.** Check that each dependency's summary file exists before writing a single line.
+- **One task at a time.** If the user provides multiple IDs, implement, summarise, and confirm each before starting the next.
+
+---
+
 ## Prerequisites
 
 ### Locate the task
 
 Search all `.forge/plan-*.md` files for the given task ID (e.g. `T003`).
 
-If no plan file contains the task ID:
+If not found:
 ```
 [FORGE:CODE] Task not found
 
@@ -35,9 +54,8 @@ acceptance criteria.
 
 ### Check dependencies
 
-If the task lists dependencies (other task IDs), verify that each dependency's
-summary file exists at `.forge/code-{dep-id}-summary.md`. Missing summaries
-mean the dependency has not been completed.
+If the task lists dependencies, verify each dependency's summary file exists
+at `.forge/code-{dep-id}-summary.md`.
 
 ```
 [FORGE:CODE] Dependency not met
@@ -50,9 +68,8 @@ Complete {dep-id} first, then retry.
 
 ### Load conventions
 
-Read `.forge/conventions.md` if it exists. All code produced must comply with
-every applicable rule. If conventions.md does not exist, note this and proceed
-— but flag the absence in the summary.
+Read `.forge/conventions.md` in full. Every rule is binding. If it does not
+exist, note the absence in the summary and proceed — but flag it.
 
 ---
 
@@ -60,64 +77,61 @@ every applicable rule. If conventions.md does not exist, note this and proceed
 
 ### Step 1 — Read the task scope
 
-From the plan entry, extract:
+Extract from the plan entry:
 - The exact files to create or modify (the **scope list**)
 - What each file change entails
-- The acceptance criteria (these drive what "done" means)
+- The acceptance criteria (these define "done")
 
-Do not infer additional files. If implementing the task correctly requires
-touching files not in the scope list, **stop** — see Scope Creep below.
+Do not infer additional files. Files not on the scope list are out of scope.
 
 ### Step 2 — Read existing files
 
-Read every file in the scope list that already exists. Also read files that
-the scope files import or depend on, so the new code fits naturally into the
-surrounding patterns.
+Read every file in the scope list that already exists. Also read files they
+import or depend on, so the new code fits naturally into surrounding patterns.
 
 Note the existing:
-- Naming conventions (variables, functions, classes, files)
-- Code structure (how similar things are done in adjacent files)
+- Naming conventions in adjacent files
+- Code structure (how similar things are done nearby)
 - Error handling style
 - Import/export patterns
 - Test patterns (if writing test files)
 
 ### Step 3 — Implement
 
-Write or edit each file in the scope list. Every decision must be traceable
-to either the task specification or the existing code patterns — not personal
-preference.
+Write or edit each file in the scope list. Every decision must trace to
+either the task specification or the existing code patterns — not preference.
 
-**Naming:** Match the conventions observed in Step 2. If conventions.md
-specifies naming rules, those take precedence.
+**Naming:** Match conventions.md. If conventions.md is silent, match adjacent
+similar code.
 
-**Patterns:** Replicate the patterns used in adjacent, similar code. Do not
-introduce a new pattern without flagging it (see Constraints).
+**Patterns:** Replicate patterns from adjacent code. Never introduce a new
+pattern without flagging it first (New Pattern Protocol below).
 
-**Database / schema changes:** If the task type is `migration`, generate the
-migration script following the project's existing migration format.
+**Migration scripts:** If type is `migration`, generate following the project's
+existing migration format and naming convention.
 
-**API changes:** If the task type is `api`, update the contract definition
-and any generated client code alongside the implementation.
+**API changes:** If type is `api`, update the contract definition and any
+generated client code alongside the implementation.
 
 ### Step 4 — Verify acceptance criteria
 
-Go through each acceptance criterion in the task entry and confirm it is met.
-For criteria that require running the system (e.g. "endpoint returns 200"),
-note them as "requires runtime verification" rather than claiming they pass.
+Go through each criterion in the task entry and confirm it is met.
+For criteria requiring runtime verification, note them explicitly rather
+than claiming they pass.
 
 ### Step 5 — Write the summary
 
-Write `.forge/code-{task-id}-summary.md` (see Output template).
+Write `.forge/code-{task-id}-summary.md`. This file is required — downstream
+tasks use it to verify dependency completion.
 
 ---
 
 ## Scope Creep Protocol
 
-If, during implementation, you discover that the task **cannot be completed
-correctly** without modifying files outside the scope list:
+If implementing the task requires touching files outside the scope list:
 
 1. **Stop immediately.** Do not make the out-of-scope change.
-2. Write a scope creep report to the user:
+2. Report to the user:
 
 ```
 [FORGE:CODE] Scope expansion needed — stopping
@@ -130,8 +144,8 @@ also requires changing:
 
 Options:
 1. Add this file to {task-id}'s scope and continue
-2. Create a new task in the plan for this change, and complete it first
-3. Proceed without the change (explain trade-off)
+2. Create a new task in the plan for this change, complete it first
+3. Proceed without the change (I'll explain the trade-off)
 
 Which do you prefer?
 ```
@@ -142,8 +156,7 @@ Wait for the user's decision before continuing.
 
 ## New Pattern Protocol
 
-If implementing the task requires introducing a pattern not present in
-conventions.md or the existing codebase:
+If the task requires a pattern not in conventions.md or the existing codebase:
 
 ```
 [FORGE:CODE] New pattern required
@@ -152,7 +165,7 @@ To implement {task-id}, I need to introduce a pattern not currently
 in the codebase or conventions:
 
   Pattern: {description}
-  Reason it's needed: {why existing patterns don't work here}
+  Reason: {why existing patterns don't work here}
   Proposed approach: {what I intend to do}
 
 Should I proceed with this approach, or do you prefer a different one?
@@ -181,8 +194,8 @@ Wait for confirmation before writing the code.
 
 ## Key Implementation Decisions
 
-Decisions made during implementation that are not obvious from the code.
-Include: pattern choices, trade-offs, why a simpler approach was not used.
+Decisions not obvious from the code: pattern choices, trade-offs, why a
+simpler approach was not used.
 
 ## Deviations from Plan
 
@@ -191,8 +204,8 @@ Leave empty if none.
 
 ## Scope Creep Warnings
 
-Files that need changing but were left untouched because they are out of scope.
-Each entry should reference the follow-up action agreed with the user.
+Files needing changes but left untouched (out of scope). Reference the
+follow-up action agreed with the user.
 
 ## New Patterns Introduced
 
@@ -210,22 +223,16 @@ Leave empty if none.
 
 ## Interaction Rules
 
-- **Never silently expand scope.** Always report and confirm before touching
-  files outside the task's scope list.
+- **Never silently expand scope.** Always report and confirm first.
 - **Never silently introduce new patterns.** Always flag and confirm first.
-- **One task at a time.** If the user provides multiple task IDs, implement
-  them sequentially, committing and summarising each before starting the next.
-- If the task's acceptance criteria are ambiguous, ask for clarification
-  before starting implementation — not after.
+- **One task at a time.** Implement, summarise, confirm, then start the next.
+- If acceptance criteria are ambiguous, ask before starting — not after.
 
 ---
 
 ## Constraints
 
-- Modify only files listed in the task's scope. Period.
-- Do not refactor, clean up, or improve code outside the scope, even if it
-  looks like it needs it. Log it in the summary instead.
-- Do not add features or generalisations not required by the acceptance
-  criteria. Implement exactly what is specified.
-- Do not skip writing the summary file. It is required for dependency checking
-  by subsequent tasks.
+- Modify only files in the task's scope list.
+- Do not refactor or improve code outside scope — log it in the summary.
+- Do not add features not required by the acceptance criteria.
+- Do not skip writing the summary file — it is required for dependency checking.

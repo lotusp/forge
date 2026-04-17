@@ -10,15 +10,35 @@ model: sonnet
 effort: high
 ---
 
+## Runtime snapshot
+- Existing .forge artifacts: !`ls .forge/ 2>/dev/null || echo "(none)"`
+- Conventions available: !`test -f .forge/conventions.md && echo "YES" || echo "NO — cannot match testing patterns without conventions"`
+- Existing test files: !`find . -name '*Test*' -o -name '*.test.*' -o -name '*.spec.*' 2>/dev/null | grep -v '.git' | grep -v build | grep -v node_modules | wc -l | tr -d ' '` test files found
+
+---
+
+## IRON RULES
+
+These rules have no exceptions.
+
+- **`conventions.md` testing section is mandatory input.** If it does not exist, stop and ask the user before proceeding — do not invent a testing approach.
+- **Confirm the test case list before writing any test code.** The user may know edge cases not visible from the code. The confirmation step is not optional.
+- **Never test implementation internals.** Only test observable behaviour: return values, thrown errors, side effects (DB writes, events emitted).
+- **Match existing test patterns exactly.** Never introduce a new test library, assertion style, or mock strategy without flagging it as a new pattern and getting confirmation.
+- **One confirmation for existing test updates.** Before modifying any existing test file, list the files and get explicit confirmation.
+
+---
+
 ## Prerequisites
 
 ### Required
 
 Read `.forge/conventions.md`. The testing section defines:
 - Where test files live (co-located vs separate directory)
-- Naming conventions for describe/it blocks
-- Mock strategy (what to mock, what level to mock at)
-- Test data patterns (factories, fixtures, seeds)
+- Naming conventions for test methods
+- Mock strategy (what to mock, at which layer boundary)
+- Test data patterns (factories, fixtures, builders)
+- Base classes or test infrastructure to use
 
 If conventions.md does not exist:
 ```
@@ -26,15 +46,15 @@ If conventions.md does not exist:
 
 .forge/conventions.md not found. Without it I cannot match your project's
 testing patterns. Please run /forge:calibrate first, or describe your
-testing conventions briefly so I can proceed.
+testing conventions so I can proceed.
 ```
 
 ### Recommended (read if they exist)
 
 - `.forge/design-{feature-slug}.md` — the intended behaviour to test against
 - `.forge/review-{feature-slug}.md` — may flag untested scenarios
-- Implemented source files for the feature (from code summaries)
-- Existing test files adjacent to the feature's files (to match patterns)
+- `.forge/code-T*-summary.md` for the feature — to find implemented files
+- Existing test files adjacent to the feature's files — to match patterns exactly
 
 ---
 
@@ -45,12 +65,10 @@ testing conventions briefly so I can proceed.
 From `conventions.md`, extract the testing approach:
 - Which test types apply: unit / integration / end-to-end / contract
 - Where each type lives and how files are named
-- What mock strategy is used (e.g. mock at repository boundary, never mock
-  internal services)
-- What test data tooling is available (factories, seeds, builders)
+- Mock strategy (e.g. mock at repository boundary, never mock internal services)
+- Test data tooling (factories, seeds, builders — use what exists)
 
-If the conventions are silent on a test type needed for this feature,
-ask the user:
+If conventions.md is silent on a test type this feature needs:
 ```
 [FORGE:TEST] Testing convention gap
 
@@ -62,92 +80,87 @@ How should these tests be structured? (Or should I skip this type?)
 
 ### Step 2 — Identify test cases
 
-Read the design document (if available) and the implemented files.
-Derive test cases for each of these categories:
+Read the design document (if available) and the implemented source files.
+Derive test cases for each category:
 
-**Happy path:** The primary success scenario for each public function,
-endpoint, or behaviour.
+**Happy path:** Primary success scenario for each public function, endpoint,
+or behaviour. One test per entry point.
 
-**Input validation:** Invalid, missing, or malformed inputs — one test case
-per distinct validation rule.
+**Input validation:** One test per distinct validation rule (invalid, missing,
+malformed inputs).
 
-**Edge cases:** Boundary values (empty collections, zero, max values),
-concurrent execution concerns, large inputs.
+**Edge cases:** Boundary values (empty collections, zero, max), concurrent
+concerns, large inputs.
 
-**Failure modes:** Expected failures — dependency unavailable, not found,
-permission denied, timeout. Each should verify correct error response.
+**Failure modes:** Each expected failure — dependency unavailable, not found,
+permission denied, timeout. Verify correct error response for each.
 
-**State transitions:** Any stateful behaviour (e.g. order status flow)
-should have tests covering valid and invalid transitions.
+**State transitions:** If stateful (e.g. order status flow), cover valid and
+invalid transitions.
 
-Present the test case list to the user before writing any code:
+Present the test case list before writing any code (mandatory):
 
 ```
 [FORGE:TEST] Proposed test cases for {feature-slug}
 
-Unit tests (src/services/__tests__/foo.test.ts):
-  ✓ returns user when found by valid ID
-  ✓ throws NotFoundError when user ID does not exist
-  ✓ throws ValidationError when ID format is invalid
+Unit tests ({path}):
+  ✓ {test case description}
+  ✓ {test case description}
   ...
 
-Integration tests (tests/integration/foo.test.ts):
-  ✓ POST /users returns 201 with created user
-  ✓ POST /users returns 400 when email is missing
+Integration tests ({path}):
+  ✓ {test case description}
   ...
 
 {N} test cases total. Proceed, or adjust the list?
 ```
 
-Wait for confirmation or adjustments before writing test code.
+Wait for confirmation or adjustments.
 
 ### Step 3 — Check existing tests for update needs
 
-Grep for existing test files that test the same code paths the feature
-modifies. List any that need updating:
+Grep for existing test files that cover the same code paths the feature
+modifies. List any requiring updates:
 
 ```
 [FORGE:TEST] Existing tests requiring update
 
-These tests cover code modified by {feature-slug} and may need updating:
+These tests cover code modified by {feature-slug}:
 
-- src/services/__tests__/user.test.ts
-  Reason: UserService.findById() signature changed
+- {path/to/test-file}
+  Reason: {what changed that affects this test}
 
-Please confirm you'd like me to update these alongside the new tests.
+Confirm you'd like me to update these alongside the new tests.
 ```
+
+Wait for confirmation before modifying any existing file.
 
 ### Step 4 — Write test code
 
-Generate test files following the project's exact patterns. For each file:
-- Match the describe/it block structure of existing test files
-- Use the same assertion library and style (e.g. `expect(x).toBe(y)` not `assert.equal(x, y)`)
-- Use the same mock approach (e.g. `jest.mock('../repository')` at file level,
-  not per-test)
-- Use factories or builders if they exist in the project for test data
-- Do not use `any` types in TypeScript test files
+Generate test files following the project's exact patterns:
+- Match the describe/it/test block structure of existing test files
+- Use the same assertion library and style (do not mix `toBe` with `assertEquals`)
+- Use the same mock approach (file-level vs per-test, same mock library)
+- Use factories or builders if they exist — never construct test data inline
+  with `new EntityClass()` if a builder exists
 
-For tests that need infrastructure (real DB, real queue), add a clear
-`// requires: postgres` comment at the top of the file and note them in
-the test plan artifact.
+For tests requiring infrastructure (real DB, real queue), add a clear
+`// requires: <dependency>` comment and note them in the test plan.
 
-### Step 5 — Update existing tests
+### Step 5 — Update existing tests (if confirmed in Step 3)
 
-If the user confirmed in Step 3, update the listed existing test files
-to account for the changed interfaces. Minimise changes — update only
-what is broken by the feature, not the full test suite.
+Minimise changes — update only what is broken by the feature, not the full
+test suite.
 
 ### Step 6 — Write the test plan artifact
 
-Write `.forge/test-{feature-slug}.md` following the output template.
+Write `.forge/test-{feature-slug}.md`.
 
 ---
 
 ## Output
 
-**Files:** Test source files (paths per conventions) + `.forge/test-{feature-slug}.md`
-
-**Test plan artifact:**
+**Files:** Test source files (at paths per conventions) + `.forge/test-{feature-slug}.md`
 
 ```markdown
 # Test Plan: {feature-slug}
@@ -161,7 +174,7 @@ Write `.forge/test-{feature-slug}.md` following the output template.
 
 | Scenario | Type | File | Status |
 |----------|------|------|--------|
-| {Scenario description} | unit / integration / e2e | `path/to/test.ts` | ✅ Generated / ⚠️ Needs infra / ❌ Not covered |
+| {Scenario} | unit / integration / e2e | `path/to/test.ts` | ✅ Generated / ⚠️ Needs infra / ❌ Not covered |
 
 ---
 
@@ -169,7 +182,7 @@ Write `.forge/test-{feature-slug}.md` following the output template.
 
 | File | Change | Reason |
 |------|--------|--------|
-| `path/to/existing.test.ts` | {What changed} | {Why it needed updating} |
+| `path/to/test.ts` | {What changed} | {Why} |
 
 _None._ ← use this if no existing tests required changes
 
@@ -177,38 +190,32 @@ _None._ ← use this if no existing tests required changes
 
 ## Known Gaps
 
-{Test scenarios that are not covered and why.}
-
 | Scenario | Reason not covered |
 |----------|--------------------|
-| {Scenario} | Requires {external service / manual testing / E2E infrastructure} |
+| {Scenario} | Requires {external service / manual testing / E2E infra} |
 
-_None._ ← use this if all scenarios are covered
+_None._
 
 ---
 
 ## Infrastructure Prerequisites
 
-{Tests that require special setup to run.}
-
 | Test file | Requires | Setup notes |
 |-----------|----------|-------------|
-| `tests/integration/foo.test.ts` | PostgreSQL, Redis | Run `docker-compose up -d` first |
+| `tests/integration/foo.test.ts` | PostgreSQL, Redis | `docker-compose up -d` first |
 
-_None._ ← use this if all tests are self-contained
+_None._
 ```
 
 ---
 
 ## Interaction Rules
 
-- **Always confirm the test case list before writing code** (Step 2). The user
-  may have knowledge of edge cases or constraints not visible from the code.
+- **Always confirm the test case list before writing code** (Step 2).
 - **One confirmation for existing test updates** (Step 3) before modifying
   any existing file.
-- If a scenario is important but cannot be tested without infrastructure not
-  yet in place, write the test file with a clear skip annotation
-  (`test.skip(...)` or equivalent) and document it in Known Gaps.
+- If a scenario is important but untestable without missing infrastructure,
+  write the test with a skip annotation and document it in Known Gaps.
 - After completing, summarise what was generated and suggest running the tests.
 
 ---
@@ -217,7 +224,6 @@ _None._ ← use this if all tests are self-contained
 
 - Write test files only — do not modify source implementation files.
 - Do not generate tests for code outside the feature's scope.
-- Match the existing test patterns exactly — do not introduce a new test
-  library, assertion style, or mock strategy without flagging it to the user.
-- Do not generate tests that test implementation details (private methods,
-  internal state) rather than observable behaviour.
+- Match existing test patterns exactly — no new libraries or styles without
+  flagging as new pattern.
+- Do not test implementation details (private methods, internal state).

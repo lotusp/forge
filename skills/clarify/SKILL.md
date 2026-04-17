@@ -11,6 +11,25 @@ model: sonnet
 effort: high
 ---
 
+## Runtime snapshot
+- Existing .forge artifacts: !`ls .forge/ 2>/dev/null || echo "(none)"`
+- Onboard available: !`test -f .forge/onboard.md && echo "YES" || echo "NO — exploration will take longer"`
+- Conventions available: !`test -f .forge/conventions.md && echo "YES" || echo "NO"`
+
+---
+
+## IRON RULES
+
+These rules have no exceptions.
+
+- **Confirm interpretation before exploring.** If the requirement is vague or ambiguous, restate it and get confirmation before reading a single file.
+- **Never assume answers to business rules.** Any rule, constraint, or edge case that cannot be read directly from the code is a question — not an assumption.
+- **Use forge-explorer agents for tracing.** Do not trace call chains manually from memory. Spawn agents for each distinct entry point.
+- **Never write the clarify artifact before questions are answered.** If the user ends the session early, write what is known and populate Open Questions — never invent answers.
+- **Do not propose solutions.** Clarify is about understanding what exists and what is needed — not how to build it. Any design suggestion belongs in `/forge:design`.
+
+---
+
 ## Prerequisites
 
 Read `.forge/onboard.md` if it exists — it provides the module map and entry
@@ -31,8 +50,9 @@ Parse the user's input. Identify:
 - The affected business domain or user-facing feature
 - Key entities, actions, and data mentioned
 
-Restate the requirement in precise technical terms. If the input is vague,
-make your interpretation explicit and confirm with the user before exploring.
+Restate the requirement in precise technical terms and confirm with the user
+before exploring if the input is vague. Do not start code exploration until
+the interpretation is confirmed.
 
 ### Step 2 — Derive the feature slug
 
@@ -155,7 +175,7 @@ _No existing implementation._ ← use this for fully new features
 EntryHandler (src/routes/foo.ts:42)
   └─ FooService.process() (src/services/foo.ts:18)
        └─ FooRepository.findById() (src/repositories/foo.ts:55)
-            └─ DB query (PostgreSQL)
+            └─ DB query
 ```
 
 ### Data Flow
@@ -182,8 +202,7 @@ EntryHandler (src/routes/foo.ts:42)
 
 ## Assumptions Made
 
-{Assumptions taken during analysis. Each should be confirmed or rejected
-by the user before design begins.}
+{Assumptions taken during analysis that should be confirmed before design.}
 
 - Assumed that {X} because {reason}. Please confirm.
 
@@ -199,8 +218,7 @@ by the user before design begins.}
 
 ## Open Questions
 
-Items the user deferred. These become Open Decisions in the design artifact
-and must be resolved before planning.
+Items the user deferred. Must be resolved before planning.
 
 | # | Question | Impact if unresolved |
 |---|----------|----------------------|
@@ -210,7 +228,7 @@ and must be resolved before planning.
 
 ## Gaps (What Doesn't Exist Yet)
 
-{Everything the requirement needs that is not present in the current codebase.
+{Everything the requirement needs that is not in the current codebase.
 These become the raw material for the design artifact.}
 
 - {Gap description} — affects {area}
@@ -220,24 +238,21 @@ These become the raw material for the design artifact.}
 
 ## Interaction Rules
 
-- **Confirm your interpretation first** (Step 1) before exploring if the
-  requirement is vague or ambiguous.
-- **Do not assume answers to unknowns.** Every business rule, edge case, or
-  external system behaviour that cannot be read from the code must be listed
-  as a question.
+- **Confirm your interpretation first** before exploring if the requirement
+  is vague or ambiguous.
+- **Do not assume answers to unknowns.** Every business rule or edge case
+  not readable from code must be listed as a question.
 - **Batch questions, do not dump them all at once.** Present the most
-  important 5 first, then continue.
-- If the user says "just proceed" or "use your judgement" for a question,
-  record a reasonable assumption in the Assumptions Made section and move on.
-- If the user ends the session before all questions are resolved, write the
-  artifact with what is known and populate the Open Questions section.
+  important 5 first.
+- If the user says "just proceed" for a question, record a reasonable
+  assumption in Assumptions Made and move on.
+- If the user ends the session early, write the artifact with what is known
+  and populate Open Questions.
 
 ---
 
 ## Constraints
 
 - Do not modify any source files. This skill is read-only.
-- Do not propose solutions or design decisions. Clarify is about understanding
-  what exists and what is needed — not how to build it.
-- Do not invent answers to unknown business rules. If it cannot be read from
-  the code, it is a question.
+- Do not propose solutions or design decisions.
+- Do not invent answers to unknown business rules.
