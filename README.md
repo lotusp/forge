@@ -13,6 +13,8 @@
     <a href="#使用指南">使用指南</a> ·
     <a href="docs/detailed-design.md">文档</a>
   </p>
+</div>
+
 ---
 
 Forge 将软件开发的完整流程拆解为一组相互衔接的 Claude Code skill。每个 skill 产出结构化的文档产物，存储在 `.forge/` 目录，下一个 skill 直接读取，形成可跨会话持续的上下文链。
