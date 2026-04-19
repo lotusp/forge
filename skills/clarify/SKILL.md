@@ -114,7 +114,7 @@ batches of at most 5. For each question:
 - Offer options where you can, with a recommendation if applicable
 
 ```
-[FORGE:CLARIFY] Questions — batch 1 of N
+[forge:clarify] Questions — batch 1 of N
 
 1. {Question}
    Why it matters: {Impact on design}

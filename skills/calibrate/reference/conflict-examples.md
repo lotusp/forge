@@ -12,7 +12,7 @@ found in the project under calibration.
 ## Example 1 — URL Versioning
 
 ```
-[FORGE:CALIBRATE] Convention conflict 1 of 3
+[forge:calibrate] Convention conflict 1 of 3
 
 Dimension: URL versioning
 
@@ -51,7 +51,7 @@ Your choice:
 ## Example 2 — Transaction Boundaries
 
 ```
-[FORGE:CALIBRATE] Convention conflict 2 of 3
+[forge:calibrate] Convention conflict 2 of 3
 
 Dimension: Transaction boundaries
 
@@ -83,7 +83,7 @@ Your choice:
 ## Example 3 — Test Isolation Strategy
 
 ```
-[FORGE:CALIBRATE] Convention conflict 3 of 3
+[forge:calibrate] Convention conflict 3 of 3
 
 Dimension: Test isolation strategy
 
@@ -119,7 +119,7 @@ Not all dimensions produce conflicts. For single-pattern dimensions, use
 the confirmation format:
 
 ```
-[FORGE:CALIBRATE] Confirming established patterns
+[forge:calibrate] Confirming established patterns
 
 The following patterns were observed consistently. Correct any that are
 wrong or should not apply to new code.

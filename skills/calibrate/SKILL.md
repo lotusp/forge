@@ -40,7 +40,7 @@ Read `.forge/context/onboard.md`. This provides the module map and tech stack ne
 to guide sampling. If it does not exist:
 
 ```
-[FORGE:CALIBRATE] Missing prerequisite
+[forge:calibrate] Missing prerequisite
 
 .forge/context/onboard.md not found. Please run /forge:onboard first so I have
 a module map to guide the codebase scan.
@@ -48,7 +48,7 @@ a module map to guide the codebase scan.
 
 If `.forge/context/conventions.md` already exists, show the user:
 ```
-[FORGE:CALIBRATE] Existing conventions found
+[forge:calibrate] Existing conventions found
 
 .forge/context/conventions.md was last generated on {date}.
 
@@ -62,7 +62,7 @@ Which do you prefer?
 
 If `.forge/_session/calibrate-scan.md` exists (prior scan was saved), show:
 ```
-[FORGE:CALIBRATE] Prior scan found
+[forge:calibrate] Prior scan found
 
 A codebase scan was saved on {date}. Resuming from adjudication step
 saves significant time.
@@ -190,7 +190,7 @@ answer before moving to the next.
 
 Format:
 ```
-[FORGE:CALIBRATE] Convention conflict {N} of {M}
+[forge:calibrate] Convention conflict {N} of {M}
 
 Dimension: {e.g. URL versioning}
 
@@ -222,7 +222,7 @@ For each dimension where a single pattern dominates without contradiction,
 briefly confirm with the user before ratifying:
 
 ```
-[FORGE:CALIBRATE] Confirming established patterns
+[forge:calibrate] Confirming established patterns
 
 The following patterns were observed consistently. Correct any that are
 wrong or should not apply to new code.

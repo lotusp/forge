@@ -33,7 +33,7 @@ These rules have no exceptions.
 Before planning, read `.forge/features/{feature-slug}/design.md`. If it does not exist:
 
 ```
-[FORGE:TASKING] Missing prerequisite
+[forge:tasking] Missing prerequisite
 
 Cannot find .forge/features/{feature-slug}/design.md.
 Please run /forge:design {feature-slug} first.
@@ -43,7 +43,7 @@ Check the design's "Open Decisions" section. If any item is `⏳ Pending`
 (not deferred), surface it:
 
 ```
-[FORGE:TASKING] Unresolved design decisions
+[forge:tasking] Unresolved design decisions
 
 The design has {N} unresolved decision(s). Planning cannot proceed until
 these are resolved:
@@ -108,7 +108,7 @@ Mark tasks `⚠ 高风险` when they:
 Present the task breakdown to the user:
 
 ```
-[FORGE:TASKING] Task breakdown for {feature-slug}
+[forge:tasking] Task breakdown for {feature-slug}
 
 Tasks identified: N
   T00X  [type]  Task name

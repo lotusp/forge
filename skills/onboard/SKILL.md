@@ -41,7 +41,7 @@ None. This is the first skill in the Forge workflow and has no dependencies.
 
 If `.forge/context/onboard.md` already exists, show the user:
 ```
-[FORGE:ONBOARD] Existing onboard artifact found
+[forge:onboard] Existing onboard artifact found
 
 .forge/context/onboard.md was last generated on {date from file header}.
 

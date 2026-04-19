@@ -38,7 +38,7 @@ These rules have no exceptions.
 
 If it does not exist:
 ```
-[FORGE:DESIGN] Missing clarify artifact
+[forge:design] Missing clarify artifact
 
 .forge/features/{feature-slug}/clarify.md not found.
 
@@ -102,7 +102,7 @@ multi-agent exploration and proceed directly to Step 4.
 Present options and recommendation to the user:
 
 ```
-[FORGE:DESIGN] Approach options for {feature-slug}
+[forge:design] Approach options for {feature-slug}
 
 Option A — {name}: {one sentence}
   Pros: ...
@@ -140,7 +140,7 @@ Identify decisions requiring human input before the design is finalised.
 These are blocking — do not write the artifact until they are resolved.
 
 ```
-[FORGE:DESIGN] Decisions needed before finalising design ({N} items)
+[forge:design] Decisions needed before finalising design ({N} items)
 
 1. {Question}
    Context: {why this matters}

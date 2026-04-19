@@ -160,7 +160,7 @@ Execute it as if it were invoked directly — follow all its Iron Rules,
 process steps, interaction rules, and output instructions.
 
 Present all output using the sub-skill's own format (e.g.,
-`[FORGE:CLARIFY]`, `[FORGE:CALIBRATE]`, etc.) so the user knows which
+`[forge:clarify]`, `[forge:calibrate]`, etc.) so the user knows which
 skill is running.
 
 ### Step 5 — After the sub-skill completes

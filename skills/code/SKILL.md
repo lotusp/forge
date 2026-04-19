@@ -39,7 +39,7 @@ Search all `.forge/features/*/plan.md` files for the given task ID (e.g. `T003`)
 
 If not found:
 ```
-[FORGE:CODE] Task not found
+[forge:code] Task not found
 
 {task-id} was not found in any .forge/features/*/plan.md file.
 
@@ -59,7 +59,7 @@ If the task lists dependencies, verify each dependency's summary file exists
 at `.forge/features/{feature-slug}/tasks/T{dep-id}-summary.md`.
 
 ```
-[FORGE:CODE] Dependency not met
+[forge:code] Dependency not met
 
 {task-id} depends on {dep-id}, which has not been completed.
 (.forge/features/{feature-slug}/tasks/{dep-id}-summary.md not found)
@@ -135,7 +135,7 @@ If implementing the task requires touching files outside the scope list:
 2. Report to the user:
 
 ```
-[FORGE:CODE] Scope expansion needed — stopping
+[forge:code] Scope expansion needed — stopping
 
 While implementing {task-id}, I found that completing it correctly
 also requires changing:
@@ -160,7 +160,7 @@ Wait for the user's decision before continuing.
 If the task requires a pattern not in conventions.md or the existing codebase:
 
 ```
-[FORGE:CODE] New pattern required
+[forge:code] New pattern required
 
 To implement {task-id}, I need to introduce a pattern not currently
 in the codebase or conventions:
