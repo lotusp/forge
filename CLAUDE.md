@@ -14,6 +14,10 @@ The core paradigm: AI is the developer, humans provide intent and context. Forge
 forge/
 ├── .claude-plugin/plugin.json
 ├── skills/
+│   ├── forge/                     ← master orchestrator
+│   │   ├── SKILL.md
+│   │   ├── reference/state-machine.md
+│   │   └── scripts/status.mjs
 │   ├── onboard/
 │   │   ├── SKILL.md
 │   │   └── reference/output-template.md
@@ -41,6 +45,10 @@ forge/
 │   │   ├── SKILL.md
 │   │   └── reference/output-template.md
 │   └── test/SKILL.md
+├── agents/
+│   ├── forge-explorer.md
+│   ├── forge-architect.md
+│   └── forge-reviewer.md
 └── README.md
 ```
 
@@ -48,6 +56,11 @@ forge/
 
 ```
 onboard → calibrate → clarify → design → tasking → code → inspect → test
+```
+
+Or use the master orchestrator which auto-detects state and routes:
+```
+/forge:forge [intent or slug or task-id]
 ```
 
 > Note: `tasking` was formerly `plan` and `inspect` was formerly `review`.
@@ -132,7 +145,7 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
 
 | Scope | 示例 | 说明 |
 |-------|------|------|
-| `skill/<name>` | `skill/plan` | 某个 skill 的实现 |
+| `skill/<name>` | `skill/tasking` | 某个 skill 的实现 |
 | `agent/<name>` | `agent/explorer` | 某个 agent 的实现 |
 | `plugin` | — | plugin.json 或整体插件结构 |
 | `forge` | — | `.forge/` 产物（设计、计划、摘要） |
@@ -146,7 +159,7 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
 ```
 chore(plugin): initialize directory skeleton and plugin manifest
 
-feat(skill/plan): implement plan skill with full process instructions
+feat(skill/tasking): implement tasking skill with full process instructions
 
 docs(forge): add design and plan artifacts for plugin-bootstrap
 ```
