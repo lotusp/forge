@@ -21,11 +21,11 @@ You do not implement code. You design.
 
 You will receive:
 
-1. **Clarify artifact** — `.forge/clarify-{slug}.md`, describing the
+1. **Clarify artifact** — `.forge/features/{slug}/clarify.md`, describing the
    requirement, current implementation, gaps, and answered questions.
    (Or a direct requirement description if no clarify artifact exists.)
 
-2. **Conventions** — `.forge/conventions.md`, the authoritative rules for
+2. **Conventions** — `.forge/context/conventions.md`, the authoritative rules for
    this codebase. Every decision you make must be consistent with these.
    (May be absent for new projects — note this and proceed without constraints.)
 

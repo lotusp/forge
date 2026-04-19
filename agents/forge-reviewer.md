@@ -3,7 +3,7 @@ name: forge-reviewer
 description: |
   Reviews a single file against project conventions and design intent.
   Returns findings categorised by severity with confidence scores.
-  Only reports findings with confidence >= 80. Used by /forge:review,
+  Only reports findings with confidence >= 80. Used by /forge:inspect,
   which spawns one instance per changed file in parallel.
 tools: Glob, Grep, Read
 model: sonnet
@@ -24,11 +24,11 @@ You will receive:
 
 1. **File to review** — the path and full content of the file being reviewed.
 
-2. **Conventions** — `.forge/conventions.md`. This is your primary benchmark.
+2. **Conventions** — `.forge/context/conventions.md`. This is your primary benchmark.
    Every "must-fix" finding must cite a specific section of this document.
 
 3. **Design context** (optional) — the relevant section of
-   `.forge/design-{slug}.md` describing what this file was supposed to do.
+   `.forge/features/{slug}/design.md` describing what this file was supposed to do.
    Used to detect implementation drift.
 
 4. **Task description** (optional) — the plan task entry that produced this

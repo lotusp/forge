@@ -2,7 +2,7 @@
 name: test
 description: |
   Generates a test plan and test code for a completed feature, matching the
-  project's testing conventions. Use after /forge:review returns a "ready"
+  project's testing conventions. Use after /forge:inspect returns a "ready"
   or "needs-work" verdict and the must-fix items have been resolved.
 argument-hint: "<feature-slug>"
 allowed-tools: "Read Glob Grep Write"
@@ -45,7 +45,7 @@ Read `.forge/context/testing.md`. This defines:
 
 If testing.md does not exist:
 ```
-[FORGE:TEST] Missing testing conventions
+[forge:test] Missing testing conventions
 
 .forge/context/testing.md not found. Without it I cannot match your project's
 testing patterns. Please run /forge:calibrate first, or describe your
@@ -74,7 +74,7 @@ From `context/testing.md`, extract the testing approach:
 
 If `context/testing.md` is silent on a test type this feature needs:
 ```
-[FORGE:TEST] Testing convention gap
+[forge:test] Testing convention gap
 
 The feature requires {integration tests / e2e tests / contract tests},
 but conventions.md does not describe the approach for this type.
@@ -105,7 +105,7 @@ invalid transitions.
 Present the test case list before writing any code (mandatory):
 
 ```
-[FORGE:TEST] Proposed test cases for {feature-slug}
+[forge:test] Proposed test cases for {feature-slug}
 
 Unit tests ({path}):
   ✓ {test case description}
@@ -127,7 +127,7 @@ Grep for existing test files that cover the same code paths the feature
 modifies. List any requiring updates:
 
 ```
-[FORGE:TEST] Existing tests requiring update
+[forge:test] Existing tests requiring update
 
 These tests cover code modified by {feature-slug}:
 
