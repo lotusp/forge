@@ -1,0 +1,131 @@
+# Constraints & Anti-Patterns: forge
+
+> 生成时间：2026-04-19
+> 生成方式：/forge:calibrate — 基于代码扫描 + 人工裁决
+> 更新方式：重新运行 /forge:calibrate
+> 文件路径：.forge/context/constraints.md
+
+**Important:** 本文件列出 Forge 插件开发的硬性约束和已知反模式。
+另见：context/conventions.md、context/architecture.md、context/testing.md
+
+---
+
+## Hard Constraints
+
+这些约束没有例外。违反任何一条都是 `must-fix` 级别问题。
+
+### C1 — Status 脚本是唯一路由权威
+
+`skills/forge/scripts/status.mjs` 是编排器路由的唯一依据。
+forge skill 必须执行此脚本并读取其 `[ACTION]` 输出，不可自行判断下一步。
+
+**违反表现：** forge skill 通过读取 `.forge/` 文件自行推断状态，绕过 status.mjs。
+
+### C2 — 交互消息必须使用小写前缀
+
+所有面向用户的消息前缀格式为 `[forge:{skill-name}]`，全小写。
+
+**违反表现：** `[FORGE:CALIBRATE]`、`[Forge:Code]` 等格式。
+
+**当前已知违规位置（待修复）：**
+- `skills/tasking/SKILL.md` — Step 6 使用 `[FORGE:TASKING]`（大写）
+- `skills/tasking/SKILL.md` — Prerequisites 中使用 `[FORGE:TASKING]`（大写）
+
+### C3 — 产物路径必须使用嵌套结构
+
+所有 `.forge/` 产物必须遵守以下路径规范：
+
+```
+.forge/context/{filename}.md         # 项目级上下文
+.forge/features/{slug}/{filename}.md # Feature 级产物
+.forge/features/{slug}/tasks/T{NNN}-summary.md  # Task 摘要
+```
+
+**禁止使用旧的平铺结构：**
+- ❌ `.forge/conventions.md`（应为 `.forge/context/conventions.md`）
+- ❌ `.forge/clarify-{slug}.md`（应为 `.forge/features/{slug}/clarify.md`）
+- ❌ `.forge/design-{slug}.md`（应为 `.forge/features/{slug}/design.md`）
+
+**当前已知违规位置（待修复）：**
+- `agents/forge-architect.md:24` — 引用 `.forge/clarify-{slug}.md`（旧路径）
+- `agents/forge-architect.md:32` — 引用 `.forge/conventions.md`（旧路径）
+
+### C4 — Skill 引用必须使用当前名称
+
+`tasking`（非 `plan`）和 `inspect`（非 `review`）是当前正确名称，
+用于避免与 Claude Code 内置命令冲突。
+
+**当前已知违规位置（待修复）：**
+- `agents/forge-reviewer.md:7` — 描述中写 "Used by /forge:review"（应为 /forge:inspect）
+- `skills/test/SKILL.md` description — "Use after /forge:review"（应为 /forge:inspect）
+
+### C5 — Inspect skill 不修改任何源文件
+
+`inspect` skill 严格只读。它不可建议修复也不可应用修复。
+评审结果只写入 `.forge/features/{slug}/inspect.md`。
+
+### C6 — Code skill 不超出任务范围
+
+`code` skill 在执行时只可修改 `plan.md` 中该 task 明确列出的文件。
+如果发现需要修改额外文件，必须触发 Scope Creep Protocol，暂停并询问用户。
+
+### C7 — Agent 层不直接写文件
+
+`forge-explorer`、`forge-architect`、`forge-reviewer` 只返回报告文本。
+由调用 skill（clarify/design/inspect）负责将内容写入产物文件。
+
+---
+
+## Anti-Patterns
+
+这些是在 Forge 代码库中发现的已存在模式，**新代码不应复制**。
+
+### AP1 — 大写交互消息前缀
+
+**现状：** `skills/tasking/SKILL.md` 中使用 `[FORGE:TASKING]` 大写格式。
+**问题：** 违反 Decision #1（用户明确要求小写，输入方便）。
+**修复：** 将所有 `[FORGE:{SKILL}]` 改为 `[forge:{skill}]`。
+
+### AP2 — 旧平铺路径引用
+
+**现状：** `agents/forge-architect.md` 中引用 `.forge/clarify-{slug}.md` 和 `.forge/conventions.md`。
+**问题：** 这些是旧的平铺路径格式，已被嵌套路径取代。Agent 读取这些路径时会找不到文件。
+**修复：** 更新为 `.forge/features/{slug}/clarify.md` 和 `.forge/context/conventions.md`。
+
+### AP3 — 过时的 skill 名称引用
+
+**现状：** `agents/forge-reviewer.md` 和 `skills/test/SKILL.md` 中引用 `/forge:review`。
+**问题：** skill 已重命名为 `inspect`，`/forge:review` 不存在。
+**修复：** 更新为 `/forge:inspect`。
+
+### AP4 — Skill 中内联完整约定
+
+**现状（未发现但需预防）：** 某个 skill 在自身 SKILL.md 中重复定义了 conventions.md 中的规则。
+**问题：** 两处定义会发生漂移，产生矛盾。
+**正确做法：** Skill 应引用 `context/conventions.md`，而不是内联规则。
+
+---
+
+## Known Technical Debt
+
+| ID | 位置 | 描述 | 优先级 |
+|----|------|------|--------|
+| TD-001 | `skills/tasking/SKILL.md` | 交互消息使用大写 `[FORGE:TASKING]` | 高 |
+| TD-002 | `agents/forge-architect.md:24,32` | 引用旧的平铺路径格式 | 高 |
+| TD-003 | `agents/forge-reviewer.md:7` | 引用已废弃的 `/forge:review` | 高 |
+| TD-004 | `skills/test/SKILL.md` description | 引用已废弃的 `/forge:review` | 高 |
+| TD-005 | 全部 skills | 系统性排查是否还有其他大写消息前缀 | 中 |
+
+---
+
+## Scope Boundaries
+
+明确列出哪些内容**不在 Forge 的职责范围内**：
+
+| 超出范围 | 原因 |
+|---------|------|
+| 执行测试 | Forge 分析和生成代码，不运行测试 |
+| 部署 | 无部署 skill，不涉及 CI/CD |
+| 数据库迁移执行 | 可生成迁移脚本，但不执行 |
+| 代码格式化 | 由项目自身的 linter 负责，Forge 不干预 |
+| Git 操作 | Forge 不提交、不推送、不创建分支 |
