@@ -4,6 +4,5 @@
   "description": "AI-driven development workflow for existing codebases. Guides you from requirement to tested code through persistent artifacts.",
   "author": {
     "name": "Gordon"
-  },
-  "skills": "./skills/"
+  }
 }
