@@ -1,11 +1,20 @@
 ---
 name: onboard
 description: |
-  Generates a human-readable project map for anyone new to the codebase.
-  Use when starting work on an unfamiliar project, onboarding a new team
-  member, or beginning a new Claude Code session on an existing codebase.
-  Run this before /forge:calibrate.
-argument-hint: ""
+  Generates a navigation-oriented project map for AI developers and humans
+  working on an existing codebase. Produces .forge/context/onboard.md with
+  9 structured sections: project identity, architecture overview, codebase
+  structure, core domain objects, entry points with call chains, integration
+  topology, change navigation, local development, and known traps.
+
+  Supports incremental updates: subsequent runs re-verify each section against
+  the current commit and rewrite only the sections whose underlying code has
+  changed. Pass --regenerate to force a full rewrite, or --section=<name>
+  to refresh a single section.
+
+  Run before /forge:calibrate. Onboard records observed facts; calibrate
+  produces authoritative rules.
+argument-hint: "[--regenerate | --section=<section-name>]"
 allowed-tools: "Read Glob Grep Bash Write"
 context: fork
 model: sonnet
@@ -13,159 +22,414 @@ effort: high
 ---
 
 ## Runtime snapshot
-- Root contents: !`ls -1 2>/dev/null`
+- Current commit: !`git rev-parse --short HEAD 2>/dev/null || echo "(not a git repo)"`
+- Existing artifact: !`test -f .forge/context/onboard.md && echo "FOUND — read header for last verified commit" || echo "(absent — first run)"`
+- Root contents: !`ls -1 2>/dev/null | head -30`
+- CLAUDE.md: !`test -f CLAUDE.md && echo "present — read fully" || echo "absent"`
 - Existing .forge artifacts: !`ls .forge/context/ .forge/features/ 2>/dev/null || echo "(none)"`
-- Source file counts: !`echo "Java: $(find . -name '*.java' 2>/dev/null | grep -v '.git' | grep -v build | wc -l | tr -d ' ') | TS: $(find . -name '*.ts' 2>/dev/null | grep -v node_modules | grep -v '.git' | wc -l | tr -d ' ') | Go: $(find . -name '*.go' 2>/dev/null | grep -v '.git' | wc -l | tr -d ' ')"`
-- Controller/Handler count: !`find . \( -name '*Controller*' -o -name '*Handler*' -o -name '*Router*' \) -name '*.java' -o -name '*.ts' -o -name '*.go' 2>/dev/null | grep -v '.git' | grep -v build | grep -v test | wc -l | tr -d ' '` files
-- Listener/Consumer count: !`find . \( -name '*Listener*' -o -name '*Consumer*' -o -name '*Subscriber*' \) -name '*.java' -o -name '*.ts' -o -name '*.go' 2>/dev/null | grep -v '.git' | grep -v build | wc -l | tr -d ' '` files
+- Source file counts: !`echo "Java: $(find . -name '*.java' 2>/dev/null | grep -v '.git' | grep -v build | wc -l | tr -d ' ') | TS: $(find . -name '*.ts' 2>/dev/null | grep -v node_modules | grep -v '.git' | wc -l | tr -d ' ') | Go: $(find . -name '*.go' 2>/dev/null | grep -v '.git' | wc -l | tr -d ' ') | Py: $(find . -name '*.py' 2>/dev/null | grep -v '.git' | grep -v venv | wc -l | tr -d ' ')"`
+- Controllers/Handlers: !`find . \( -name '*Controller*' -o -name '*Handler*' -o -name '*Router*' \) \( -name '*.java' -o -name '*.ts' -o -name '*.go' -o -name '*.py' \) 2>/dev/null | grep -v '.git' | grep -v build | grep -v test | wc -l | tr -d ' '` files
+- Listeners/Consumers: !`find . \( -name '*Listener*' -o -name '*Consumer*' -o -name '*Subscriber*' \) \( -name '*.java' -o -name '*.ts' -o -name '*.go' -o -name '*.py' \) 2>/dev/null | grep -v '.git' | grep -v build | wc -l | tr -d ' '` files
 
 ---
 
 ## IRON RULES
 
-These rules have no exceptions.
+These rules have no exceptions. A run that violates any of them must stop
+and correct itself before writing the artifact.
 
-- **Never describe a module from its directory name alone.** Read at least one substantive source file per module before writing its description.
-- **Entry point counts are mandatory.** If a section lists listeners, controllers, or consumers, state the total count ("28 listeners total, 6 representative examples below") — do not silently list only a subset.
-- **Sub-systems must be listed separately.** If a sub-directory has its own complete adapter/service/repository layering (not just a few helper files), it is its own module entry — never fold it into its parent.
-- **URL versioning inconsistency must be noted explicitly.** If some routes use `/api/v2/` and others use `/api/`, state this in the Notes section rather than picking one and ignoring the other.
-- **Never copy-paste from README without verifying against code.** READMEs are often stale. Confirm claims against actual build files and source.
-- **Local development commands must come from actual config files** (Makefile, package.json scripts, build.gradle tasks) — not invented.
+### Verification rules
+
+1. **HTTP methods must come from annotations, never from method names.**
+   Before writing any route, read the source file and confirm the verb
+   against `@GetMapping|@PostMapping|@PutMapping|@PatchMapping|@DeleteMapping|@RequestMapping.*method=`
+   (or the stack's equivalent — see `reference/scan-patterns.md`).
+
+2. **Module paths must be verified on disk.** Never record a path derived
+   from a package name alone. For every module entry, run Glob on the path
+   first. Remove entries that do not resolve.
+
+3. **Versions come from build files, not README.** Read `gradle.properties`,
+   `build.gradle`, `pom.xml`, `package.json`, `go.mod`, `Cargo.toml`, or
+   `pyproject.toml` for versions. When README disagrees, record both with
+   a `[conflict]` tag — never silently pick one.
+
+4. **Never compress multi-observer events.** For each domain event, grep
+   every file that listens to it (`@EventListener`, `implements
+   ApplicationListener<EventName>`, `@KafkaListener`, `@RabbitListener`,
+   etc.) and list all observers. Compressing N listeners into "downstream
+   services" is forbidden.
+
+5. **Tag confidence on every high-impact claim.** Use one of:
+   - `[code]` — read directly from source
+   - `[config]` — read from config file (`.yml`, `.properties`, `.env`)
+   - `[build]` — read from build file (`build.gradle`, `package.json`)
+   - `[readme]` — from README only, not verified against code
+   - `[inferred]` — generated without direct verification
+
+   Untagged factual claims about versions, paths, flows, or behaviour are
+   forbidden.
+
+6. **Commands must be sourced from actual config files.** Build/test/lint
+   commands come from `Makefile`, `package.json` scripts, `build.gradle`
+   tasks, or README (with the README's command verified against the build
+   file). Invented commands are forbidden.
+
+### Structural rules
+
+7. **Observed fact vs. rule — onboard writes observations only.**
+
+   | Observed fact (onboard writes) | Rule (belongs to /forge:calibrate) |
+   |-------------------------------|-----------------------------------|
+   | "Services live in `*.service.*`" | "Business logic MUST live in service layer" |
+   | "BaseTestSetup uses @Rollback" | "New integration tests MUST extend BaseTestSetup" |
+   | "fakedms/ returns canned responses" | "New code MUST NOT depend on fakedms" |
+   | "Mixed /api and /api/v2 observed" | "New endpoints MUST use /api/v2" |
+
+   If a sentence about to be written contains "must", "must not", "should",
+   "forbidden", "never", "required to"—stop. That sentence belongs in
+   calibrate's output. Record only the observation.
+
+8. **Sub-systems with their own full layering are separate modules.** A
+   sub-directory that has its own `controller/`, `service/`, and
+   `repository/` (or equivalent trio) is its own module row — never fold
+   into the parent.
+
+9. **Entry point totals must precede examples.** "28 listeners total, 6
+   representative below" — never list examples without the total.
+
+10. **Preserve blocks are sacred.** Any content inside
+    `<!-- forge:onboard:preserve -->` markers must be carried verbatim
+    across regenerations, including `--regenerate`.
 
 ---
 
-## Prerequisites
+## Boundary with /forge:calibrate
 
-None. This is the first skill in the Forge workflow and has no dependencies.
+Onboard produces navigation. Calibrate produces authoritative rules.
 
-If `.forge/context/onboard.md` already exists, show the user:
+| Topic | Onboard writes | Calibrate writes |
+|-------|----------------|------------------|
+| Layering | Observed layers, call direction | `architecture.md` — rules & forbidden calls |
+| Testing | Test base classes, known infra traps | `testing.md` — strategy, mock policy, coverage |
+| Code style | — | `conventions.md` — naming, logging, error handling |
+| Anti-patterns | — | `constraints.md` — what new code must not do |
+
+Each onboard section with a calibrate counterpart must end with an explicit
+pointer (even before calibrate runs — the pointer tells readers where rules
+will appear):
+
+- Architecture Overview → `> 分层规则与禁止事项见 .forge/context/architecture.md（由 /forge:calibrate 产生）`
+- Local Development → `> 完整测试策略见 .forge/context/testing.md（由 /forge:calibrate 产生）`
+- Known Traps → `> 反模式与硬性规则见 .forge/context/constraints.md（由 /forge:calibrate 产生）`
+
+---
+
+## Prerequisites & Run Modes
+
+Parse the `$1` argument and detect artifact state, then pick a mode:
+
+### Mode A — First run
+No existing `.forge/context/onboard.md`. Run Steps 0–11 end-to-end and write
+all 9 sections.
+
+### Mode B — Incremental (default when artifact exists)
+Existing artifact, no flag. Announce:
+
 ```
-[forge:onboard] Existing onboard artifact found
+[forge:onboard] Existing artifact found
+  last verified: {short-hash} ({date})
+  current HEAD:  {short-hash}
 
-.forge/context/onboard.md was last generated on {date from file header}.
-
-Options:
-1. Regenerate (overwrites existing)
-2. View existing and exit
-
-Which do you prefer?
+Running in incremental mode. Will re-scan all sections and rewrite only
+those whose underlying code has changed. Preserve blocks are carried
+across. To force full regeneration: /forge:onboard --regenerate
 ```
+
+For each section, compare the re-scan result against the stored content:
+- **Unchanged** → keep content as-is, update `verified=<hash>` marker only
+- **Changed** → show the user a one-line diff summary, rewrite the section
+- **Inside a `forge:onboard:preserve` block** → never touch
+
+Write sections one at a time to disk so an interrupted run leaves a valid,
+partially-updated artifact.
+
+### Mode C — `--regenerate`
+Existing artifact, `--regenerate` flag. Prompt:
+
+```
+[forge:onboard] --regenerate will REWRITE all sections of
+.forge/context/onboard.md. Preserve blocks will still be carried across.
+Proceed? (y/N)
+```
+
+On `y`: behave like Mode A but carry preserve blocks forward.
+
+### Mode D — `--section=<name>`
+Single-section refresh. Valid names:
+- `project-identity`
+- `architecture-overview`
+- `codebase-structure`
+- `core-domain-objects`
+- `entry-points`
+- `integration-topology`
+- `change-navigation`
+- `local-development`
+- `known-traps`
+
+Run only the scans needed for that section, rewrite only that section's
+block, update its `verified=<hash>` marker. Other sections unchanged.
 
 ---
 
 ## Process
 
-### Step 1 — Identify project type and root
+Each Step maps to zero or more output sections and scans specific artifacts.
+Skip Steps not required by the current run mode.
 
-Determine what kind of project this is:
-- **Monorepo**: multiple packages / services under one root (look for
-  `packages/`, `apps/`, `services/`, `libs/` directories, or workspace
-  config in `package.json` / `pnpm-workspace.yaml` / `lerna.json`)
-- **Single application**: one deployable unit
-- **Library / SDK**: published package with no runtime server
+### Step 0 — Detect run mode and plan
+Parse argument, read existing artifact header if present, announce mode
+per the rules above. In Mode D, skip directly to the target section's step.
 
-For monorepos, list each package/service as its own module entry.
+### Step 1 — Project identity
+Feeds section **1. Project Identity**.
 
-### Step 2 — Read configuration files
+- Determine project type: monorepo / single application / library+SDK.
+  For monorepos look for `packages/`, `apps/`, `services/`, `libs/`,
+  workspace config.
+- Read README's first paragraph and CLAUDE.md fully if present.
+- Identify the primary runnable unit (startup class, `main` function,
+  `@SpringBootApplication`, etc.) and its module/directory.
+- Record one to two paragraphs covering purpose, business domain, primary
+  users. Non-technical readers must understand this.
 
-Scan the project root and common config locations for:
+### Step 2 — Configuration scan (build + runtime + side effects)
+Feeds sections **2. Architecture Overview** (tech stack table) and
+**8. Local Development**.
 
-| File | Information to extract |
-|------|----------------------|
-| `package.json` / `package-lock.json` | Language (Node.js), framework, scripts, main dependencies |
-| `pom.xml` / `build.gradle` | Language (Java/Kotlin), framework, dependencies, exposed ports |
-| `go.mod` | Language (Go), module name, major dependencies |
-| `Cargo.toml` | Language (Rust), crate type, dependencies |
-| `pyproject.toml` / `setup.py` / `requirements.txt` | Language (Python), dependencies |
-| `Makefile` | Build, test, run targets |
-| `docker-compose.yml` / `docker-compose.yaml` | Services, ports, infrastructure dependencies |
-| `.env.example` / `.env.sample` | Required environment variables |
-| `Dockerfile` | Runtime environment, exposed ports |
-| `README.md` | Project description, setup instructions (verify before using) |
-| `CLAUDE.md` | Project-specific AI guidance (high priority — read fully) |
+Read common config files per `reference/scan-patterns.md`. Extract:
+- Language + runtime + framework versions — tag `[build]`
+- Database, cache, search, MQ — tag `[config]` or `[build]`
+- Service discovery / config center — distinguish config-only (Nacos
+  config) from discovery. Do not mislabel.
+- Key internal/proprietary libraries
+- Infrastructure (cloud region, container registry) — tag `[config]`
 
-### Step 3 — Identify entry points
+**Side-effect surfacing (critical, easy to miss):**
+Grep root build files for:
+- `git config` invocations
+- `core.hooksPath` settings
+- `System.setProperty` in init blocks
+- `afterEvaluate { ... exec ... }` blocks
+- init tasks that mutate the developer environment
 
-Scan for all places where the system receives work. For each type, **count
-the total** first, then select representative examples.
+Record all such side effects for Known Traps or Local Development.
 
-**HTTP / REST APIs:**
-- Grep for `@Controller`, `@RestController`, `@RequestMapping`, `router.get`,
-  `app.post`, `func.*Handler`, or equivalent
-- Count total controller/handler files
-- Extract base URL patterns and main route groups
-- Note any URL versioning inconsistency (`/api/` vs `/api/v2/`)
+### Step 3 — Codebase structure scan
+Feeds section **3. Codebase Structure**.
 
-**Message consumers / event listeners:**
-- Grep for `@EventListener`, `onApplicationEvent`, `@KafkaListener`,
-  `@RabbitListener`, `consumer.subscribe`, or equivalent
-- **Count the total number** — this is critical for understanding system complexity
-- List 5–8 representative examples
+Split the module map into **two layers**:
 
-**Background jobs / schedulers:**
-- Grep for `@Scheduled`, `cron.schedule`, `setInterval`, job definitions
-- List each with its schedule/trigger
+**Business Domains:** the top-level business units (`order`, `salesoption`,
+`billing`, etc.). One row each.
 
-**CLI commands:**
-- Look for command definitions (`commander`, `cobra`, `click`, `argparse`)
+**Technical Layers:** the cross-cutting packages (`framework`, `clients`,
+`authentication`, `db`, `toggles`, etc.). One row each.
 
-**GraphQL / gRPC:**
-- Look for schema definitions and resolver/handler registration
+Detection rules:
+- A sub-directory with its own full `adapter/`, `service/`, `repository/`
+  triple is a **business domain** (IRON RULE 8 — must be separate row).
+- A sub-directory that only contains infrastructure/cross-cutting code is
+  a **technical layer**.
+- Adapter sub-packages (`order.adapter.mbe`, `order.adapter.dms`) are
+  **not** separate rows — fold into the parent domain, list integrations
+  in Section 6 (Integration Topology) instead.
 
-For each entry point type found, state the total count and then list
-representative examples with file paths.
+For every row, run Glob on the path and read ≥1 representative source
+file before writing the responsibility. Every path gets `[code]` tag.
 
-### Step 4 — Map modules and services
+### Step 4 — Core domain object scan
+Feeds section **4. Core Domain Objects**.
 
-For monorepos: list each package/service with its path and one-line purpose.
+Scan `src/main/java/**/domain/**`, `src/main/java/**/entity/**`,
+`**/models/**`, or language equivalent. Identify aggregate roots:
+- `@Entity` + no `@ManyToOne` owning side → likely aggregate root
+- Classes ending in `*Order`, `*Account`, `*Policy`, `*Program`, `*Ticket`
+- Classes with `@OneToMany` to history/audit tables
 
-For single applications: identify the main internal modules or layers.
+For each aggregate root record:
+- Class name + package `[code]`
+- 1-line business meaning
+- Key related entities (1:1 / 1:N)
+- Status-field enum if present (for state machines)
+- Which services mutate it (grep `{ClassName}Repository.save|persist`)
 
-**Critical: detect sub-systems.** A sub-system is a sub-directory that has
-its own complete layering (e.g. its own controllers, services, and
-repositories). Common in legacy monoliths. Each sub-system gets its own
-row in the module map — never fold it into the parent module.
+**Keep this section factual.** Record the shape, not "what developers
+should do when modifying it."
 
-Read at least one representative file from each module or sub-system to
-verify the description is accurate before writing it.
+### Step 5 — Entry points + call chains
+Feeds section **5. Entry Points & Call Chains**.
 
-### Step 5 — Extract local development commands
+For each category:
 
-Find and verify:
-- How to install dependencies
-- How to run the application locally (note the port)
-- How to run tests (all tests, and a single test class/file)
-- How to build for production
-- How to run linting / formatting
-- Any prerequisite infrastructure setup (Docker commands, DB creation)
+**HTTP API:**
+- Grep for all controller annotations per `reference/scan-patterns.md`
+- **State total count first** (IRON RULE 9)
+- Select 5–10 representative routes spanning the major business domains
+- For each representative route, trace **one level deeper** — the primary
+  service method called, and the main side effects. Format:
 
-Source these from `Makefile`, `package.json` scripts, `build.gradle` tasks,
-or README. If a README command cannot be verified in a config file, flag it
-as "unverified."
+```
+### {Flow name}
+- Entry: `QuotationOrderController#createOrder` (@PostMapping /api/v2/orders) [code]
+- Service: `QuotationOrderService#createOrder` [code]
+- Entity: `QuotationOrder` [code]
+- Events published: `OrderCreatedEvent` [code]
+- External calls: `StockManagementClient.reserveStock` (Feign) [code]
+```
 
-### Step 6 — Identify key data flows
+**Never** write just a bare `METHOD /path — file:line`. Line numbers shift;
+use the class#method triplet.
 
-Choose 2–3 of the most important or representative end-to-end flows.
-Describe each in 3–5 steps (not full call chains — those belong in clarify).
-Include at least one flow that crosses a significant system boundary
-(external API call, message queue, database write).
+**Event Listeners / Message Consumers / Background Jobs / CLI / gRPC:**
+- State total count first for each category
+- List representative examples with class + trigger
 
-### Step 7 — Self-check
+### Step 6 — Integration topology scan
+Feeds section **6. Integration Topology**.
 
-Before writing the artifact, verify:
+Run four greps (see `reference/scan-patterns.md` for exact patterns):
+1. **Outbound REST:** `@FeignClient` classes or HTTP client wrappers
+2. **Inbound REST from external systems:** filter `@*Mapping` for paths
+   that look like integration endpoints (`/mbe/`, `/cdm/`, `/oasis/`)
+3. **Inbound async:** `@MessageListener`, `@Consumer`, `@KafkaListener`,
+   `@RabbitListener`, `@JmsListener`, `@ServiceBusListener`
+4. **Outbound async:** `*Publisher`, `*Sender`, explicit `.send(...)` calls
+   to queues/topics
 
-- [ ] Every module entry was verified by reading ≥1 source file
-- [ ] Entry point totals (not just examples) are stated for listeners/consumers
-- [ ] Sub-systems with their own layering are listed as separate modules
-- [ ] URL versioning inconsistency (if any) is noted
-- [ ] Local dev commands were sourced from actual config files
-- [ ] Notes section contains at least one non-obvious gotcha
+Compile a matrix:
 
-If any checkbox fails, address it before writing.
+| System | Direction | Mechanism | Main class | Local dev needed | Notes |
+|--------|-----------|-----------|------------|------------------|-------|
 
-### Step 8 — Write the onboard artifact
+Then, for **internal events**, produce a second table showing each
+`*Event` class and **all** its listeners (IRON RULE 4):
 
-Write `.forge/context/onboard.md` following the output template below.
+| Event | Publisher | Observers (all) | External effects |
+|-------|-----------|-----------------|------------------|
+| `OrderConfirmedEvent` | `OrderConfirmService` | `OrderConfirmedListener`, `OCCOrderConfirmListener`, `WallBoxOnOrderConfirmedListener` | DMS notify, OCC status, WallBox init |
+
+### Step 7 — Test infrastructure scan (for Known Traps only)
+Feeds section **9. Known Traps**. Does NOT feed a testing strategy section.
+
+- Glob `**/BaseTest*.*`, `**/AbstractTest*.*` — record each base class's
+  isolation mechanism (is there `@Transactional`? `@Rollback`? what does
+  `cleanUp()` do?)
+- Grep `@Disabled`, `@Ignore` across test sources — list currently-disabled
+  tests
+- Read test config for `stubMode=remote`, `wiremock.*`, embedded DB
+  versions (MariaDB4j, H2, Testcontainers)
+- Note cross-platform concerns (Apple Silicon ALPN, glibc-linked native
+  libs, etc.) if discoverable from dependency versions
+
+Surface only **observed facts** that will bite first-day developers. Do
+NOT write a testing strategy — that is calibrate's job.
+
+### Step 8 — Local development commands
+Feeds section **8. Local Development**.
+
+Structure into three distinct blocks:
+
+1. **Prereqs** — infrastructure (DB, Redis, MQ). Include Docker commands
+   when `docker-compose.yml` exists.
+2. **Compile** — minimum to make the build succeed. If private repos are
+   required (Nexus, Artifactory), state the env vars / credentials needed.
+3. **Run** — minimum config for local startup. Include:
+   - Config template file path (exact, e.g.
+     `application-local.properties.sample`); if absent, state "(no local
+     template in repo)"
+   - Required config keys (grep main `application.yml` for `${...}`
+     placeholders without defaults)
+   - Port and profile defaults (read `bootstrap.yml` / `application.yml`)
+4. **Test** — all tests + single test class/file commands
+5. **Lint / format** — if `spotless`, `checkstyle`, `eslint`, `prettier`
+   is configured, the command; else `# (no lint task configured)`
+
+End the section with the testing-strategy pointer to calibrate.
+
+### Step 9 — Change navigation synthesis
+Feeds section **7. Change Navigation**.
+
+From the scans in Steps 3–6, synthesize 4–6 typical change scenarios
+**observed in the existing code**. Frame each as "if you change X, existing
+code modifies these layers":
+
+```
+### Add / modify an order field
+- Controller DTO: `QuotationOrderRequest` (in `order/adapter/api/dto/`)
+- Service mapping: `QuotationOrderService#mapRequestToEntity`
+- Entity: `QuotationOrder`
+- Migration: `order-management-service/src/main/resources/db/migration/`
+- Likely side effects: search indexing, export, CDM sync, contract tests
+```
+
+**Keep this factual, not prescriptive.** Describe what existing code does,
+not what new code should do. If you can't find ≥3 similar existing changes
+for a scenario, omit that scenario.
+
+### Step 10 — Verification pass (MANDATORY)
+
+Before writing the artifact, confirm every IRON RULE:
+
+- [ ] Route sanity: every representative route's HTTP verb read from
+  `@*Mapping` annotation in the actual file
+- [ ] Path existence: every module and file path resolves on Glob
+- [ ] Version cross-check: every version in Tech Stack appears in a
+  build file; README conflicts marked `[conflict]`
+- [ ] Observer completeness: for every event in Integration Topology,
+  all listeners grep-verified
+- [ ] Confidence tags: every factual claim tagged
+- [ ] Command verification: every command in Local Development appears
+  in an actual build/config file
+- [ ] No rule-writing: re-read Known Traps / Architecture Overview /
+  Change Navigation and remove any sentence with "must", "should",
+  "forbidden", "never"
+- [ ] Sub-system separation: every domain with full layering has its own row
+- [ ] Entry-point totals: each category has a count before examples
+- [ ] Calibrate pointers: Architecture Overview, Local Development,
+  Known Traps each end with their pointer line
+
+Any failed check must be fixed before Step 11.
+
+### Step 11 — Write artifact (section-by-section)
+
+Write each section independently to disk, in order. Each section is
+wrapped in HTML-comment markers so incremental mode can diff them:
+
+```markdown
+<!-- forge:onboard section=project-identity verified={commit-hash} generated={YYYY-MM-DD} -->
+## 1. Project Identity
+
+...content...
+
+<!-- /forge:onboard section=project-identity -->
+```
+
+Preserve blocks inside sections use their own markers:
+
+```markdown
+<!-- forge:onboard:preserve -->
+团队补充 — skill 不会覆盖此块
+...
+<!-- /forge:onboard:preserve -->
+```
+
+See `reference/output-template.md` for the full 9-section structure and
+`reference/incremental-mode.md` for the diff/merge logic.
+
+Write in the order: header → sections 1–9 → Document Confidence footer.
+After each section write, confirm the file still parses (opening/closing
+markers match) before proceeding.
 
 ---
 
@@ -173,24 +437,32 @@ Write `.forge/context/onboard.md` following the output template below.
 
 **File:** `.forge/context/onboard.md`
 
-See [output-template.md](reference/output-template.md) for the complete artifact template.
+See [reference/output-template.md](reference/output-template.md) for the
+complete artifact template including all section markers, the Document
+Confidence footer, and the preserve-block syntax.
 
 ---
 
 ## Interaction Rules
 
 - If CLAUDE.md exists, read it fully — it may contain corrections to what
-  you would otherwise infer.
-- If a section has no data (e.g. no CLI entry points), omit that section
-  rather than writing "None."
-- After writing the artifact, summarise what was found in 2–3 sentences and
-  suggest the next step (`/forge:calibrate`).
+  the skill would otherwise infer. Tag claims from CLAUDE.md as `[code]`
+  only if cross-verified against source; otherwise `[inferred]`.
+- If a section has no data (e.g. no CLI entry points), **still emit the
+  section markers with an explicit "No {category} detected" body** — do
+  not silently omit sections in the incremental-mode output (the markers
+  anchor future diffs).
+- After writing, summarise in 2–3 sentences:
+  - total sections written vs reused vs skipped
+  - any `[conflict]` or `[needs-verification]` tags that need human input
+  - next step: `/forge:calibrate`
 - Append one entry to `.forge/JOURNAL.md` (create if absent):
 
 ```markdown
-## YYYY-MM-DD — /forge:onboard
-- 产出：.forge/context/onboard.md
-- 摘要：{N} 个模块，{N} 个入口点，主要技术栈：{stack}
+## YYYY-MM-DD — /forge:onboard ({mode})
+- 产出：.forge/context/onboard.md ({N} sections written, {M} reused)
+- 摘要：{N} 个业务域, {N} 个技术层, {N} 个 entry points, {N} 个集成
+- 置信度警示：{list of [conflict] or [needs-verification] items, or "无"}
 - 下一步：/forge:calibrate
 ```
 
@@ -198,8 +470,11 @@ See [output-template.md](reference/output-template.md) for the complete artifact
 
 ## Constraints
 
-- Do not modify any source files. This skill is strictly read-only.
-- Do not guess at project purpose from directory names alone — read at least
-  one substantive file before describing what a module does.
-- Do not list every file or every route — this is a map, not an inventory.
-  Aim for the 20% of information that gives 80% of orientation.
+- Strictly read-only to source files. This skill never modifies code.
+- Never guess project purpose from directory names — read at least one
+  substantive file per module before describing it.
+- Aim for navigation over inventory: 20% of information that gives 80%
+  of orientation. Do not list every route or every file.
+- In incremental mode, never overwrite a section whose scan result is
+  unchanged — the `verified=` marker update is the only write.
+- Preserve blocks are sacred: even `--regenerate` carries them across.
