@@ -6,9 +6,8 @@ description: |
   member, or beginning a new Claude Code session on an existing codebase.
   Run this before /forge:calibrate.
 argument-hint: ""
-allowed-tools: "Read Glob Grep Bash"
+allowed-tools: "Read Glob Grep Bash Write"
 context: fork
-agent: Explore
 model: sonnet
 effort: high
 ---

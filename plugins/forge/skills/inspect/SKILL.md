@@ -5,7 +5,7 @@ description: |
   Use after /forge:code has completed one or more tasks for a feature,
   or to review a specific file path.
 argument-hint: "<feature-slug or file-path>"
-allowed-tools: "Read Glob Grep"
+allowed-tools: "Read Glob Grep Write"
 context: fork
 model: sonnet
 effort: high

@@ -6,7 +6,7 @@ description: |
   requirement before design begins. Produces a structured clarify artifact
   that feeds into /forge:design.
 argument-hint: "<requirement description>"
-allowed-tools: "Read Glob Grep Bash"
+allowed-tools: "Read Glob Grep Bash Write"
 model: sonnet
 effort: high
 ---

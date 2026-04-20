@@ -8,7 +8,7 @@ description: |
   that serve as the collective source of truth referenced by /forge:code,
   /forge:inspect, and /forge:test.
 argument-hint: ""
-allowed-tools: "Read Glob Grep Bash"
+allowed-tools: "Read Glob Grep Bash Write"
 model: sonnet
 effort: max
 ---

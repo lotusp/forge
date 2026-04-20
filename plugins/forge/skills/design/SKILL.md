@@ -6,7 +6,7 @@ description: |
   has produced a clarify artifact, or when the user provides sufficient context
   directly.
 argument-hint: "<feature-slug>"
-allowed-tools: "Read Glob Grep Bash"
+allowed-tools: "Read Glob Grep Bash Write"
 model: sonnet
 effort: high
 ---

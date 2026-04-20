@@ -5,7 +5,7 @@ description: |
   with clear acceptance criteria and dependency graph. Use after /forge:design
   has produced a design artifact for the feature.
 argument-hint: "<feature-slug>"
-allowed-tools: "Read Glob Grep"
+allowed-tools: "Read Glob Grep Write"
 model: sonnet
 effort: medium
 ---
