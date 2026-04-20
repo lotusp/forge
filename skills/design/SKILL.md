@@ -160,6 +160,18 @@ risk note for the plan.
 
 Write `.forge/features/{feature-slug}/design.md` following the output template.
 
+### Step 8 — Append to JOURNAL.md
+
+Append one entry to `.forge/JOURNAL.md`:
+
+```markdown
+## YYYY-MM-DD — /forge:design {feature-slug}
+- 产出：.forge/features/{slug}/design.md
+- 方案：{chosen approach name}, 风险：low / medium / high
+- 遗留决策：{N} 个 deferred（见 design.md § Open Decisions）
+- 下一步：/forge:tasking {slug}
+```
+
 ---
 
 ## Output

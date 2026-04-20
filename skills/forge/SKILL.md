@@ -20,6 +20,7 @@ effort: high
 - Completed tasks: !`ls .forge/features/*/tasks/T*-summary.md 2>/dev/null | grep -oE 'T[0-9]+' | tr '\n' ', ' || echo "(none)"`
 - Inspect results: !`ls .forge/features/*/inspect.md 2>/dev/null | sed 's|.forge/features/||;s|/inspect.md||' | tr '\n' ', ' || echo "(none)"`
 - Status script: !`find ~/.claude -name "status.mjs" -path "*/forge/scripts/*" 2>/dev/null | head -1 || echo "(not found — will use manual detection)"`
+- Recent activity: !`tail -30 .forge/JOURNAL.md 2>/dev/null || echo "(no journal yet — first session)"`
 
 ---
 

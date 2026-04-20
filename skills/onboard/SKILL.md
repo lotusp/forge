@@ -186,6 +186,14 @@ See [output-template.md](reference/output-template.md) for the complete artifact
   rather than writing "None."
 - After writing the artifact, summarise what was found in 2–3 sentences and
   suggest the next step (`/forge:calibrate`).
+- Append one entry to `.forge/JOURNAL.md` (create if absent):
+
+```markdown
+## YYYY-MM-DD — /forge:onboard
+- 产出：.forge/context/onboard.md
+- 摘要：{N} 个模块，{N} 个入口点，主要技术栈：{stack}
+- 下一步：/forge:calibrate
+```
 
 ---
 

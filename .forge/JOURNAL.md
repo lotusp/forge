@@ -2,6 +2,7 @@
 
 > 操作日志，追加写入，不修改历史。  
 > 任何人打开此文件，可以看到项目从零到完整的演进历史。
+> `/forge:forge` 在 Runtime snapshot 中读取末尾 30 行作为新会话上下文。
 
 ---
 
@@ -35,3 +36,20 @@
 - 下一步：开始 `/forge:code T001`
 
 ---
+
+## 2026-04-19 — /forge:onboard
+- 产出：.forge/context/onboard.md
+- 摘要：9 个 skill、3 个 agent、4 个脚本；Claude Code Plugin 无外部依赖
+- 下一步：/forge:calibrate
+
+## 2026-04-19 — /forge:calibrate
+- 产出：conventions.md, testing.md, architecture.md, constraints.md
+- 裁决：1 个矛盾（交互消息大小写），关键决策：`[forge:{skill}]` 全小写
+- 下一步：持续优化 skill 实现
+
+## 2026-04-20 — 优化：JOURNAL.md + Assumptions Made（非 skill 执行，直接代码变更）
+- 变更：forge:forge Runtime snapshot 加 JOURNAL 读取；所有 9 个 skill 加 JOURNAL 追加步骤；
+  forge:code 加 assumption tracking IRON RULE、Step 3 说明、summary Assumptions Made 章节；
+  forge:inspect 扩展 prerequisites 和 Step 2 以接收 assumptions；
+  conventions.md 更新产物路径表和 Decision #6；初始化 JOURNAL.md 格式头
+- 下一步：评估中优先级改进项（conventions-quickref、design Rejected Approaches 等）

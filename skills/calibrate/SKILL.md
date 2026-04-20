@@ -292,6 +292,14 @@ If any checkbox is unchecked, address it before writing the files.
 - After completing calibration, suggest the next step:
   - If there is a feature to work on: `/forge:clarify {feature}`
   - If starting fresh: `/forge:clarify` with a description of the first feature
+- Append one entry to `.forge/JOURNAL.md` (create if absent):
+
+```markdown
+## YYYY-MM-DD — /forge:calibrate
+- 产出：conventions.md, testing.md, architecture.md, constraints.md
+- 裁决：{N} 个矛盾，关键决策：{1–2 most important decisions}
+- 下一步：/forge:clarify {feature or "<需求描述>"}
+```
 
 ---
 

@@ -188,6 +188,7 @@ Options:
 
 | 产物 | 路径 |
 |------|------|
+| 活动日志 | `.forge/JOURNAL.md` |
 | 项目地图 | `.forge/context/onboard.md` |
 | 代码约定 | `.forge/context/conventions.md` |
 | 测试约定 | `.forge/context/testing.md` |
@@ -201,6 +202,22 @@ Options:
 | 实现摘要 | `.forge/features/{slug}/tasks/T{NNN}-summary.md` |
 | 会话状态 | `.forge/_session/calibrate-scan.md` |
 
+### JOURNAL.md 条目格式
+
+每个 skill 执行后强制追加，条目由新到旧（追加到文件末尾）：
+
+```markdown
+## YYYY-MM-DD — /forge:{skill} {arg}
+- 产出：{主产物文件}
+- {skill-specific key metric, e.g. 假设/任务/发现数量}
+- 下一步：{recommended next command}
+```
+
+**关键规则：**
+- 每次 skill 执行追加一条，不修改已有条目
+- forge 编排器（`/forge:forge`）在 Runtime snapshot 中读取末尾 30 行作为会话上下文
+- 不删除、不重写日志；错误记录也保留（便于追溯）
+
 ---
 
 ## Decision Log
@@ -212,6 +229,7 @@ Options:
 | 3 | 产物结构 | `context/` + `features/{slug}/` 嵌套 | 多功能项目清晰，避免根目录堆积 |
 | 4 | allowed-tools 格式 | 空格分隔带引号字符串 | Claude Code 解析格式要求 |
 | 5 | Agent tools 格式 | 逗号分隔无引号 | Agent frontmatter 格式要求 |
+| 6 | 会话连续性 | JOURNAL.md 强制追加 + task summary Assumptions Made 章节 | 解决 AI 冷启动和隐性假设可追溯问题 |
 
 ---
 

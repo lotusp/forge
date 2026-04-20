@@ -136,6 +136,17 @@ if there is one.
 Once all batches are resolved (or the user chooses to stop), write
 `.forge/features/{feature-slug}/clarify.md` following the output template.
 
+### Step 9 — Append to JOURNAL.md
+
+Append one entry to `.forge/JOURNAL.md`:
+
+```markdown
+## YYYY-MM-DD — /forge:clarify {feature-slug}
+- 产出：.forge/features/{slug}/clarify.md
+- 未知项：{N} 个（blocking: {n}, deferred: {n}）
+- 下一步：/forge:design {slug}
+```
+
 ---
 
 ## Output

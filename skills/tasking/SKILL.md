@@ -127,6 +127,17 @@ re-confirm before writing.
 
 Write `.forge/features/{feature-slug}/plan.md` following the output template.
 
+### Step 8 — Append to JOURNAL.md
+
+Append one entry to `.forge/JOURNAL.md`:
+
+```markdown
+## YYYY-MM-DD — /forge:tasking {feature-slug}
+- 产出：.forge/features/{slug}/plan.md
+- 任务：{N} 个（T{first}–T{last}），高风险：{n} 个
+- 下一步：/forge:code T{first-task-id}
+```
+
 ---
 
 ## Output

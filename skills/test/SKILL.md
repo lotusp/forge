@@ -160,6 +160,17 @@ test suite.
 
 Write `.forge/features/{feature-slug}/test.md`.
 
+### Step 7 — Append to JOURNAL.md
+
+Append one entry to `.forge/JOURNAL.md`:
+
+```markdown
+## YYYY-MM-DD — /forge:test {feature-slug}
+- 产出：.forge/features/{slug}/test.md + {N} 个测试文件
+- 覆盖：{N} 个 unit, {N} 个 integration, {N} 个 e2e
+- 下一步：运行测试套件验证覆盖
+```
+
 ---
 
 ## Output
