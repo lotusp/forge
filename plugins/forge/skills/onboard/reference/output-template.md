@@ -17,6 +17,14 @@ Referenced by `/forge:onboard` Step 11.
 - **Preserve blocks for human additions.** Content inside
   `<!-- forge:onboard:preserve -->` is carried across all regenerations.
 
+## Example domain for illustrations
+
+All concrete examples below use a **generic e-commerce order platform**
+(domain classes like `Order`, `Customer`, `Payment`; packages like
+`com.example.shop.*`; service name `order-service`). These are
+illustrative only — replace with the actual identifiers found in the
+target project.
+
 ---
 
 ## Template
@@ -37,7 +45,7 @@ Referenced by `/forge:onboard` Step 11.
 - What the system does in business terms [readme|code]
 - Its boundary in the larger ecosystem (which services does it integrate
   with, what does it NOT own) [inferred|code]
-- Primary users (internal teams, external dealers, end customers) [readme]
+- Primary users (internal teams, external partners, end customers) [readme]
 - Repository name and its distinction from the deployable artifact name
   if they differ [build]
 - Startup class / main entry `[code]`
@@ -59,13 +67,13 @@ Referenced by `/forge:onboard` Step 11.
 | Framework | {e.g. Spring Boot 2.5.12 + Spring Cloud 2020.0.3} | [build] |
 | Database | {e.g. MySQL 8, schema `xxx`, migrations via Flyway 4.2} | [config] |
 | Cache | {e.g. Redis via Jedis} | [config] |
-| Search | {e.g. Elasticsearch 7.9.3} {with "— module: X" if identifiable, else "— usage location not confirmed [inferred]"} | [build] |
-| Messaging | {e.g. Azure Service Bus} | [config] |
-| Config center | {e.g. Nacos config (spring-cloud-starter-alibaba-nacos-config)} | [build] |
+| Search | {e.g. Elasticsearch 7.x} {with "— module: X" if identifiable, else "— usage location not confirmed [inferred]"} | [build] |
+| Messaging | {e.g. Kafka / RabbitMQ / Azure Service Bus} | [config] |
+| Config center | {e.g. Nacos / Consul / Spring Cloud Config} | [build] |
 | Service integration | {e.g. Feign + Resilience4j} | [build] |
-| Build | {e.g. Gradle 6.9, multi-project: root + order-management-service} | [build] |
-| Infrastructure | {e.g. Azure China (registry: iotrmcninfctreg001.azurecr.cn), Kubernetes} | [config] |
-| Key internal libraries | {shared starters, proprietary SDKs} | [build] |
+| Build | {e.g. Gradle 6.9, multi-project: root + `{service-name}`} | [build] |
+| Infrastructure | {e.g. Kubernetes on AWS / Azure / GCP, container registry: `{registry-host}`} | [config] |
+| Key internal libraries | {shared starters, proprietary SDKs — list by artifact ID} | [build] |
 
 ### Observed layering
 
@@ -88,7 +96,7 @@ Observed call direction: Adapter → Service → Repository [code]
 Observed transaction boundary: Service layer (search `@Transactional`
 in `*Service.java`) [code]
 Observed event usage: Spring ApplicationEvent for in-process side effects
-(e.g. `OrderCreatedEvent` → N listeners); Service Bus for cross-service
+(e.g. `OrderPlacedEvent` → N listeners); external MQ for cross-service
 async messaging [code]
 
 > 分层规则与禁止事项见 `.forge/context/architecture.md`（由 /forge:calibrate 产生）
@@ -102,8 +110,8 @@ async messaging [code]
 
 | Domain | Path | Responsibility | Source |
 |--------|------|----------------|--------|
-| `order` | `order-management-service/src/main/java/com/daimler/otr/order/` | Quotation lifecycle, order state machine, invoicing, vehicle assignment | [code] |
-| `salesoption` | `.../salesoption/` | Accessories, service contracts, insurance, incentive programs, service fees | [code] |
+| `order` | `order-service/src/main/java/com/example/shop/order/` | Order lifecycle, state machine, invoicing, fulfilment | [code] |
+| `catalog` | `.../catalog/` | Products, promotions, pricing rules, service add-ons | [code] |
 | ... | ... | ... | ... |
 
 ### Technical layers
@@ -120,10 +128,10 @@ async messaging [code]
 ### Notes on structure
 
 {Non-obvious observations about how the code is organized. Examples:}
-- Adapter sub-packages (`order.adapter.mbe`, `order.adapter.dms`, etc.)
-  are **not** listed as separate modules above — they are per-integration
-  adapters within the `order` domain. See Section 6 (Integration Topology)
-  for the full integration list. [code]
+- Adapter sub-packages (`order.adapter.{vendor}`, `order.adapter.shipping`,
+  etc.) are **not** listed as separate modules above — they are
+  per-integration adapters within the `order` domain. See Section 6
+  (Integration Topology) for the full integration list. [code]
 - `{domain}/{subdomain}/` is a sub-system with its own full layering
   (controllers, services, repositories) — treat as its own module row
   above. [code]
@@ -137,8 +145,8 @@ async messaging [code]
 
 | Class | Package | Business meaning | Key relations | State field |
 |-------|---------|------------------|---------------|-------------|
-| `QuotationOrder` | `order.domain.quotationorder` | Main order entity | `Quotation` (1:1), `QuotationOrderHistory` (1:N) | `status: OrderStatus` enum [code] |
-| `SalesIncentiveProgram` | `salesoption.domain.salesincentive` | Manufacturer incentive program | `QuotationOption` (N:N via junction) | — |
+| `Order` | `order.domain.order` | Main order entity | `LineItem` (1:N), `OrderHistory` (1:N) | `status: OrderStatus` enum [code] |
+| `PromotionProgram` | `catalog.domain.promotion` | Vendor-supplied promotion program | `LineItem` (N:N via junction) | — |
 | ... | ... | ... | ... | ... |
 
 ### Status flows (observed)
@@ -146,8 +154,8 @@ async messaging [code]
 For each aggregate root with a status enum, list the enum values and the
 observed transitions:
 
-**`OrderStatus` (on `QuotationOrder`):** [code]
-- `DRAFT` → `SUBMITTED` → `CONFIRMED` → `INVOICED` → `DELIVERED`
+**`OrderStatus` (on `Order`):** [code]
+- `DRAFT` → `SUBMITTED` → `CONFIRMED` → `INVOICED` → `SHIPPED` → `DELIVERED`
 - From `CONFIRMED`: can also → `CANCELLED`
 - Transitions triggered by: {list the service methods that change status}
 
@@ -155,8 +163,8 @@ observed transitions:
 
 | Event | Emitted from | Carries | Observers listed in |
 |-------|--------------|---------|---------------------|
-| `OrderCreatedEvent` | `QuotationOrderService#createOrder` | `orderId`, `dealerId` | Section 6 |
-| `OrderConfirmedEvent` | `OrderConfirmService#confirm` | `orderId`, `confirmedAt` | Section 6 |
+| `OrderPlacedEvent` | `OrderService#createOrder` | `orderId`, `customerId` | Section 6 |
+| `OrderConfirmedEvent` | `OrderService#confirm` | `orderId`, `confirmedAt` | Section 6 |
 | ... | ... | ... | Section 6 |
 
 <!-- /forge:onboard section=core-domain-objects -->
@@ -171,17 +179,17 @@ see Known Traps} [code]
 Total business controllers: **{N}** [code]
 Representative call chains:
 
-#### Create quotation order
-- Entry: `QuotationOrderController#createOrder` (@PostMapping /api/v2/orders) [code]
-- Service: `QuotationOrderService#createOrder` [code]
-- Entity: `QuotationOrder` [code]
-- Events published: `OrderCreatedEvent` [code]
-- External calls: `StockManagementClient#reserveStock` (Feign) [code]
+#### Place a new order
+- Entry: `OrderController#createOrder` (@PostMapping /api/v1/orders) [code]
+- Service: `OrderService#createOrder` [code]
+- Entity: `Order` [code]
+- Events published: `OrderPlacedEvent` [code]
+- External calls: `InventoryClient#reserveStock` (Feign) [code]
 
-#### Receive MBE payment
-- Entry: `MBEIntegrationController#receivePayment` (@PostMapping /api/mbe/payment) [code]
-- Service: `MBEIntegrationService#createPayment` [code]
-- Entity: `Payment`, `QuotationOrder` [code]
+#### Receive payment from gateway
+- Entry: `PaymentController#receivePayment` (@PostMapping /api/payment/callback) [code]
+- Service: `PaymentService#createPayment` [code]
+- Entity: `Payment`, `Order` [code]
 - Events published: `OrderConfirmedEvent` [code]
 - External calls: none (integration is inbound) [code]
 
@@ -193,9 +201,10 @@ Total: **{N}** Spring application-event listeners + **{N}** async queue
 consumers [code]
 Representative examples:
 
-- `OrderCreatedListener` — `@EventListener OrderCreatedEvent` — publishes
-  Service Bus message [code]
-- `CentralVehicleMessageListener` — `@Consumer queue.otr.scheduler_to_vehicle` — dispatches 48h/72h timeout handlers [code]
+- `OrderPlacedListener` — `@EventListener OrderPlacedEvent` — publishes
+  MQ message [code]
+- `InventoryTimeoutListener` — `@Consumer queue.inventory.timeout` —
+  dispatches 48h/72h timeout handlers [code]
 - ... {list 5–8 representative}
 
 **All listeners per event are tabulated in Section 6.**
@@ -220,13 +229,13 @@ Total: **{N}** [code] — omit section if zero
 
 | System | Direction | Mechanism | Main class | Local dev | Notes |
 |--------|-----------|-----------|------------|-----------|-------|
-| MBE | Inbound | REST | `MBEIntegrationController` | can mock | [code] |
-| DMS | Outbound | Feign | `NotificationClient` | can mock | [code] |
-| OCC (Central Vehicle) | Bi-directional | Service Bus queue | `CentralVehicleMessageListener` + `OccCentralVehicleService` | needs mock | [code] |
-| CDM | Bi-directional | Service Bus | `CDMIntegrationController` + `CDMMessageListener` | needs mock | [code] |
-| RTM | Outbound | Feign | `RTMClient` | can mock | [code] |
-| OASIS | Inbound | REST (multipart gzip) | `OASISImportController` | not required | [code] |
-| SIMS | Inbound | REST | `SIMSImportController` | not required | [code] |
+| Payment Gateway | Inbound | REST (webhook) | `PaymentController` | can mock | [code] |
+| Notification Service | Outbound | Feign | `NotificationClient` | can mock | [code] |
+| Warehouse Scheduler | Bi-directional | Queue | `WarehouseListener` + `WarehouseService` | needs mock | [code] |
+| Customer Data Platform | Bi-directional | Queue | `CustomerDataController` + `CustomerDataListener` | needs mock | [code] |
+| Reporting Service | Outbound | Feign | `ReportingClient` | can mock | [code] |
+| Vendor Catalog Feed | Inbound | REST (multipart gzip) | `VendorCatalogImportController` | not required | [code] |
+| Incentive Program Feed | Inbound | REST | `IncentiveImportController` | not required | [code] |
 | {internal service} | Outbound | Feign | `{Name}Client` | mock provided | [code] |
 
 ### Internal event → observer map
@@ -236,8 +245,8 @@ cell says "1 observer", that was verified by grep:
 
 | Event | Publisher | Observers (all) | External effects |
 |-------|-----------|-----------------|------------------|
-| `OrderCreatedEvent` | `QuotationOrderService` | `OrderCreatedListener`, `OrderCreatedListenerForWallBox` | Service Bus `order.created` topic; WallBox order init [code] |
-| `OrderConfirmedEvent` | `OrderConfirmService` | `OrderConfirmedListener`, `OCCOrderConfirmListener` | DMS notify (Feign); OCC status → SIGNED (Service Bus) [code] |
+| `OrderPlacedEvent` | `OrderService` | `OrderPlacedListener`, `FulfilmentInitListener` | MQ `order.placed` topic; fulfilment workflow init [code] |
+| `OrderConfirmedEvent` | `OrderService` | `OrderConfirmedListener`, `WarehouseConfirmListener` | Notification (Feign); warehouse status → SIGNED (queue) [code] |
 | ... | ... | ... | ... |
 
 <!-- /forge:onboard section=integration-topology -->
@@ -252,30 +261,31 @@ cell says "1 observer", that was verified by grep:
 ### Add / modify an order field
 
 Layers that existing PRs have touched together [code]:
-- Request/response DTO: `QuotationOrderRequest` / `QuotationOrderResponse`
+- Request/response DTO: `OrderRequest` / `OrderResponse`
   in `order/adapter/api/dto/`
-- Service mapping: `QuotationOrderService#mapRequestToEntity`
-- Entity: `QuotationOrder`
+- Service mapping: `OrderService#mapRequestToEntity`
+- Entity: `Order`
 - Migration: add Flyway script to
-  `order-management-service/src/main/resources/db/migration/`
-- Likely side effects seen in similar past PRs: CDM sync payload, data
-  export, contract tests in `{path}`
+  `order-service/src/main/resources/db/migration/`
+- Likely side effects seen in similar past PRs: search-index payload,
+  data export, contract tests in `{path}`
 
 ### Modify order status flow
 
 - Status enum: `order.domain.OrderStatus`
-- Transition logic: `OrderConfirmService`, `OrderCancelService`
+- Transition logic: `OrderService`, `OrderCancelService`
 - Event publication: new `*Event` class + `@Publisher` invocation
 - All listeners of the new/changed event (see Section 6) must be audited
-- Downstream sync: DMS / OCC / CDM / RTM adapters
+- Downstream sync: Notification / Warehouse / Customer-Data / Reporting adapters
 
-### Modify OASIS / SIMS incentive import
+### Modify a vendor import handler
 
-- Import controller: `OASISImportController` / `SIMSImportController`
-- Parsing: `OASISProgramService` / `SIMSProgramService`
+- Import controller: `VendorCatalogImportController` /
+  `IncentiveImportController`
+- Parsing: `VendorCatalogService` / `IncentiveProgramService`
 - Handler strategy: one file per record type under `impl/`
-- Persistence: `SalesIncentiveProgram*` entities
-- Downstream: `QuotationOptionListener` event for quotation refresh
+- Persistence: `PromotionProgram*` entities
+- Downstream: `LineItemRefreshListener` event for order refresh
 
 ### Integrate a new external service (outbound)
 
@@ -323,8 +333,8 @@ brew services start redis
 ```
 
 **Known compile blockers:** [code]
-- Missing Nexus credentials → `Could not resolve com.daimler.otr:*`
-- Azure CN cert not imported → SSL handshake failure (see Known Traps)
+- Missing Nexus credentials → `Could not resolve com.example.internal:*`
+- Internal TLS cert not imported → SSL handshake failure (see Known Traps)
 
 ### Run locally
 
@@ -336,29 +346,29 @@ source)" [inferred]}
 defaults in `application.yml`): [code]
 - `spring.datasource.url`
 - `spring.redis.host`
-- `spring.cloud.nacos.config.server-addr`
-- `azure.servicebus.connection-string`
+- `spring.cloud.{config-center}.server-addr`
+- `{messaging.connection-string}`
 - `{...}`
 
-**Default profile:** `local` | **Default port:** `30002` [config]
+**Default profile:** `local` | **Default port:** `{N}` [config]
 
 ```bash
-cp {template} order-management-service/src/main/resources/application-local.properties
+cp {template} order-service/src/main/resources/application-local.properties
 # Edit required keys per above
-./gradlew :order-management-service:bootRun -Penv=local
+./gradlew :order-service:bootRun -Penv=local
 ```
 
 ### Test
 
 ```bash
 # All tests
-./gradlew :order-management-service:test
+./gradlew :order-service:test
 
 # Single class
-./gradlew :order-management-service:test --tests "com.daimler.otr.order.service.QuotationOrderServiceTest"
+./gradlew :order-service:test --tests "com.example.shop.order.service.OrderServiceTest"
 
 # Single method
-./gradlew :order-management-service:test --tests "*#shouldCreateOrder"
+./gradlew :order-service:test --tests "*#shouldCreateOrder"
 ```
 
 > 完整测试策略见 `.forge/context/testing.md`（由 /forge:calibrate 产生）
@@ -373,8 +383,8 @@ cp {template} order-management-service/src/main/resources/application-local.prop
 ### Build production JAR
 
 ```bash
-./gradlew :order-management-service:bootJar -Penv=prod
-# Output: order-management-service/build/libs/order-management.jar [build]
+./gradlew :order-service:bootJar -Penv=prod
+# Output: order-service/build/libs/order-service.jar [build]
 ```
 
 <!-- /forge:onboard section=local-development -->
@@ -387,17 +397,18 @@ cp {template} order-management-service/src/main/resources/application-local.prop
 
 ### Environment
 
-- **Azure CN cert must be imported locally:** JVM doesn't trust Azure
-  China domains by default. Import two certs from `./config/` into
-  `$JAVA_HOME/jre/lib/security/cacerts`. The Dockerfile handles this in
-  prod. [code]
+- **Internal CA cert must be imported locally:** JVM may not trust
+  company-internal or region-specific domains by default. Import the
+  required certificates from `./config/` into
+  `$JAVA_HOME/jre/lib/security/cacerts`. The Dockerfile typically
+  handles this in production. [code]
 - **Apple Silicon WireMock ALPN failure** (if WireMock version < 3.x):
   symptom `No Server ALPNProcessors!`. Workaround: export
   `WIREMOCK_SERVER_HTTPS_PORT=-1` and
   `WIREMOCK_SERVER_HTTPS_PORT_DYNAMIC=false`. [inferred]
 - **VPN + Nexus credentials required for build:** `repoUser` /
   `repoPassword` in `~/.gradle/gradle.properties`; without them, Gradle
-  can't resolve internal `otr:*` starters. [build]
+  can't resolve internal `com.example.internal:*` starters. [build]
 
 ### History / legacy
 
@@ -405,12 +416,12 @@ cp {template} order-management-service/src/main/resources/application-local.prop
   versions: Java 11 (`gradle.properties: javaVersion=11`) + MySQL 8
   (`mysql-connector-java:8.0.26`). Treat the README infrastructure
   section as stale. [build] [conflict]
-- **Mixed URL versioning:** newer order endpoints use `/api/v2/`, older
-  endpoints (salesoption, SIMS, OASIS, reporting) use `/api/`. Both run
-  in the same context. [code]
-- **`fakedms/` is a stub, not the real integration:** code in
-  `order/adapter/api/fakedms/` returns canned responses for local
-  testing. The real DMS integration lives in `order/adapter/dms/`.
+- **Mixed URL versioning:** newer endpoints use `/api/v2/`, older
+  endpoints (catalog, imports, reporting) use `/api/`. Both run in the
+  same context. [code]
+- **`fakestub/` is a stub, not the real integration:** code under
+  `{module}/adapter/api/fakestub/` returns canned responses for local
+  testing. The real integration lives in `{module}/adapter/{vendor}/`.
   [code]
 - **`@Ignore` vs `@Disabled` mix-ups observed:** JUnit 4's `@Ignore` does
   not disable JUnit 5 tests. Historical commits have mistakenly used
@@ -431,7 +442,7 @@ cp {template} order-management-service/src/main/resources/application-local.prop
 
 ### Feature toggle console exposure
 
-- Togglz console at `/api/v2/orders/togglz-console` with
+- Togglz console at `/api/v2/{module}/togglz-console` with
   `togglz.console.secured=false`. [config]
 
 > 反模式与硬性规则见 `.forge/context/constraints.md`（由 /forge:calibrate 产生）

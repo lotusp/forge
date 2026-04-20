@@ -281,11 +281,11 @@ For each category:
 
 ```
 ### {Flow name}
-- Entry: `QuotationOrderController#createOrder` (@PostMapping /api/v2/orders) [code]
-- Service: `QuotationOrderService#createOrder` [code]
-- Entity: `QuotationOrder` [code]
-- Events published: `OrderCreatedEvent` [code]
-- External calls: `StockManagementClient.reserveStock` (Feign) [code]
+- Entry: `OrderController#createOrder` (@PostMapping /api/v1/orders) [code]
+- Service: `OrderService#createOrder` [code]
+- Entity: `Order` [code]
+- Events published: `OrderPlacedEvent` [code]
+- External calls: `InventoryClient.reserveStock` (Feign) [code]
 ```
 
 **Never** write just a bare `METHOD /path — file:line`. Line numbers shift;
@@ -301,7 +301,8 @@ Feeds section **6. Integration Topology**.
 Run four greps (see `reference/scan-patterns.md` for exact patterns):
 1. **Outbound REST:** `@FeignClient` classes or HTTP client wrappers
 2. **Inbound REST from external systems:** filter `@*Mapping` for paths
-   that look like integration endpoints (`/mbe/`, `/cdm/`, `/oasis/`)
+   that look like integration endpoints (e.g. webhook paths, vendor
+   import endpoints — `/webhook/`, `/import/`, `/{vendor-name}/`)
 3. **Inbound async:** `@MessageListener`, `@Consumer`, `@KafkaListener`,
    `@RabbitListener`, `@JmsListener`, `@ServiceBusListener`
 4. **Outbound async:** `*Publisher`, `*Sender`, explicit `.send(...)` calls
@@ -317,7 +318,7 @@ Then, for **internal events**, produce a second table showing each
 
 | Event | Publisher | Observers (all) | External effects |
 |-------|-----------|-----------------|------------------|
-| `OrderConfirmedEvent` | `OrderConfirmService` | `OrderConfirmedListener`, `OCCOrderConfirmListener`, `WallBoxOnOrderConfirmedListener` | DMS notify, OCC status, WallBox init |
+| `OrderConfirmedEvent` | `OrderService` | `OrderConfirmedListener`, `InventoryReservationListener`, `ShippingDispatchListener` | Notify customer, reserve inventory, schedule shipment |
 
 ### Step 7 — Test infrastructure scan (for Known Traps only)
 Feeds section **9. Known Traps**. Does NOT feed a testing strategy section.
@@ -366,11 +367,11 @@ code modifies these layers":
 
 ```
 ### Add / modify an order field
-- Controller DTO: `QuotationOrderRequest` (in `order/adapter/api/dto/`)
-- Service mapping: `QuotationOrderService#mapRequestToEntity`
-- Entity: `QuotationOrder`
-- Migration: `order-management-service/src/main/resources/db/migration/`
-- Likely side effects: search indexing, export, CDM sync, contract tests
+- Controller DTO: `OrderRequest` (in `order/adapter/api/dto/`)
+- Service mapping: `OrderService#mapRequestToEntity`
+- Entity: `Order`
+- Migration: `order-service/src/main/resources/db/migration/`
+- Likely side effects: search indexing, export, downstream sync, contract tests
 ```
 
 **Keep this factual, not prescriptive.** Describe what existing code does,
