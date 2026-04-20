@@ -308,6 +308,18 @@ git diff --cached | grep -iE "{company-patterns}|{product-patterns}" \
 本次泄漏修复采用方式 3（见 commit `b1f1f8b`）——历史消息本来就干净，
 只需前向修复即可。
 
+### 反面清单的陷阱（元规则）
+
+**写"禁止使用 X"时，列举真实的 X 本身就泄漏 X。**
+
+正确姿势：用**类别描述** + **无害占位符**，不要把真实违规案例写进文档。
+
+错误写法（反例）：
+> 禁止使用 `XYZ_ACRONYM_FROM_REAL_PROJECT` 这种内部缩写
+
+正确写法：
+> 禁止使用外部不可识别的 3–5 字母全大写缩写（来自具体项目的内部系统名）
+
 ### 例外
 
 Forge 在自举场景下，`.forge/context/onboard.md` 会描述 forge 自己作为
