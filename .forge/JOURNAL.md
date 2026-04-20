@@ -64,3 +64,12 @@
   4. Section 6 (Integration Topology) 对 meta-project 大部分 N/A，模板需说明如何优雅处理
 - 置信度警示：无 [conflict]；2 处 [inferred]（空 docs/decisions/、空 docs/milestones/）
 - 下一步：据自举发现做 skill 小幅修补（新增 project-kind 检测 + 各 section 的 N/A 指引）
+
+## 2026-04-20 — 规则沉淀：Content Hygiene 约束（非 skill 执行，直接人工更新）
+- 触发事件：commit `b1f1f8b` 清理了 skill 模板中来自 AI 辅助开发目标项目的私有标识符
+- 变更：
+  - conventions.md 新增 "Content Hygiene" 节（适用范围 / 允许内容 / 禁止内容 / 通用示例调色板 / 提交前自检 / 泄漏补救流程 / 例外）
+  - conventions.md Decision Log 新增 #7
+  - constraints.md 新增 C8（硬约束）+ AP5（反模式）+ TD-006（待建自动化扫描）
+  - constraints.md 顶部标注「最近人工更新」日期
+- 下一步：继续 onboard skill 的 T3（kind detection + profile 组合架构）
