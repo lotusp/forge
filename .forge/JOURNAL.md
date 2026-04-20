@@ -53,3 +53,14 @@
   forge:inspect 扩展 prerequisites 和 Step 2 以接收 assumptions；
   conventions.md 更新产物路径表和 Decision #6；初始化 JOURNAL.md 格式头
 - 下一步：评估中优先级改进项（conventions-quickref、design Rejected Approaches 等）
+
+## 2026-04-20 — /forge:onboard (--regenerate, self-bootstrap)
+- 产出：.forge/context/onboard.md (575 行, 107 confidence tags, 10 section markers)
+- 摘要：验证新 skill（v0.3.0）在 forge 自身项目上的行为；全 9 section 均产出
+- 自举发现：
+  1. 模板中 "Business Domain vs Technical Layer" 的二分法不适合 meta-project；Section 3 需要明确支持 plugin/library/tool 类项目
+  2. Section 4 (Core Domain Objects) 在无数据库项目上需用 "artifact types" 等类比概念填充
+  3. Section 5 (Entry Points) 模板预设 HTTP/events/jobs；slash-command 型项目需新子类别
+  4. Section 6 (Integration Topology) 对 meta-project 大部分 N/A，模板需说明如何优雅处理
+- 置信度警示：无 [conflict]；2 处 [inferred]（空 docs/decisions/、空 docs/milestones/）
+- 下一步：据自举发现做 skill 小幅修补（新增 project-kind 检测 + 各 section 的 N/A 指引）
