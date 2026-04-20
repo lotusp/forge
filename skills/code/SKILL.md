@@ -28,6 +28,7 @@ These rules have no exceptions.
 - **Never silently expand scope.** Even if an adjacent improvement is obvious, log it in the summary rather than making it.
 - **Never start a task with unmet dependencies.** Check that each dependency's summary file exists before writing a single line.
 - **One task at a time.** If the user provides multiple IDs, implement, summarise, and confirm each before starting the next.
+- **Document assumptions as they are made.** Any decision not explicitly specified in the task description or `conventions.md` is an assumption. Record it immediately in the Assumptions Made section — not retrospectively.
 
 ---
 
@@ -114,6 +115,11 @@ existing migration format and naming convention.
 **API changes:** If type is `api`, update the contract definition and any
 generated client code alongside the implementation.
 
+**Assumption tracking:** Whenever you make a decision not grounded in the
+task spec or conventions.md, write it down immediately as a draft assumption
+entry before continuing. Do not rely on reconstructing these retrospectively.
+Format: `Assumed [X] because [basis]. Risk: [low/medium/high].`
+
 ### Step 4 — Verify acceptance criteria
 
 Go through each criterion in the task entry and confirm it is met.
@@ -123,7 +129,22 @@ than claiming they pass.
 ### Step 5 — Write the summary
 
 Write `.forge/features/{feature-slug}/tasks/{task-id}-summary.md`. This file
-is required — downstream tasks use it to verify dependency completion.
+is required — downstream tasks use it to verify dependency completion, and
+`/forge:inspect` reads it to understand which deviations and assumptions were
+intentional.
+
+### Step 6 — Append to JOURNAL.md
+
+Append one entry to `.forge/JOURNAL.md` (create the file if it does not exist):
+
+```markdown
+## YYYY-MM-DD — /forge:code {task-id} [{feature-slug}]
+- 变更：{comma-separated list of files changed}
+- 假设：{count} 条 — 详见 tasks/{task-id}-summary.md § Assumptions Made
+- 下一步：{next task ID if more remain, or /forge:inspect {slug} if all done}
+```
+
+If there were no assumptions, write `假设：无` instead.
 
 ---
 
@@ -192,6 +213,18 @@ Wait for confirmation before writing the code.
 | File | Action | Description |
 |------|--------|-------------|
 | `path/to/file` | created / modified / deleted | What changed and why |
+
+## Assumptions Made
+
+Decisions made during implementation that were not explicitly specified in
+the task description or `conventions.md`. Each entry must cite its basis.
+`/forge:inspect` will not penalise assumptions documented here.
+
+| Assumption | Basis | Risk |
+|-----------|-------|------|
+| {What was assumed} | {conventions.md §X / adjacent code in Y / design intent} | low / medium / high |
+
+_No assumptions made — all decisions traced to task spec or conventions._ ← use this if none
 
 ## Key Implementation Decisions
 

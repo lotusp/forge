@@ -24,7 +24,7 @@ These rules have no exceptions.
 
 - **Every `must-fix` finding must cite a specific section and rule from `context/conventions.md`.** If you cannot cite a rule, it is not a `must-fix` — downgrade to `should-fix`.
 - **Confidence < 80% means the finding is dropped.** Never include uncertain findings. Precision over recall.
-- **Never penalise deviations confirmed by the user.** If the code summary's "Deviations from Plan" section documents an intentional deviation, do not flag it.
+- **Never penalise documented assumptions or deviations.** If the code summary's "Assumptions Made" or "Deviations from Plan" section documents an intentional decision, do not flag it. These sections are pre-confirmed by the developer.
 - **Line numbers are required for every finding.** Vague findings ("this file has naming issues") are not acceptable.
 - **Spawn all forge-reviewer agents in parallel.** Never review files sequentially — it wastes time and context.
 - **`consider` findings are never blockers.** They must never use language like "problem" or "issue" — use "suggestion" or "opportunity" only.
@@ -45,7 +45,8 @@ Determine the review scope from the argument:
 
 If the argument is a feature slug, read:
 - All `.forge/features/{feature-slug}/tasks/T*-summary.md` files to get the list of
-  changed files
+  changed files and to extract the **Assumptions Made** and **Deviations from Plan**
+  sections — these are intentional and must not be penalised
 - `.forge/features/{feature-slug}/design.md` if it exists (to verify implementation
   matches design intent)
 
@@ -67,7 +68,9 @@ receives:
 - The full `context/conventions.md`
 - The relevant section of the design document (if available)
 - The task description from the matching plan entry (if available)
-- The "Deviations from Plan" section from the matching code summary (to
+- The **"Assumptions Made"** section from the matching code summary (to
+  avoid penalising documented assumptions — these are pre-confirmed decisions)
+- The **"Deviations from Plan"** section from the matching code summary (to
   avoid penalising confirmed deviations)
 
 All agents run in parallel. Each returns a list of findings with:
@@ -102,6 +105,18 @@ If `.forge/features/{feature-slug}/design.md` exists, check:
 ### Step 6 — Write the review artifact
 
 Write `.forge/features/{feature-slug}/inspect.md` following the output template.
+
+### Step 7 — Append to JOURNAL.md
+
+Append one entry to `.forge/JOURNAL.md`:
+
+```markdown
+## YYYY-MM-DD — /forge:inspect {feature-slug}
+- 评审文件：{N} 个
+- 发现：{must-fix 数} must-fix, {should-fix 数} should-fix, {consider 数} consider
+- 结论：ready / needs-work / needs-redesign
+- 下一步：{/forge:test {slug} if ready, or /forge:code {task-id} if needs-work}
+```
 
 ---
 
