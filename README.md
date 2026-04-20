@@ -3,7 +3,7 @@
   <p>AI-driven development workflow for existing codebases.</p>
 
   <p>
-    <a href="https://github.com/lotusp/forge/releases"><img src="https://img.shields.io/badge/version-0.1.0-blue" alt="version"/></a>
+    <a href="https://github.com/lotusp/forge/releases"><img src="https://img.shields.io/badge/version-0.2.0-blue" alt="version"/></a>
     <a href="https://github.com/lotusp/forge/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="license"/></a>
     <img src="https://img.shields.io/badge/Claude%20Code-plugin-orange" alt="Claude Code plugin"/>
   </p>

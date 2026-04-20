@@ -8,49 +8,46 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 The core paradigm: AI is the developer, humans provide intent and context. Forge is designed for maintenance and evolutionary development on legacy systems — not greenfield projects.
 
-## Target Plugin Structure
+## Repository Structure
 
 ```
-forge/
-├── .claude-plugin/plugin.json
-├── skills/
-│   ├── forge/                     ← master orchestrator
-│   │   ├── SKILL.md
-│   │   ├── reference/state-machine.md
-│   │   └── scripts/status.mjs
-│   ├── onboard/
-│   │   ├── SKILL.md
-│   │   └── reference/output-template.md
-│   ├── calibrate/
-│   │   ├── SKILL.md
-│   │   ├── reference/
-│   │   │   ├── output-template.md
-│   │   │   ├── dimensions.md
-│   │   │   └── conflict-examples.md
-│   │   └── scripts/
-│   │       ├── check-prerequisites.mjs
-│   │       ├── save-scan-state.mjs
-│   │       └── validate-output.mjs
-│   ├── clarify/
-│   │   ├── SKILL.md
-│   │   └── reference/output-template.md
-│   ├── design/
-│   │   ├── SKILL.md
-│   │   └── reference/output-template.md
-│   ├── tasking/           ← formerly "plan" (renamed to avoid native /plan conflict)
-│   │   ├── SKILL.md
-│   │   └── reference/output-template.md
-│   ├── code/SKILL.md
-│   ├── inspect/           ← formerly "review" (renamed to avoid native /review conflict)
-│   │   ├── SKILL.md
-│   │   └── reference/output-template.md
-│   └── test/SKILL.md
-├── agents/
-│   ├── forge-explorer.md
-│   ├── forge-architect.md
-│   └── forge-reviewer.md
+forge/                             ← marketplace root (github.com/lotusp/forge)
+├── .claude-plugin/
+│   └── marketplace.json           ← marketplace manifest, source: "./plugins/forge"
+├── plugins/
+│   └── forge/                     ← actual plugin content
+│       ├── .claude-plugin/
+│       │   └── plugin.json        ← plugin manifest
+│       ├── skills/
+│       │   ├── forge/             ← master orchestrator
+│       │   │   ├── SKILL.md
+│       │   │   ├── reference/state-machine.md
+│       │   │   └── scripts/status.mjs
+│       │   ├── onboard/SKILL.md
+│       │   ├── calibrate/
+│       │   │   ├── SKILL.md
+│       │   │   ├── reference/
+│       │   │   └── scripts/
+│       │   ├── clarify/SKILL.md
+│       │   ├── design/SKILL.md
+│       │   ├── tasking/SKILL.md   ← formerly "plan"
+│       │   ├── code/SKILL.md
+│       │   ├── inspect/SKILL.md   ← formerly "review"
+│       │   └── test/SKILL.md
+│       └── agents/
+│           ├── forge-explorer.md
+│           ├── forge-architect.md
+│           └── forge-reviewer.md
+├── docs/                          ← design documents (read-only reference)
+├── .forge/                        ← self-hosting artifacts
+├── CLAUDE.md
 └── README.md
 ```
+
+> **Why the nested structure?** Claude Code's marketplace model requires the plugin
+> to live in a subdirectory of the marketplace repo. The repo root acts as the
+> marketplace (via `.claude-plugin/marketplace.json`) and `plugins/forge/` is the
+> actual installable plugin content.
 
 ## Skill Flow
 
