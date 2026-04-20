@@ -1,8 +1,9 @@
 # Project Conventions: forge
 
 > 生成时间：2026-04-19
+> 最近人工更新：2026-04-20（新增 Content Hygiene 节 + Decision #7）
 > 生成方式：/forge:calibrate — 基于代码扫描 + 人工裁决
-> 更新方式：重新运行 /forge:calibrate
+> 更新方式：重新运行 /forge:calibrate，或针对具体规则做人工补充
 > 文件路径：.forge/context/conventions.md
 
 **Important:** 本文件是 Forge 插件自身开发的权威约定。
@@ -220,6 +221,101 @@ Options:
 
 ---
 
+## Content Hygiene
+
+> 所有面向外部的文字内容（commit message、文档、SKILL.md 示例、reference 文件、
+> agent 文件、测试夹具）必须使用**中性的、通用的、虚构的**示例标识符。
+> **除 forge 自身之外**，不得出现任何其他真实项目、公司、产品、系统的名称。
+
+### 适用范围
+
+| 类型 | 具体包含 |
+|------|----------|
+| Commit 消息 | Subject + Body + footer |
+| 仓库文档 | `README.md`、`CLAUDE.md`、`docs/**/*.md` |
+| Skill 文件 | `plugins/forge/skills/**/SKILL.md`、`reference/*.md` |
+| Agent 文件 | `plugins/forge/agents/*.md` |
+| Artifact 模板 | `output-template.md`、`scan-patterns.md`、`incremental-mode.md` |
+| 脚本文件 | `scripts/*.mjs` 中的注释和示例 |
+| `.forge/` 产物 | `.forge/context/*.md`、`.forge/features/**/*.md` |
+
+### 什么可以出现
+
+| 类别 | 允许值 | 示例 |
+|------|--------|------|
+| Forge 自身标识符 | skill 名、agent 名、artifact 文件名、目录结构 | `onboard`、`forge-explorer`、`clarify.md`、`.forge/context/` |
+| 公开开源工具 | 通用技术栈名称，无品牌敏感性 | `Spring Boot`、`MySQL`、`Redis`、`Feign`、`Flyway`、`Nacos`、`Togglz`、`WireMock`、`Testcontainers` |
+| 通用生态术语 | 行业中立的架构/协议术语 | `REST`、`Webhook`、`Message Queue`、`Feature Toggle` |
+| Claude Code 生态 | 官方产品名 | `Claude Code`、`Anthropic API`、`claude.ai/code` |
+
+### 什么必须避免
+
+| 类别 | 禁止值 | 替换为 |
+|------|--------|--------|
+| 公司名 | 任何真实公司（特别是 forge 的 AI 辅助开发目标用户的雇主） | 省略，或 `{company}` 占位符 |
+| 产品名 | 任何其他真实产品/系统 | 通用业务名词（如 `order`、`catalog`、`inventory`） |
+| 内部系统缩写 | 外部不可识别的 3–5 字母全大写缩写（来自具体项目的内部系统名） | 可识别的功能描述（如 `Payment Gateway`、`Vendor Catalog Feed`） |
+| Java 包命名空间 | `com.{company}.*`、`com.{brand}.*` | `com.example.*` |
+| 基础设施主机 | 具体的 registry / endpoint 域名 | `registry.example.com`、`{registry-host}` 占位符 |
+| 实际 schema 名 | 生产数据库 schema | 通用名（`shop_orders`）或 `{schema-name}` |
+| 实际端口号 | 生产端口 | `{N}` 或 `8080` 等大众默认值 |
+| 实际 feature slug | 真实业务特性名 | `phone-verification`、`order-export-csv` 等泛用示例 |
+
+### 通用示例调色板（推荐沿用）
+
+为保持跨文档一致性，**所有新增示例优先从下表取值**：
+
+| 领域 | 标识符 |
+|------|--------|
+| 示例业务域 | 通用电商订单平台（e-commerce order platform） |
+| Java 包基址 | `com.example.shop` |
+| 服务名 | `order-service` |
+| 聚合根 | `Order`、`LineItem`、`Customer`、`Payment`、`PromotionProgram` |
+| 枚举 | `OrderStatus: DRAFT → SUBMITTED → CONFIRMED → SHIPPED → DELIVERED` |
+| Controller | `OrderController`、`PaymentController` |
+| Service | `OrderService`、`PaymentService` |
+| Feign client | `InventoryClient`、`ShippingClient`、`NotificationClient`、`ReportingClient` |
+| Event | `OrderPlacedEvent`、`OrderConfirmedEvent`、`OrderCancelledEvent` |
+| Listener | `OrderPlacedListener`、`FulfilmentInitListener`、`ShippingDispatchListener` |
+| 外部系统 | Payment Gateway、Notification Service、Warehouse Scheduler、Customer Data Platform、Vendor Catalog Feed |
+| 占位域名 | `registry.example.com`、`api.example.com` |
+| 占位命名空间 | `com.example.internal:*`（私有仓标识符） |
+| 占位路径 | `{project-root}`、`{module}`、`{vendor-name}` |
+
+### Commit 提交前的自检
+
+在 `git commit` 之前手动运行：
+
+```bash
+# 检查当前工作区是否混入非 forge 项目标识符
+# （补充自己熟悉的企业/产品名到 pattern 里）
+git diff --cached | grep -iE "{company-patterns}|{product-patterns}" \
+  && echo "⚠ 发现可疑标识符，清理后再提交" \
+  || echo "✓ 可提交"
+```
+
+不强制在 hook 里执行（forge 当前无 git hook 基础设施），但任何 AI 辅助提交
+前必须做一次人眼 diff review。
+
+### 泄漏后的补救流程
+
+1. **commit 消息已泄漏** → 需要 rebase/force-push（仅限仓库 owner 协调，
+   普通用户严禁自行 force-push）
+2. **仅工作区文件泄漏，未 push** → `git commit --amend` 清理后提交
+3. **已 push 但 commit 消息干净，仅文件内容泄漏** → 前向修复 commit
+   （新 commit 清理 + 明确说明泄漏上下文），**不**重写历史
+
+本次泄漏修复采用方式 3（见 commit `b1f1f8b`）——历史消息本来就干净，
+只需前向修复即可。
+
+### 例外
+
+Forge 在自举场景下，`.forge/context/onboard.md` 会描述 forge 自己作为
+"项目"。此时使用 forge 自身的标识符（`forge-explorer`、`/forge:onboard`、
+`plugins/forge/skills/*` 等）是允许的，因为 forge 就是 THE 项目。
+
+---
+
 ## Decision Log
 
 | # | 维度 | 裁决 | 理由 |
@@ -230,6 +326,7 @@ Options:
 | 4 | allowed-tools 格式 | 空格分隔带引号字符串 | Claude Code 解析格式要求 |
 | 5 | Agent tools 格式 | 逗号分隔无引号 | Agent frontmatter 格式要求 |
 | 6 | 会话连续性 | JOURNAL.md 强制追加 + task summary Assumptions Made 章节 | 解决 AI 冷启动和隐性假设可追溯问题 |
+| 7 | 内容洁净原则 | Commit message + 文档 + 示例代码 均使用中性/虚构标识符；除 forge 自身外禁止提及任何真实项目 | 防止 AI 辅助开发场景下把目标项目信息泄漏进 forge 公开仓库（已有先例：commit `b1f1f8b` 清理） |
 
 ---
 
