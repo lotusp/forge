@@ -73,3 +73,19 @@
   - constraints.md 新增 C8（硬约束）+ AP5（反模式）+ TD-006（待建自动化扫描）
   - constraints.md 顶部标注「最近人工更新」日期
 - 下一步：继续 onboard skill 的 T3（kind detection + profile 组合架构）
+
+## 2026-04-20 — /forge:clarify onboard-kind-profiles
+- 产出：.forge/features/onboard-kind-profiles/clarify.md
+- 未知项：10 个问题全部回答（Batch 1 × 5 + Batch 2 × 5），5 个 Open Questions 推迟到 design
+- 关键决策：
+  - 3 个起手 kind：web-backend / claude-code-plugin / monorepo
+  - Profile 位置：skill-local `reference/profiles/*.md`
+  - 一次性发 v0.4.0 breaking（无存量用户）
+  - IRON RULES 用 core + per-kind overlay 结构
+  - Kind detection 信号走 kind 文件 frontmatter（G1 最优）
+  - Profile 加载走 read-do-discard 节奏（G1+G2 最优）
+  - Monorepo MVP 列包图 + 按包 detect；为未来递归预留 4 条架构约束
+  - `--thorough` flag 开启 self-critique；默认关闭
+  - Profile 丰度：Lean + golden-path 示例 + 压缩 IRON RULES 提醒
+- 3 个设计目标（G1/G2/G3）形成矩阵评估后续每个决策
+- 下一步：/forge:design onboard-kind-profiles
