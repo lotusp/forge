@@ -141,3 +141,13 @@
   - `constraints.md` 新增 TD-007（skill `--audit <slug>` 支持）
 - 意义：把"人工审计习惯"转化为显式的项目级责任边界；为未来 `--audit` 工具化提供依据
 - 下一步：继续 T3 — `/forge:design onboard-kind-profiles`
+
+## 2026-04-20 — /forge:design onboard-kind-profiles
+- 产出：.forge/features/onboard-kind-profiles/design.md (348 行, 12 sections)
+- 方案：Option C 两级 Process（kind detection + plan execution loop），风险：High（SKILL.md 整体重写 + 17 profile 首次编写）
+- Key Decisions：14 条（K-1..K-14），涵盖 Process 风格、Kind 文件格式、检测算法、Profile 组织、IRON RULES overlay 语义、kind drift 处理、OQ-01/02/03 裁决、Monorepo Future-Proofing 落地方式
+- DI 声明：DI-1..DI-5 全部 Accept（DI-5 含 minor refinement：5 节正文 + 压缩 IRON RULES 上限 5 行）
+- 遗留决策：0 个 deferred
+- 规模预估：新建 3 个 kind 定义 + 17 个 profile 文件（约 6 core + 3 structural + 2 model + 2 entry-points + 3 integration + 1 monorepo）+ 重写 SKILL.md + 更新 incremental-mode.md + 删除 output-template.md
+- 3 个 kind 的 execution plan 已明确（claude-code-plugin 10 profile / web-backend 12 profile / monorepo 8 profile）
+- 下一步：/forge:tasking onboard-kind-profiles
