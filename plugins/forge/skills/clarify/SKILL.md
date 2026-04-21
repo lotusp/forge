@@ -27,6 +27,7 @@ These rules have no exceptions.
 - **Use forge-explorer agents for tracing.** Do not trace call chains manually from memory. Spawn agents for each distinct entry point.
 - **Never write the clarify artifact before questions are answered.** If the user ends the session early, write what is known and populate Open Questions — never invent answers.
 - **Do not propose solutions.** Clarify is about understanding what exists and what is needed — not how to build it. Any design suggestion belongs in `/forge:design`.
+- **Q&A 必须限于需求级议题（WHAT / WHETHER），不涉及实现级（HOW / WHERE）。** 提问 "产品该不该有 X 能力"、"MVP 应支持哪些场景"、"是否向后兼容"、"如何裁剪范围" 属于需求；提问 "文件放什么路径"、"字段叫什么名"、"用什么数据结构 / 算法 / 命名规范" 属于设计。启发式：**如果一个问题的答案会直接指定某文件名、包路径、字段名、数据结构或算法选择，它属于 design 阶段，不是 clarify。** 若用户在 clarify 会话中主动提出实现级偏好（例如预先约束一些设计边界），记录在 `design-inputs.md`（需建立该文件），不放进 `clarify.md` 的 Q&A 节。
 
 ---
 
@@ -104,6 +105,20 @@ from the codebase alone**:
 - Runtime configuration (feature flags, environment-specific values)
 - Implicit requirements not stated (edge cases, error behaviour, scale)
 - Decisions with non-obvious correct answers (security trade-offs, UX choices)
+
+**Before moving to Step 7, classify each unknown as either requirement-level
+or implementation-level** (per IRON RULE on Q&A scope):
+
+| Category | Goes to | Example |
+|----------|---------|---------|
+| Requirement-level (WHAT / WHETHER / product策略 / 范围) | Step 7 Q&A | "MVP 应支持哪些 X?"、"是否向后兼容?"、"是否暴露 Y 能力给用户?" |
+| Implementation-level (HOW / WHERE / 字段名 / 结构) | Deferred to `/forge:design` | "Y 文件放什么路径?"、"Z 字段叫什么?" |
+
+If the user proactively volunteers implementation-level preferences during
+the session (pre-constraining design space), record them in
+`.forge/features/{slug}/design-inputs.md` — **do not** put them in `clarify.md`
+Q&A. The design-inputs file is a pre-design constraint memo, separate from
+the requirement artifact.
 
 ### Step 7 — Ask structured questions
 

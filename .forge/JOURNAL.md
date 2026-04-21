@@ -89,3 +89,25 @@
   - Profile 丰度：Lean + golden-path 示例 + 压缩 IRON RULES 提醒
 - 3 个设计目标（G1/G2/G3）形成矩阵评估后续每个决策
 - 下一步：/forge:design onboard-kind-profiles
+
+## 2026-04-20 — Self-review 修订 clarify.md + clarify skill 加 IRON RULE
+- 触发事件：用户要求 review `.forge/features/onboard-kind-profiles/clarify.md`
+- 发现：clarify.md 有 5 个实现级决策（Q2/Q4/Q6/Q7/Q10）越界进入 Q&A，违反 clarify skill 的"do not propose solutions"原则
+- 变更：
+  - 新增 `.forge/features/onboard-kind-profiles/design-inputs.md` (146 行)：
+    DI-1..DI-5 收纳剥离的实现级预置边界
+  - 重写 `.forge/features/onboard-kind-profiles/clarify.md` (231→303 行)：
+    - Q&A 只保留需求级 Q-1..Q-5（范围/策略/能力）
+    - 合并 Assumptions/OQ → 单 Open Questions 列表 (OQ-01..OQ-05)
+    - 新增 Success Criteria 节 (8 条验收项，含 token 消耗 ≤ 1.5× 基准)
+    - 统一编号 (DG1..3 for Goals, Gap-01..11, P-01..04, Q-1..5, OQ-01..05)
+    - 合并"非目标" + Accommodation Gaps → 单 Out of Scope (Deferred / Future)
+    - Data Flow 扩写含 v0.4.0 期望流程
+    - Architectural Accommodation 重写为 Requirements 风格
+    - 加 Content Hygiene Notice 节引用 conventions.md 通用调色板
+  - `plugins/forge/skills/clarify/SKILL.md` (180→194 行)：
+    - 新 IRON RULE：Q&A 限于需求级 (WHAT/WHETHER)；实现级偏好落 design-inputs.md
+    - Step 6 加分类表 (requirement-level vs implementation-level) + 启发式判据
+- 元层面收益：下次任何 /forge:clarify 会话，skill 级规则会阻止同类 scope creep
+- 版本：plugin 0.3.0 → 0.3.1 (clarify skill patch)
+- 下一步：/forge:design onboard-kind-profiles
