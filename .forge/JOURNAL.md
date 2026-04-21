@@ -111,3 +111,19 @@
 - 元层面收益：下次任何 /forge:clarify 会话，skill 级规则会阻止同类 scope creep
 - 版本：plugin 0.3.0 → 0.3.1 (clarify skill patch)
 - 下一步：/forge:design onboard-kind-profiles
+
+## 2026-04-20 — clarify.md 合规审计修正 (Commit A of Option Y)
+- 审计方法：按新 IRON RULE "Q&A 限于需求级" 的启发式判据对 T3 clarify.md 全文逐项检查
+- 发现（4 处）：
+  - OQ-04（profile cross-reference 语法）— 🔴 纯 HOW，应归 design 自行裁决，不打扰用户
+  - OQ-05（monorepo 子包 detection 并行度）— 🔴 纯 HOW，同上
+  - SC-4（"`--kind=<name>` override 生效"）— 🟡 指定具体 flag 名，违反"不指定字段名"判据
+  - SC-5（"`--thorough` flag 生效"）— 🟡 同上
+- 修正：
+  - OQ-04/OQ-05 从 Open Questions 移除；Open Questions 头部注明"纯实现选择不列入 OQ"
+  - SC-4 改为"Kind 显式覆盖能力"（不提 flag 名）
+  - SC-5 改为"Opt-in 质量模式"（不提 flag 名）
+  - 顺手清理 Data Flow 图、Design Goals 表、Gap-06 中 3 处残留 `--kind` / `--thorough` 引用
+  - 保留 `--regenerate` / `--section`（这些是既有 v0.3.0 flag，描述当前状态，非对新设计的预指定）
+- 结果：clarify.md 对 clarify skill 当前全部 6 条 IRON RULES 合规
+- 下一步：Commit B — 把"skill 规则演进后 artifact 审计"机制沉淀进 conventions.md
