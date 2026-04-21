@@ -1,7 +1,7 @@
 # Project Conventions: forge
 
 > 生成时间：2026-04-19
-> 最近人工更新：2026-04-20（新增 Content Hygiene 节 + Decision #7）
+> 最近人工更新：2026-04-20（新增 Skill Rule Evolution 节 + Decision #8）
 > 生成方式：/forge:calibrate — 基于代码扫描 + 人工裁决
 > 更新方式：重新运行 /forge:calibrate，或针对具体规则做人工补充
 > 文件路径：.forge/context/conventions.md
@@ -328,6 +328,68 @@ Forge 在自举场景下，`.forge/context/onboard.md` 会描述 forge 自己作
 
 ---
 
+## Skill Rule Evolution & Artifact Compliance
+
+> Skill 的 IRON RULES / Process / Output 要求随着项目认知演进会发生变化。
+> 之前已生成的 `.forge/` 产物（onboard.md、clarify.md、design.md 等）**不会
+> 自动跟随**。本节定义变更发生时的责任分配与流程。
+
+### 三条规则
+
+**R1 — Skill IRON RULES 变更等同于 breaking change。**
+当 `plugins/forge/skills/{name}/SKILL.md` 的 IRON RULES 节发生新增、删除
+或语义修改时：
+
+- 必须 bump 至少 patch 版本（`plugin.json` 的 `version`）
+- 必须在同一 commit 中说明受影响的 artifact 类型
+- 若变更影响语义（非仅排版），须在 `JOURNAL.md` 明示"此变更触发下游审计"
+
+**R2 — 变更 commit 必须附带同期的 artifact 审计。**
+Skill 规则变更后、进入下一个 feature 之前，必须对当前仓库所有同类型 artifact
+做一次人工审计：
+
+```
+受影响 skill = X
+审计目标 = .forge/features/*/X.md + （若适用）.forge/context/{X 对应的 context 文件}.md
+判据 = 变更后的 SKILL.md 全部 IRON RULES
+```
+
+审计产出三种动作之一：
+
+| 动作 | 适用场景 |
+|------|---------|
+| **Rewrite** | Artifact 有违规点，有明确修正路径 |
+| **Regenerate** | 违规点多 / 结构需重构，重新跑对应 skill 更经济 |
+| **Preserve with exception** | 旧 artifact 代表历史状态，不应改写；用 `<!-- preserve -->` 块标记，在 JOURNAL 记录例外理由 |
+
+**R3 — 审计结果必须记录 JOURNAL。**
+每次 skill 变更后的审计都在 `JOURNAL.md` 追加一条形如：
+
+```markdown
+## YYYY-MM-DD — {skill} 合规审计 (触发：{variant commit hash})
+- 审计范围：{列出检查的 artifact 文件}
+- 发现：{N 条违规}
+- 动作：{rewrite/regenerate/preserve-with-exception 分布}
+- 修正 commit：{后续修正的 commit hash；若本次同步修 → 同 commit}
+```
+
+### 执行模式的演进路径
+
+| 阶段 | 模式 | 说明 |
+|------|------|------|
+| **现在** | 纯人工审计 | Skill 改动较少，artifact 数量有限；审计者把 SKILL.md 当 checklist 手工对照 |
+| **中期** | Skill 提供 `--audit <slug>` | 每个 skill 加只读审计模式：读 artifact + 当前 IRON RULES，产 `{slug}/audit-{date}.md` 报告（见 `constraints.md` TD-007） |
+| **远期** | `/forge:forge --audit-all` 批量 | 全仓走查；CI 集成阻塞非合规发布 |
+
+### 元规则
+
+- 本节本身是"规则的规则"。如果未来变更了这里的三条规则（R1/R2/R3），同样
+  触发一次本节审计（审计自己是否还覆盖变更后的情况）。
+- 若跳过审计（例如紧急修复），JOURNAL 必须显式记录"跳过原因"；下次 skill
+  变更时补做。
+
+---
+
 ## Decision Log
 
 | # | 维度 | 裁决 | 理由 |
@@ -339,6 +401,7 @@ Forge 在自举场景下，`.forge/context/onboard.md` 会描述 forge 自己作
 | 5 | Agent tools 格式 | 逗号分隔无引号 | Agent frontmatter 格式要求 |
 | 6 | 会话连续性 | JOURNAL.md 强制追加 + task summary Assumptions Made 章节 | 解决 AI 冷启动和隐性假设可追溯问题 |
 | 7 | 内容洁净原则 | Commit message + 文档 + 示例代码 均使用中性/虚构标识符；除 forge 自身外禁止提及任何真实项目 | 防止 AI 辅助开发场景下把目标项目信息泄漏进 forge 公开仓库（已有先例：commit `b1f1f8b` 清理） |
+| 8 | Skill 规则演进与 artifact 合规 | Skill IRON RULES 变更 = breaking；变更 commit 必须附带同期 artifact 审计；审计结果记录 JOURNAL | 变更发生时的责任边界清晰；防止规则与产物长期不同步；为未来工具化（`--audit` flag）留下约定基础（已有先例：commit `52f2e75` 新增 Q&A 边界规则后 `2bd25b3` 审计修正 T3 clarify.md）|
 
 ---
 
