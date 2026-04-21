@@ -127,3 +127,17 @@
   - 保留 `--regenerate` / `--section`（这些是既有 v0.3.0 flag，描述当前状态，非对新设计的预指定）
 - 结果：clarify.md 对 clarify skill 当前全部 6 条 IRON RULES 合规
 - 下一步：Commit B — 把"skill 规则演进后 artifact 审计"机制沉淀进 conventions.md
+
+## 2026-04-20 — 沉淀 Skill Rule Evolution 机制 (Commit B of Option Y)
+- 触发：clarify skill 加新 IRON RULE（commit 52f2e75）后，T3 clarify.md 立即需要审计（Commit A / 2bd25b3）——证明 skill 变更后的 artifact 合规问题是系统性的，不是个案
+- 变更：
+  - `conventions.md` 新增 "Skill Rule Evolution & Artifact Compliance" 节：
+    - R1：Skill IRON RULES 变更 = breaking change，必须 bump 版本
+    - R2：变更 commit 必须附带同期的 artifact 审计，三种动作（rewrite / regenerate / preserve-with-exception）
+    - R3：审计结果必须追加 JOURNAL
+    - 演进路径：现在纯人工 → 中期 skill `--audit` flag → 远期批量 + CI
+    - 元规则：本节本身变更也触发对自己的审计
+  - `conventions.md` Decision Log 新增 #8
+  - `constraints.md` 新增 TD-007（skill `--audit <slug>` 支持）
+- 意义：把"人工审计习惯"转化为显式的项目级责任边界；为未来 `--audit` 工具化提供依据
+- 下一步：继续 T3 — `/forge:design onboard-kind-profiles`
