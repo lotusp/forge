@@ -3,13 +3,15 @@ kind-id: claude-code-plugin
 display-name: Claude Code Plugin
 detection-signals:
   positive:
-    - pattern: ".claude-plugin/plugin.json exists"
+    - pattern: ".claude-plugin/plugin.json exists (plain plugin repo)"
+      weight: 0.45
+    - pattern: "plugins/*/.claude-plugin/plugin.json exists (marketplace-with-plugins layout)"
       weight: 0.45
     - pattern: ".claude-plugin/marketplace.json exists"
-      weight: 0.15
-    - pattern: "skills/*/SKILL.md files present (≥ 1)"
       weight: 0.20
-    - pattern: "agents/*.md files present (≥ 1)"
+    - pattern: "skills/*/SKILL.md OR plugins/*/skills/*/SKILL.md files present (≥ 1)"
+      weight: 0.20
+    - pattern: "agents/*.md OR plugins/*/agents/*.md files present (≥ 1)"
       weight: 0.10
     - pattern: "README.md or docs/ mentions 'Claude Code plugin'"
       weight: 0.10
