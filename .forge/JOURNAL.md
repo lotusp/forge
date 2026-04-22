@@ -196,3 +196,41 @@
 - onboard 内部无悬挂引用：SKILL.md grep 0 match；profiles/README.md 仅保留历史"曾被取代"说明（非链接）
 - README.md 版本 badge 和 onboard 描述更新延后到 T016（正式版本跃迁）
 - 下一步：检查点 3 — 用户决定是否立即跑 T015 自举验证
+
+## 2026-04-22 — /forge:onboard (Mode A — first run, T015 自举验证)
+- 产出：.forge/context/onboard.md (7 sections written, 0 reused)
+- Kind 检测：claude-code-plugin（置信度 0.90），加载 6 个 core profiles
+- 摘要：9 个 skill, 3 个 agent, 4 个辅助脚本, 0 个外部集成
+- 置信度警示：1 个 [conflict]（plugin.json 版本 0.3.2-dev vs README badge 0.3.1）
+- 自举发现：
+  1. Kind 检测逻辑运行正常 — claude-code-plugin 识别置信度 0.90，无歧义
+  2. 6 个 core profile 覆盖了所有有意义的截面；excluded profiles (structural/model/integration) 确实无内容
+  3. Section 4 (Core Domain Objects) 对 plugin 项目不适用 — 由 kind 的 output-sections 设计正确排除
+  4. notes.md profile 对自举项目效果良好，CLAUDE.md + JOURNAL 提供了充足信号
+- 下一步：/forge:calibrate
+
+## 2026-04-22 — /forge:onboard (Mode B — incremental)
+- 产出：.forge/context/onboard.md (2 sections rewritten, 5 reused)
+- Kind 检测：claude-code-plugin（置信度 0.90）；HEAD d3db26a 与上次 verified hash 一致，无新提交
+- 变更摘要：
+  - Section 3 (module-map)：修正 `forge` skill 描述（原 [TEST-MARKER-DIRTY-2] → 正确描述），更新 `onboard` 描述反映 kind-aware profile 架构
+  - Section 7 (notes)：更新 onboard-kind-profiles 状态（T015 验证完成，T016 待完成）
+  - Section 2 (tech-stack) preserve 块原文保留（[TEST-MARKER-PRESERVE-1] 完整携带）
+- 置信度警示：1 个 [conflict]（plugin.json 版本 0.3.2-dev vs README badge 0.3.1，待 T016）
+- 下一步：/forge:calibrate
+
+## 2026-04-22 — T015 自举验证（条件通过）
+- Phase 1 first-run：kind 识别 `claude-code-plugin` @ 0.90 confidence；7 sections 齐备，6 core profiles 加载；219 行产物
+- Phase 2 incremental（3 处手改触发）：
+  - Tech Stack preserve 块：✅ 原样保留
+  - Module Map 非 preserve 修改：✅ 重写覆盖
+  - Notes bullet 删除：✅ 用户删除被尊重，不恢复
+- Mode B：HEAD 未变 → 5 reused + 2 written（module-map / notes）
+- 发现 3 项 Minor 偏差：
+  - M1 Section marker 缺 `profile=` 属性（可回退从 kind 文件推导）
+  - M2 Header 用 HTML marker 而非 markdown 引用块
+  - M3 Confidence tag 被扩展为 `[code]/[conflict]/[build]/[readme]`（有信息价值）
+- 我的规范缺陷：I-R2 body-hash 设计不能支撑"跳过昂贵扫描"核心价值；应拆分为 verified-commit + body-signature 双属性
+- 判定：条件通过。T016 可进，但需先完成 T012a + T013a follow-up 任务修正规范
+- 产出 T012a、T013a 两个 follow-up task（写入 verification.md）
+- 下一步：开 T012a/T013a 修复规范 → 重跑自举一次 → 进入 T016
