@@ -100,6 +100,71 @@ Never write "N/A", "unknown", "TBD" — omit the line entirely.
 This skill is strictly read + write-to-.forge/. Do not edit project source
 files, configs, or manifests. Do not run package managers or build tools.
 
+### R9 — Artifact structural format is fixed
+
+Both the header and every section marker MUST follow the exact formats
+defined in Step 3. Specifically:
+
+**Header** (Step 3.1) — markdown blockquote style only:
+
+```markdown
+# Project Onboard: {project-name}
+
+> Kind:             {kind-id}
+> Confidence:       {confidence}
+> Generated:        {YYYY-MM-DD}
+> Commit:           {short-sha}
+> Generator:        /forge:onboard (v{plugin-version})
+```
+
+Do NOT wrap the header in an HTML comment (`<!-- forge:onboard header ... -->`).
+The header is plain-text markdown so humans reading the file get project
+identity immediately.
+
+**Section marker** (Step 3.3) — every section MUST have these 5 attributes,
+exactly this order, double-quoted values:
+
+```
+<!-- forge:onboard section="<id>" profile="<profile-id>" verified-commit="<git-short>" body-signature="<16hex>" generated="<YYYY-MM-DD>" -->
+```
+
+Closing marker uses only the `section` attribute:
+
+```
+<!-- /forge:onboard section="<id>" -->
+```
+
+Missing attributes, changed order, or unquoted values violate R9 and break
+incremental mode reconciliation.
+
+### R10 — Tag system is a closed enumeration
+
+Every fact in a section body MUST carry exactly **one confidence tag** from:
+
+```
+[high]       — source verified; fact directly observed
+[medium]     — pattern observed + partial cross-verification
+[low]        — single-source evidence; not cross-verified
+[inferred]   — derived from directory layout / file names without file body inspection
+```
+
+A fact MAY additionally carry **one source tag** from:
+
+```
+[code]        — read from source file bodies (`.java`, `.ts`, `.go`, etc.)
+[build]       — read from build manifest (`pom.xml`, `package.json`, `Cargo.toml`, `plugin.json`, `Dockerfile`, CI YAML)
+[config]      — read from runtime config (`application.yml`, `.env.example`, `k8s/*.yaml`)
+[readme]      — read from `README.md`, `docs/**/*.md`, `CLAUDE.md`
+[cli]         — output of a shell command (`ls`, `find`, `grep`) from Runtime snapshot
+```
+
+A fact MAY additionally carry the **conflict flag** `[conflict]` to mark
+contradictions between two stated facts (e.g. version in `plugin.json` vs
+version in README badge).
+
+**Tag order**: `<fact text> [confidence] [source?] [conflict?]`.
+No other bracketed values are permitted. Do not invent new tags mid-run.
+
 ---
 
 ## Prerequisites
@@ -255,10 +320,16 @@ working memory. Only the rendered section text is retained. When starting
 the next iteration, the LLM should not reference the previous profile's
 internals — only the current profile's contents drive the work.
 
-**Confidence tag application (R7):**
+**Confidence tag application (R7 + R10):**
 
-Every row/bullet/fact in a section carries a `[high|medium|low|inferred]`
-tag per the profile's Confidence Tags section. No untagged facts.
+Every row/bullet/fact in a section carries tags per R10:
+
+- Required: one confidence tag `[high|medium|low|inferred]`
+- Optional: one source tag `[code|build|config|readme|cli]`
+- Optional: conflict flag `[conflict]`
+
+Order: `<fact> [confidence] [source?] [conflict?]`. R7 forbids untagged
+facts — no row or bullet may appear without at least the confidence tag.
 
 **Budget enforcement:**
 
@@ -291,23 +362,41 @@ directory observations. 1–2 paragraphs, non-technical audience.
 
 **3.3 — Section markers**
 
-Each profile-generated section is wrapped in a marker pair:
+Each profile-generated section is wrapped in a marker pair. R9 enforces
+the exact format. Use this literal shape (substitute values, keep
+attribute order and quotes):
 
 ```markdown
-<!-- forge:onboard section="<section-name>" profile="<profile-id>" verified="<hash>" generated="<YYYY-MM-DD>" -->
+<!-- forge:onboard section="tech-stack" profile="tech-stack" verified-commit="a3f2c1d4" body-signature="9f8e7d6c5b4a3210" generated="2026-04-22" -->
 
-## {Section Title}
+## Tech Stack
 
-{rendered content}
+| Layer | Technology |
+|-------|-----------|
+| Language | TypeScript 5.x [high] [build] |
+| Runtime | Node.js 20 LTS [high] [build] |
 
-<!-- /forge:onboard section="<section-name>" -->
+<!-- /forge:onboard section="tech-stack" -->
 ```
 
-- `section-name` = lowercase, kebab-case, matches `output-sections` entry
-- `profile-id` = source profile's `name` frontmatter
-- `verified` = first 16 hex chars of `SHA-256(canonicalized_body_without_preserve_blocks)`
-  — see `reference/incremental-mode.md` I-R2 for canonicalization algorithm
+**Attribute definitions:**
+
+- `section` = lowercase, kebab-case, matches an entry in the kind's `output-sections`
+- `profile` = source profile's `name` frontmatter (e.g. `tech-stack`, `http-api`)
+- `verified-commit` = git short-hash of the commit this section was scanned
+  against; used by Mode B to skip re-scanning if HEAD has not moved
+  (see `reference/incremental-mode.md` I-R2a)
+- `body-signature` = first 16 hex chars of `SHA-256(canonicalized_body_without_preserve_blocks)`;
+  used by Mode B to detect out-of-band edits to the artifact
+  (see `reference/incremental-mode.md` I-R2b)
 - `generated` = ISO date (YYYY-MM-DD) when body was last written
+
+**Closing marker** only carries the `section` attribute (closing markers
+are positional anchors, not state carriers):
+
+```markdown
+<!-- /forge:onboard section="tech-stack" -->
+```
 
 **3.4 — Preserve blocks**
 
