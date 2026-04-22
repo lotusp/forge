@@ -234,3 +234,13 @@
 - 判定：条件通过。T016 可进，但需先完成 T012a + T013a follow-up 任务修正规范
 - 产出 T012a、T013a 两个 follow-up task（写入 verification.md）
 - 下一步：开 T012a/T013a 修复规范 → 重跑自举一次 → 进入 T016
+
+## 2026-04-22 — T012a onboard SKILL.md 规范强化
+- 修复 T015 发现的 3 项 Minor + 1 项规范缺陷
+- 新增 R9（marker 格式硬约束）：header markdown blockquote + section marker 5 属性（section / profile / verified-commit / body-signature / generated）顺序与引号固定
+- 新增 R10（tag 三轴枚举）：confidence（必）[high|medium|low|inferred] + source（可选）[code|build|config|readme|cli] + conflict（可选）[conflict]；严禁发明新 tag
+- Step 3.3 marker 示例用真实 hex 字面值（`verified-commit="a3f2c1d4"` + `body-signature="9f8e7d6c5b4a3210"`），避免 LLM 用 git hash 糊弄过去
+- Step 2 confidence tag 引用指向 R10
+- profiles/README.md 同步 Tag System 权威定义章节，含范例 + 严禁条款
+- SKILL.md 505 → 595 行；profiles/README.md 149 → 206 行
+- 下一步：T013a 定义 verified-commit / body-signature 的算法与 Mode B 判定逻辑
