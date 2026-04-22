@@ -151,3 +151,10 @@
 - 规模预估：新建 3 个 kind 定义 + 17 个 profile 文件（约 6 core + 3 structural + 2 model + 2 entry-points + 3 integration + 1 monorepo）+ 重写 SKILL.md + 更新 incremental-mode.md + 删除 output-template.md
 - 3 个 kind 的 execution plan 已明确（claude-code-plugin 10 profile / web-backend 12 profile / monorepo 8 profile）
 - 下一步：/forge:tasking onboard-kind-profiles
+
+## 2026-04-22 — /forge:tasking onboard-kind-profiles
+- 产出：.forge/features/onboard-kind-profiles/plan.md
+- 任务：11 个（T006–T016），高风险：2 个（T012 SKILL.md 改写、T013 incremental-mode.md 更新）
+- 关键调整：采纳用户反馈，拆分版本升级为两步（T014 过渡版 0.3.2-dev + T016 正式版 0.4.0），避免 T015 验证失败时回滚困难
+- 风险缓解写入验收标准：两阶段硬隔离、伪代码循环、preserve 块 IRON RULE、hash 算法显式定义、增量模式强制二次运行验证
+- 下一步：/forge:code T006
