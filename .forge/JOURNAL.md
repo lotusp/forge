@@ -189,3 +189,10 @@
 - 预留 Future --dry-run 占位（非 MVP）
 - 顺带更新：SKILL.md Step 3.3 补充 generated= 属性说明，与 incremental-mode.md 对齐
 - 下一步：T014 清理 + 过渡版本 0.3.2-dev
+
+## 2026-04-22 — T014 清理 + 过渡版本 0.3.2-dev
+- 删除 plugins/forge/skills/onboard/reference/output-template.md（521 行，被 profile 架构完全取代）
+- plugin.json 版本 0.3.1 → 0.3.2-dev（过渡版本，待 T015 自举验证通过后由 T016 正式升 0.4.0）
+- onboard 内部无悬挂引用：SKILL.md grep 0 match；profiles/README.md 仅保留历史"曾被取代"说明（非链接）
+- README.md 版本 badge 和 onboard 描述更新延后到 T016（正式版本跃迁）
+- 下一步：检查点 3 — 用户决定是否立即跑 T015 自举验证
