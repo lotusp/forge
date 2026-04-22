@@ -294,7 +294,7 @@ directory observations. 1–2 paragraphs, non-technical audience.
 Each profile-generated section is wrapped in a marker pair:
 
 ```markdown
-<!-- forge:onboard section="<section-name>" profile="<profile-id>" verified="<hash>" -->
+<!-- forge:onboard section="<section-name>" profile="<profile-id>" verified="<hash>" generated="<YYYY-MM-DD>" -->
 
 ## {Section Title}
 
@@ -305,8 +305,9 @@ Each profile-generated section is wrapped in a marker pair:
 
 - `section-name` = lowercase, kebab-case, matches `output-sections` entry
 - `profile-id` = source profile's `name` frontmatter
-- `verified` = `sha256(section_body_without_preserve_blocks)` truncated to
-  16 hex chars
+- `verified` = first 16 hex chars of `SHA-256(canonicalized_body_without_preserve_blocks)`
+  — see `reference/incremental-mode.md` I-R2 for canonicalization algorithm
+- `generated` = ISO date (YYYY-MM-DD) when body was last written
 
 **3.4 — Preserve blocks**
 

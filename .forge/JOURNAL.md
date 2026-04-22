@@ -179,3 +179,13 @@
 - 4 halt 场景交互消息模板齐备（低置信度 / unknown / 歧义 / kind drift）
 - 人工走读：3 种 kind 各模拟一次，修复 runtime snapshot 路径依赖 + claude-code-plugin 嵌套布局检测
 - 下一步：T013 incremental-mode.md 更新
+
+## 2026-04-22 — T013 incremental-mode.md 更新
+- 产出：plugins/forge/skills/onboard/reference/incremental-mode.md（211 → 428 行）
+- 4 reference-local IRON RULES：I-R1 preserve 神圣 / I-R2 hash 算法精确定义 / I-R3 kind drift 优先 / I-R4 section 顺序跟随当前 kind
+- Kind Drift Handling 独立小节 + 4 状态决策表（Stable / Confidence drop / Kind change / Loss of signal）+ 每状态 section 处理规则
+- Hash 算法显式定义：first_16_hex(SHA-256(canonicalized_body_without_preserve_blocks))，5 步 canonicalization 规则 + pseudo-code
+- Mode B/C/D 完整算法重写，删除硬编码"10 canonical sections"，改为按 current_kind.output_sections 动态处理
+- 预留 Future --dry-run 占位（非 MVP）
+- 顺带更新：SKILL.md Step 3.3 补充 generated= 属性说明，与 incremental-mode.md 对齐
+- 下一步：T014 清理 + 过渡版本 0.3.2-dev
