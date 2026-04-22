@@ -244,3 +244,18 @@
 - profiles/README.md 同步 Tag System 权威定义章节，含范例 + 严禁条款
 - SKILL.md 505 → 595 行；profiles/README.md 149 → 206 行
 - 下一步：T013a 定义 verified-commit / body-signature 的算法与 Mode B 判定逻辑
+
+## 2026-04-22 — T013a incremental-mode.md 修正 I-R2 为双属性
+- 修复 T015 发现的"I-R2 body-hash 不能支撑跳过昂贵扫描"核心设计缺陷
+- I-R2 拆分为：
+  - I-R2a：`verified-commit=<git-short>`（Stage 2 用 git rev-parse --short HEAD 记录扫描时的 HEAD；primary fast-skip 信号）
+  - I-R2b：`body-signature=<sha256-16hex>`（SHA-256 of canonicalized body；secondary tamper-detect 信号）
+- Mode B 流程重写为两阶段检查：Stage A 先比对 verified-commit（HEAD 未变直接 CLEAN-FAST，不跑 profile）→ Stage B 再算 body-signature 识别 out-of-band 手改
+- 4 种状态语义：CLEAN-FAST / CLEAN-MAYBE-STALE / DIRTY-TAMPERED / NEW
+- 新增 "Why two stages?" 决策表 + 边界情况（same HEAD + edited body = 尊重用户编辑）
+- 后向兼容：旧 `verified=` 属性 fallback 到 body-signature only + JOURNAL warning
+- Hash pseudo-code 更新：verified_commit() + body_signature() 双函数 + worked example
+- Mode C/D + Announcement + Recovery 全部同步新属性名
+- `--refresh-stale` 标注 future（不在 MVP，不污染 SKILL.md Run Modes）
+- incremental-mode.md 428 → 567 行；与 T012a SKILL.md 交叉一致
+- 下一步：重跑自举验证 T012a + T013a 修复是否生效
