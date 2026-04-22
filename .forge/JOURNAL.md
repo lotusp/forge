@@ -158,3 +158,15 @@
 - 关键调整：采纳用户反馈，拆分版本升级为两步（T014 过渡版 0.3.2-dev + T016 正式版 0.4.0），避免 T015 验证失败时回滚困难
 - 风险缓解写入验收标准：两阶段硬隔离、伪代码循环、preserve 块 IRON RULE、hash 算法显式定义、增量模式强制二次运行验证
 - 下一步：/forge:code T006
+
+## 2026-04-22 — Batch A: T006–T011 onboard-kind-profiles
+- T006：建立 profiles/ 目录（7 个子目录）+ profiles/README.md（profile/kind schema、执行合约说明）
+- T007：6 个 core profile 文件（tech-stack、module-map、entry-points、local-dev、data-flows、notes）
+- T008：3 个 structural profile 文件（build-system、config-management、deployment）
+- T009：4 个 model/entry-points 文件（domain-model、db-schema、http-api、event-consumers）
+- T010：4 个 integration/monorepo 文件（third-party-apis、auth、messaging、workspace-layout）
+- T011：3 个 kind 定义文件（web-backend、claude-code-plugin、monorepo）
+- 所有示例使用 e-commerce 调色板（Order/Customer/Product/Payment + com.example.shop.*），遵守 C8
+- claude-code-plugin kind 明确仅加载 6 个 core profiles（K-12 Decision）
+- monorepo kind 的 workspace-layout 预留 K-14 recursive-targets 扩展点
+- 下一步：检查点 1 — 人工过一遍 profile/kind 一致性，随后进入 Batch B (T012 SKILL.md 改写)
