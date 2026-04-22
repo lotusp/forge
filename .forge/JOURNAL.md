@@ -170,3 +170,12 @@
 - claude-code-plugin kind 明确仅加载 6 个 core profiles（K-12 Decision）
 - monorepo kind 的 workspace-layout 预留 K-14 recursive-targets 扩展点
 - 下一步：检查点 1 — 人工过一遍 profile/kind 一致性，随后进入 Batch B (T012 SKILL.md 改写)
+
+## 2026-04-22 — T012 onboard-kind-profiles SKILL.md 全量改写
+- 产出：plugins/forge/skills/onboard/SKILL.md（481 → 505 行）
+- 8 IRON RULES：两阶段硬隔离、kind 单次读、低置信度 halt、unknown halt、preserve 神圣、模板遵循、证据或省略、只读源码
+- Process 两阶段：Step 1 kind detection → Execution Plan (frozen) → Step 2 read-do-discard 伪代码循环
+- 5 Run Modes：first-run / incremental / regenerate / single-section / force-kind
+- 4 halt 场景交互消息模板齐备（低置信度 / unknown / 歧义 / kind drift）
+- 人工走读：3 种 kind 各模拟一次，修复 runtime snapshot 路径依赖 + claude-code-plugin 嵌套布局检测
+- 下一步：T013 incremental-mode.md 更新

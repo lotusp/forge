@@ -2,19 +2,24 @@
 name: onboard
 description: |
   Generates a navigation-oriented project map for AI developers and humans
-  working on an existing codebase. Produces .forge/context/onboard.md with
-  9 structured sections: project identity, architecture overview, codebase
-  structure, core domain objects, entry points with call chains, integration
-  topology, change navigation, local development, and known traps.
+  working on an existing codebase. Adapts its output to the project's kind
+  (web-backend / claude-code-plugin / monorepo / ...) by composing profile
+  files from ./profiles/. Produces .forge/context/onboard.md with sections
+  declared by the detected kind.
 
-  Supports incremental updates: subsequent runs re-verify each section against
-  the current commit and rewrite only the sections whose underlying code has
-  changed. Pass --regenerate to force a full rewrite, or --section=<name>
-  to refresh a single section.
+  Execution is two-stage:
+    Stage 1 — detect kind, produce a frozen Execution Plan (profiles, sections,
+              confidence). Halt on low confidence or unknown kind.
+    Stage 2 — read-do-discard loop over profiles. Each profile is loaded,
+              applied, its section written, then evicted from context.
+
+  Supports incremental updates: later runs reconcile section markers against
+  the current commit and rewrite only dirty sections, while preserving any
+  user-authored content inside <!-- forge:preserve --> blocks.
 
   Run before /forge:calibrate. Onboard records observed facts; calibrate
   produces authoritative rules.
-argument-hint: "[--regenerate | --section=<section-name>]"
+argument-hint: "[--regenerate | --section=<section-name> | --kind=<kind-id>]"
 allowed-tools: "Read Glob Grep Bash Write"
 context: fork
 model: sonnet
@@ -22,460 +27,479 @@ effort: high
 ---
 
 ## Runtime snapshot
+
 - Current commit: !`git rev-parse --short HEAD 2>/dev/null || echo "(not a git repo)"`
-- Existing artifact: !`test -f .forge/context/onboard.md && echo "FOUND — read header for last verified commit" || echo "(absent — first run)"`
+- Existing artifact: !`test -f .forge/context/onboard.md && echo "FOUND — read header for kind + last verified commit" || echo "(absent — first run)"`
 - Root contents: !`ls -1 2>/dev/null | head -30`
-- CLAUDE.md: !`test -f CLAUDE.md && echo "present — read fully" || echo "absent"`
-- Existing .forge artifacts: !`ls .forge/context/ .forge/features/ 2>/dev/null || echo "(none)"`
-- Source file counts: !`echo "Java: $(find . -name '*.java' 2>/dev/null | grep -v '.git' | grep -v build | wc -l | tr -d ' ') | TS: $(find . -name '*.ts' 2>/dev/null | grep -v node_modules | grep -v '.git' | wc -l | tr -d ' ') | Go: $(find . -name '*.go' 2>/dev/null | grep -v '.git' | wc -l | tr -d ' ') | Py: $(find . -name '*.py' 2>/dev/null | grep -v '.git' | grep -v venv | wc -l | tr -d ' ')"`
-- Controllers/Handlers: !`find . \( -name '*Controller*' -o -name '*Handler*' -o -name '*Router*' \) \( -name '*.java' -o -name '*.ts' -o -name '*.go' -o -name '*.py' \) 2>/dev/null | grep -v '.git' | grep -v build | grep -v test | wc -l | tr -d ' '` files
-- Listeners/Consumers: !`find . \( -name '*Listener*' -o -name '*Consumer*' -o -name '*Subscriber*' \) \( -name '*.java' -o -name '*.ts' -o -name '*.go' -o -name '*.py' \) 2>/dev/null | grep -v '.git' | grep -v build | wc -l | tr -d ' '` files
+- CLAUDE.md: !`test -f CLAUDE.md && echo "present — read fully before Step 1" || echo "absent"`
+- Claude plugin marker: !`test -f .claude-plugin/plugin.json && echo "present" || echo "absent"`
+- Workspace markers: !`ls pnpm-workspace.yaml turbo.json nx.json lerna.json go.work 2>/dev/null || true; grep -l '^\[workspace\]' Cargo.toml 2>/dev/null || true`
+- Nested plugin manifests: !`find . -maxdepth 4 -path ./node_modules -prune -o -name 'plugin.json' -path '*/.claude-plugin/*' -print 2>/dev/null | head -5`
+
+> Note: The kind catalogue itself is enumerated in Step 1.1 via Glob against
+> this skill's own `profiles/kinds/` directory (resolved by Claude Code, not
+> the user project).
 
 ---
 
 ## IRON RULES
 
-These rules have no exceptions. A run that violates any of them must stop
-and correct itself before writing the artifact.
+These rules have no exceptions. A run that violates any of them must stop and
+correct itself before writing the artifact.
 
-### Verification rules
+### R1 — Two-stage hard isolation (Stage 1 ⊥ Stage 2)
 
-1. **HTTP methods must come from annotations, never from method names.**
-   Before writing any route, read the source file and confirm the verb
-   against `@GetMapping|@PostMapping|@PutMapping|@PatchMapping|@DeleteMapping|@RequestMapping.*method=`
-   (or the stack's equivalent — see `reference/scan-patterns.md`).
+Stage 1 (kind detection) MUST produce an **Execution Plan** text block
+containing: `selected-kind`, `confidence`, `profiles[]`, `skipped[]`,
+`output-sections[]`. Once the plan is emitted, Stage 2 MUST follow it
+exactly. Stage 2 MUST NOT re-read the kind file or alter the plan.
+If new evidence appears mid-Stage-2 that contradicts the plan, stop the run
+and surface the contradiction — do not silently adapt.
 
-2. **Module paths must be verified on disk.** Never record a path derived
-   from a package name alone. For every module entry, run Glob on the path
-   first. Remove entries that do not resolve.
+### R2 — Single kind-file read
 
-3. **Versions come from build files, not README.** Read `gradle.properties`,
-   `build.gradle`, `pom.xml`, `package.json`, `go.mod`, `Cargo.toml`, or
-   `pyproject.toml` for versions. When README disagrees, record both with
-   a `[conflict]` tag — never silently pick one.
+The selected kind file (`profiles/kinds/<kind-id>.md`) is read exactly once,
+in Stage 1. Its `profiles:` list and `output-sections:` list are copied into
+the Execution Plan. The kind file is then closed and not reopened.
 
-4. **Never compress multi-observer events.** For each domain event, grep
-   every file that listens to it (`@EventListener`, `implements
-   ApplicationListener<EventName>`, `@KafkaListener`, `@RabbitListener`,
-   etc.) and list all observers. Compressing N listeners into "downstream
-   services" is forbidden.
+### R3 — Low confidence halts the run
 
-5. **Tag confidence on every high-impact claim.** Use one of:
-   - `[code]` — read directly from source
-   - `[config]` — read from config file (`.yml`, `.properties`, `.env`)
-   - `[build]` — read from build file (`build.gradle`, `package.json`)
-   - `[readme]` — from README only, not verified against code
-   - `[inferred]` — generated without direct verification
+If the top kind's detection score is below **0.60**, the run MUST halt
+and present the user with the top 3 candidates + their scores + the
+option to force a kind via `--kind=<kind-id>`. Never proceed by guessing.
 
-   Untagged factual claims about versions, paths, flows, or behaviour are
-   forbidden.
+### R4 — Unknown kind halts the run
 
-6. **Commands must be sourced from actual config files.** Build/test/lint
-   commands come from `Makefile`, `package.json` scripts, `build.gradle`
-   tasks, or README (with the README's command verified against the build
-   file). Invented commands are forbidden.
+If no kind file matches any positive signal, the run MUST halt and list
+the available kinds in `profiles/kinds/`, asking the user to either
+re-run with `--kind=<kind-id>` or describe the project so a new kind
+can be added. Do not fall back to a default kind.
 
-### Structural rules
+### R5 — Preserve blocks are sacred
 
-7. **Observed fact vs. rule — onboard writes observations only.**
+Any `<!-- forge:preserve -->...<!-- /forge:preserve -->` block in an existing
+`onboard.md` MUST be carried forward verbatim, even when the enclosing
+section is being rewritten, deleted due to kind drift, or renamed.
+Preserve blocks always win over generated content.
 
-   | Observed fact (onboard writes) | Rule (belongs to /forge:calibrate) |
-   |-------------------------------|-----------------------------------|
-   | "Services live in `*.service.*`" | "Business logic MUST live in service layer" |
-   | "BaseTestSetup uses @Rollback" | "New integration tests MUST extend BaseTestSetup" |
-   | "fakedms/ returns canned responses" | "New code MUST NOT depend on fakedms" |
-   | "Mixed /api and /api/v2 observed" | "New endpoints MUST use /api/v2" |
+### R6 — Profile outputs obey their Section Template
 
-   If a sentence about to be written contains "must", "must not", "should",
-   "forbidden", "never", "required to"—stop. That sentence belongs in
-   calibrate's output. Record only the observation.
+Each profile declares a Section Template. The generated section MUST
+follow that template's structure (table shape, bullet form, confidence
+tag placement). Do not merge, reorder, or invent sections not declared
+by the selected kind's `output-sections:`.
 
-8. **Sub-systems with their own full layering are separate modules.** A
-   sub-directory that has its own `controller/`, `service/`, and
-   `repository/` (or equivalent trio) is its own module row — never fold
-   into the parent.
+### R7 — Evidence or omission, never invention
 
-9. **Entry point totals must precede examples.** "28 listeners total, 6
-   representative below" — never list examples without the total.
+Every fact in the artifact MUST be traceable to a file path, pattern match,
+or explicit user statement. When evidence is absent, omit the row/bullet.
+Never write "N/A", "unknown", "TBD" — omit the line entirely.
 
-10. **Preserve blocks are sacred.** Any content inside
-    `<!-- forge:onboard:preserve -->` markers must be carried verbatim
-    across regenerations, including `--regenerate`.
+### R8 — No source files modified
+
+This skill is strictly read + write-to-.forge/. Do not edit project source
+files, configs, or manifests. Do not run package managers or build tools.
 
 ---
 
-## Boundary with /forge:calibrate
+## Prerequisites
 
-Onboard produces navigation. Calibrate produces authoritative rules.
+None. Onboard is the first skill in the Forge workflow.
 
-| Topic | Onboard writes | Calibrate writes |
-|-------|----------------|------------------|
-| Layering | Observed layers, call direction | `architecture.md` — rules & forbidden calls |
-| Testing | Test base classes, known infra traps | `testing.md` — strategy, mock policy, coverage |
-| Code style | — | `conventions.md` — naming, logging, error handling |
-| Anti-patterns | — | `constraints.md` — what new code must not do |
-
-Each onboard section with a calibrate counterpart must end with an explicit
-pointer (even before calibrate runs — the pointer tells readers where rules
-will appear):
-
-- Architecture Overview → `> 分层规则与禁止事项见 .forge/context/architecture.md（由 /forge:calibrate 产生）`
-- Local Development → `> 完整测试策略见 .forge/context/testing.md（由 /forge:calibrate 产生）`
-- Known Traps → `> 反模式与硬性规则见 .forge/context/constraints.md（由 /forge:calibrate 产生）`
-
----
-
-## Prerequisites & Run Modes
-
-Parse the `$1` argument and detect artifact state, then pick a mode:
-
-### Mode A — First run
-No existing `.forge/context/onboard.md`. Run Steps 0–11 end-to-end and write
-all 9 sections.
-
-### Mode B — Incremental (default when artifact exists)
-Existing artifact, no flag. Announce:
+If `.forge/context/onboard.md` already exists, show the user:
 
 ```
-[forge:onboard] Existing artifact found
-  last verified: {short-hash} ({date})
-  current HEAD:  {short-hash}
+[forge:onboard] Existing onboard artifact found
 
-Running in incremental mode. Will re-scan all sections and rewrite only
-those whose underlying code has changed. Preserve blocks are carried
-across. To force full regeneration: /forge:onboard --regenerate
+.forge/context/onboard.md was last generated on {date} for kind {kind-id}
+at commit {sha}.
+
+Options:
+  1. Incremental update  (default — reconcile section markers, rewrite dirty sections)
+  2. Regenerate          (--regenerate — full rewrite, preserve blocks retained)
+  3. Single section      (--section=<name> — refresh one section only)
+  4. Force different kind (--kind=<kind-id> — re-detect if project type changed)
+  5. View and exit
+
+Which do you prefer?
 ```
-
-For each section, compare the re-scan result against the stored content:
-- **Unchanged** → keep content as-is, update `verified=<hash>` marker only
-- **Changed** → show the user a one-line diff summary, rewrite the section
-- **Inside a `forge:onboard:preserve` block** → never touch
-
-Write sections one at a time to disk so an interrupted run leaves a valid,
-partially-updated artifact.
-
-### Mode C — `--regenerate`
-Existing artifact, `--regenerate` flag. Prompt:
-
-```
-[forge:onboard] --regenerate will REWRITE all sections of
-.forge/context/onboard.md. Preserve blocks will still be carried across.
-Proceed? (y/N)
-```
-
-On `y`: behave like Mode A but carry preserve blocks forward.
-
-### Mode D — `--section=<name>`
-Single-section refresh. Valid names:
-- `project-identity`
-- `architecture-overview`
-- `codebase-structure`
-- `core-domain-objects`
-- `entry-points`
-- `integration-topology`
-- `change-navigation`
-- `local-development`
-- `known-traps`
-
-Run only the scans needed for that section, rewrite only that section's
-block, update its `verified=<hash>` marker. Other sections unchanged.
 
 ---
 
 ## Process
 
-Each Step maps to zero or more output sections and scans specific artifacts.
-Skip Steps not required by the current run mode.
-
-### Step 0 — Detect run mode and plan
-Parse argument, read existing artifact header if present, announce mode
-per the rules above. In Mode D, skip directly to the target section's step.
-
-### Step 1 — Project identity
-Feeds section **1. Project Identity**.
-
-- Determine project type: monorepo / single application / library+SDK.
-  For monorepos look for `packages/`, `apps/`, `services/`, `libs/`,
-  workspace config.
-- Read README's first paragraph and CLAUDE.md fully if present.
-- Identify the primary runnable unit (startup class, `main` function,
-  `@SpringBootApplication`, etc.) and its module/directory.
-- Record one to two paragraphs covering purpose, business domain, primary
-  users. Non-technical readers must understand this.
-
-### Step 2 — Configuration scan (build + runtime + side effects)
-Feeds sections **2. Architecture Overview** (tech stack table) and
-**8. Local Development**.
-
-Read common config files per `reference/scan-patterns.md`. Extract:
-- Language + runtime + framework versions — tag `[build]`
-- Database, cache, search, MQ — tag `[config]` or `[build]`
-- Service discovery / config center — distinguish config-only (Nacos
-  config) from discovery. Do not mislabel.
-- Key internal/proprietary libraries
-- Infrastructure (cloud region, container registry) — tag `[config]`
-
-**Side-effect surfacing (critical, easy to miss):**
-Grep root build files for:
-- `git config` invocations
-- `core.hooksPath` settings
-- `System.setProperty` in init blocks
-- `afterEvaluate { ... exec ... }` blocks
-- init tasks that mutate the developer environment
-
-Record all such side effects for Known Traps or Local Development.
-
-### Step 3 — Codebase structure scan
-Feeds section **3. Codebase Structure**.
-
-Split the module map into **two layers**:
-
-**Business Domains:** the top-level business units (`order`, `salesoption`,
-`billing`, etc.). One row each.
-
-**Technical Layers:** the cross-cutting packages (`framework`, `clients`,
-`authentication`, `db`, `toggles`, etc.). One row each.
-
-Detection rules:
-- A sub-directory with its own full `adapter/`, `service/`, `repository/`
-  triple is a **business domain** (IRON RULE 8 — must be separate row).
-- A sub-directory that only contains infrastructure/cross-cutting code is
-  a **technical layer**.
-- Adapter sub-packages (`order.adapter.mbe`, `order.adapter.dms`) are
-  **not** separate rows — fold into the parent domain, list integrations
-  in Section 6 (Integration Topology) instead.
-
-For every row, run Glob on the path and read ≥1 representative source
-file before writing the responsibility. Every path gets `[code]` tag.
-
-### Step 4 — Core domain object scan
-Feeds section **4. Core Domain Objects**.
-
-Scan `src/main/java/**/domain/**`, `src/main/java/**/entity/**`,
-`**/models/**`, or language equivalent. Identify aggregate roots:
-- `@Entity` + no `@ManyToOne` owning side → likely aggregate root
-- Classes ending in `*Order`, `*Account`, `*Policy`, `*Program`, `*Ticket`
-- Classes with `@OneToMany` to history/audit tables
-
-For each aggregate root record:
-- Class name + package `[code]`
-- 1-line business meaning
-- Key related entities (1:1 / 1:N)
-- Status-field enum if present (for state machines)
-- Which services mutate it (grep `{ClassName}Repository.save|persist`)
-
-**Keep this section factual.** Record the shape, not "what developers
-should do when modifying it."
-
-### Step 5 — Entry points + call chains
-Feeds section **5. Entry Points & Call Chains**.
-
-For each category:
-
-**HTTP API:**
-- Grep for all controller annotations per `reference/scan-patterns.md`
-- **State total count first** (IRON RULE 9)
-- Select 5–10 representative routes spanning the major business domains
-- For each representative route, trace **one level deeper** — the primary
-  service method called, and the main side effects. Format:
+### Overview
 
 ```
-### {Flow name}
-- Entry: `OrderController#createOrder` (@PostMapping /api/v1/orders) [code]
-- Service: `OrderService#createOrder` [code]
-- Entity: `Order` [code]
-- Events published: `OrderPlacedEvent` [code]
-- External calls: `InventoryClient.reserveStock` (Feign) [code]
+╭── Stage 1: Kind Detection ───────────────────────────────────╮
+│  scan project → score each kind → pick top → emit Plan       │
+│  (halts on low confidence or unknown)                        │
+╰──────────────────────────────────────────────────────────────╯
+                              │
+                              ▼
+╭── Stage 2: Read-Do-Discard Loop ─────────────────────────────╮
+│  for profile in Plan.profiles:                               │
+│      read profile file                                       │
+│      execute Scan Patterns + Extraction Rules                │
+│      write section to artifact using Section Template        │
+│      discard profile from working context                    │
+╰──────────────────────────────────────────────────────────────╯
+                              │
+                              ▼
+                  Write artifact + JOURNAL entry
 ```
-
-**Never** write just a bare `METHOD /path — file:line`. Line numbers shift;
-use the class#method triplet.
-
-**Event Listeners / Message Consumers / Background Jobs / CLI / gRPC:**
-- State total count first for each category
-- List representative examples with class + trigger
-
-### Step 6 — Integration topology scan
-Feeds section **6. Integration Topology**.
-
-Run four greps (see `reference/scan-patterns.md` for exact patterns):
-1. **Outbound REST:** `@FeignClient` classes or HTTP client wrappers
-2. **Inbound REST from external systems:** filter `@*Mapping` for paths
-   that look like integration endpoints (e.g. webhook paths, vendor
-   import endpoints — `/webhook/`, `/import/`, `/{vendor-name}/`)
-3. **Inbound async:** `@MessageListener`, `@Consumer`, `@KafkaListener`,
-   `@RabbitListener`, `@JmsListener`, `@ServiceBusListener`
-4. **Outbound async:** `*Publisher`, `*Sender`, explicit `.send(...)` calls
-   to queues/topics
-
-Compile a matrix:
-
-| System | Direction | Mechanism | Main class | Local dev needed | Notes |
-|--------|-----------|-----------|------------|------------------|-------|
-
-Then, for **internal events**, produce a second table showing each
-`*Event` class and **all** its listeners (IRON RULE 4):
-
-| Event | Publisher | Observers (all) | External effects |
-|-------|-----------|-----------------|------------------|
-| `OrderConfirmedEvent` | `OrderService` | `OrderConfirmedListener`, `InventoryReservationListener`, `ShippingDispatchListener` | Notify customer, reserve inventory, schedule shipment |
-
-### Step 7 — Test infrastructure scan (for Known Traps only)
-Feeds section **9. Known Traps**. Does NOT feed a testing strategy section.
-
-- Glob `**/BaseTest*.*`, `**/AbstractTest*.*` — record each base class's
-  isolation mechanism (is there `@Transactional`? `@Rollback`? what does
-  `cleanUp()` do?)
-- Grep `@Disabled`, `@Ignore` across test sources — list currently-disabled
-  tests
-- Read test config for `stubMode=remote`, `wiremock.*`, embedded DB
-  versions (MariaDB4j, H2, Testcontainers)
-- Note cross-platform concerns (Apple Silicon ALPN, glibc-linked native
-  libs, etc.) if discoverable from dependency versions
-
-Surface only **observed facts** that will bite first-day developers. Do
-NOT write a testing strategy — that is calibrate's job.
-
-### Step 8 — Local development commands
-Feeds section **8. Local Development**.
-
-Structure into three distinct blocks:
-
-1. **Prereqs** — infrastructure (DB, Redis, MQ). Include Docker commands
-   when `docker-compose.yml` exists.
-2. **Compile** — minimum to make the build succeed. If private repos are
-   required (Nexus, Artifactory), state the env vars / credentials needed.
-3. **Run** — minimum config for local startup. Include:
-   - Config template file path (exact, e.g.
-     `application-local.properties.sample`); if absent, state "(no local
-     template in repo)"
-   - Required config keys (grep main `application.yml` for `${...}`
-     placeholders without defaults)
-   - Port and profile defaults (read `bootstrap.yml` / `application.yml`)
-4. **Test** — all tests + single test class/file commands
-5. **Lint / format** — if `spotless`, `checkstyle`, `eslint`, `prettier`
-   is configured, the command; else `# (no lint task configured)`
-
-End the section with the testing-strategy pointer to calibrate.
-
-### Step 9 — Change navigation synthesis
-Feeds section **7. Change Navigation**.
-
-From the scans in Steps 3–6, synthesize 4–6 typical change scenarios
-**observed in the existing code**. Frame each as "if you change X, existing
-code modifies these layers":
-
-```
-### Add / modify an order field
-- Controller DTO: `OrderRequest` (in `order/adapter/api/dto/`)
-- Service mapping: `OrderService#mapRequestToEntity`
-- Entity: `Order`
-- Migration: `order-service/src/main/resources/db/migration/`
-- Likely side effects: search indexing, export, downstream sync, contract tests
-```
-
-**Keep this factual, not prescriptive.** Describe what existing code does,
-not what new code should do. If you can't find ≥3 similar existing changes
-for a scenario, omit that scenario.
-
-### Step 10 — Verification pass (MANDATORY)
-
-Before writing the artifact, confirm every IRON RULE:
-
-- [ ] Route sanity: every representative route's HTTP verb read from
-  `@*Mapping` annotation in the actual file
-- [ ] Path existence: every module and file path resolves on Glob
-- [ ] Version cross-check: every version in Tech Stack appears in a
-  build file; README conflicts marked `[conflict]`
-- [ ] Observer completeness: for every event in Integration Topology,
-  all listeners grep-verified
-- [ ] Confidence tags: every factual claim tagged
-- [ ] Command verification: every command in Local Development appears
-  in an actual build/config file
-- [ ] No rule-writing: re-read Known Traps / Architecture Overview /
-  Change Navigation and remove any sentence with "must", "should",
-  "forbidden", "never"
-- [ ] Sub-system separation: every domain with full layering has its own row
-- [ ] Entry-point totals: each category has a count before examples
-- [ ] Calibrate pointers: Architecture Overview, Local Development,
-  Known Traps each end with their pointer line
-
-Any failed check must be fixed before Step 11.
-
-### Step 11 — Write artifact (section-by-section)
-
-Write each section independently to disk, in order. Each section is
-wrapped in HTML-comment markers so incremental mode can diff them:
-
-```markdown
-<!-- forge:onboard section=project-identity verified={commit-hash} generated={YYYY-MM-DD} -->
-## 1. Project Identity
-
-...content...
-
-<!-- /forge:onboard section=project-identity -->
-```
-
-Preserve blocks inside sections use their own markers:
-
-```markdown
-<!-- forge:onboard:preserve -->
-团队补充 — skill 不会覆盖此块
-...
-<!-- /forge:onboard:preserve -->
-```
-
-See `reference/output-template.md` for the full 9-section structure and
-`reference/incremental-mode.md` for the diff/merge logic.
-
-Write in the order: header → sections 1–9 → Document Confidence footer.
-After each section write, confirm the file still parses (opening/closing
-markers match) before proceeding.
 
 ---
 
-## Output
+### Step 1 — Detect kind
 
-**File:** `.forge/context/onboard.md`
+**1.1 — Enumerate kinds**
 
-See [reference/output-template.md](reference/output-template.md) for the
-complete artifact template including all section markers, the Document
-Confidence footer, and the preserve-block syntax.
+Glob `profiles/kinds/*.md` in this skill's directory. For each kind file,
+read its frontmatter (`kind-id`, `detection-signals.positive[]`,
+`detection-signals.negative[]`, `profiles[]`, `output-sections[]`).
+
+**1.2 — If `--kind=<kind-id>` flag is passed**
+
+Skip detection. Load the specified kind file. Set `confidence = 1.0`
+(user-forced). Proceed to 1.5.
+
+**1.3 — Score each kind**
+
+For each kind:
+- For each positive signal: if the signal matches (file glob / grep pattern
+  found), add its `weight` to the kind's score.
+- For each negative signal: if the signal matches, subtract its `weight`.
+- Clamp to `[0.0, 1.0]`.
+
+Scoring hints:
+- Positive signals are ORed (any match adds weight; duplicates within the
+  same bucket are not double-counted).
+- Use the Runtime snapshot values where possible to avoid re-scanning.
+- Do not read source file bodies during scoring — this is a cheap pass
+  based on file existence, manifest contents, and pattern counts.
+
+**1.4 — Rank and decide**
+
+Sort kinds by score descending. Let `top1`, `top2` be the two highest.
+
+| Condition | Action |
+|-----------|--------|
+| `top1.score ≥ 0.60` and `(top1.score − top2.score) ≥ 0.15` | accept `top1`, proceed |
+| `top1.score ≥ 0.60` and margin `< 0.15` | ambiguous — surface both to user, halt |
+| `top1.score < 0.60` | R3 triggers — halt with candidate list |
+| all scores `= 0` | R4 triggers — halt with unknown-kind message |
+
+**1.5 — Emit Execution Plan**
+
+Produce the plan as a fenced text block. This is the handoff to Stage 2.
+The plan is **frozen** — Stage 2 must not modify it.
+
+```text
+[Execution Plan]
+Selected kind:      <kind-id>
+Display name:       <display-name>
+Confidence:         <0.00–1.00>   (source: scored | user-forced)
+Kind file:          profiles/kinds/<kind-id>.md
+
+Profiles to load (in order):
+  1. <path-1>
+  2. <path-2>
+  ...
+
+Skipped profiles (with reason):
+  - <path>  —  <reason, e.g. "no database detected">
+  - ...
+
+Output sections (in order):
+  1. <Section Title 1>
+  2. <Section Title 2>
+  ...
+```
+
+Show the plan to the user and pause for confirmation on first-run. On
+incremental mode with unchanged kind, auto-proceed.
+
+**1.6 — Close kind file**
+
+Once the plan is emitted, the kind file is done. Do not reopen it in
+Stage 2. (R2)
 
 ---
 
-## Interaction Rules
+### Step 2 — Read-do-discard loop
 
-- If CLAUDE.md exists, read it fully — it may contain corrections to what
-  the skill would otherwise infer. Tag claims from CLAUDE.md as `[code]`
-  only if cross-verified against source; otherwise `[inferred]`.
-- If a section has no data (e.g. no CLI entry points), **still emit the
-  section markers with an explicit "No {category} detected" body** — do
-  not silently omit sections in the incremental-mode output (the markers
-  anchor future diffs).
-- After writing, summarise in 2–3 sentences:
-  - total sections written vs reused vs skipped
-  - any `[conflict]` or `[needs-verification]` tags that need human input
-  - next step: `/forge:calibrate`
-- Append one entry to `.forge/JOURNAL.md` (create if absent):
+For each `profile` in `Plan.profiles` (in listed order):
+
+```pseudo
+loop over Plan.profiles:
+  profile_doc = Read(profile.path)
+  patterns    = profile_doc.scan_patterns
+  rules       = profile_doc.extraction_rules
+  template    = profile_doc.section_template
+  tags_guide  = profile_doc.confidence_tags
+
+  evidence = apply(patterns, project_files)     # Glob / Grep / Bash ls
+  extracted = extract(rules, evidence)          # follow Extraction Rules
+  section_md = render(template, extracted, tags_guide)
+
+  append_section(artifact_buffer, section_md)
+
+  discard(profile_doc, evidence)                # clear from working context
+```
+
+**Discard discipline (DG1 — save tokens, DG2 — long-context stability):**
+
+After each iteration, do not keep the profile file or its raw evidence in
+working memory. Only the rendered section text is retained. When starting
+the next iteration, the LLM should not reference the previous profile's
+internals — only the current profile's contents drive the work.
+
+**Confidence tag application (R7):**
+
+Every row/bullet/fact in a section carries a `[high|medium|low|inferred]`
+tag per the profile's Confidence Tags section. No untagged facts.
+
+**Budget enforcement:**
+
+If the extracted content for a profile would exceed its declared
+`token-budget`, trim to the most important items and note the truncation
+as a bullet in the `Notes` section (if loaded).
+
+---
+
+### Step 3 — Assemble artifact
+
+**3.1 — Header**
+
+Emit the artifact header:
 
 ```markdown
-## YYYY-MM-DD — /forge:onboard ({mode})
-- 产出：.forge/context/onboard.md ({N} sections written, {M} reused)
-- 摘要：{N} 个业务域, {N} 个技术层, {N} 个 entry points, {N} 个集成
-- 置信度警示：{list of [conflict] or [needs-verification] items, or "无"}
-- 下一步：/forge:calibrate
+# Project Onboard: {project-name}
+
+> Kind:             {kind-id}
+> Confidence:       {confidence}
+> Generated:        {YYYY-MM-DD}
+> Commit:           {short-sha}
+> Generator:        /forge:onboard (v{plugin-version})
 ```
+
+**3.2 — "What This Is" section**
+
+Always the first section. Synthesize from README.md + CLAUDE.md + top-level
+directory observations. 1–2 paragraphs, non-technical audience.
+
+**3.3 — Section markers**
+
+Each profile-generated section is wrapped in a marker pair:
+
+```markdown
+<!-- forge:onboard section="<section-name>" profile="<profile-id>" verified="<hash>" -->
+
+## {Section Title}
+
+{rendered content}
+
+<!-- /forge:onboard section="<section-name>" -->
+```
+
+- `section-name` = lowercase, kebab-case, matches `output-sections` entry
+- `profile-id` = source profile's `name` frontmatter
+- `verified` = `sha256(section_body_without_preserve_blocks)` truncated to
+  16 hex chars
+
+**3.4 — Preserve blocks**
+
+Inside any section body, a user may insert:
+
+```markdown
+<!-- forge:preserve -->
+This content is manually maintained and must not be overwritten.
+<!-- /forge:preserve -->
+```
+
+During incremental updates (see `reference/incremental-mode.md`), preserve
+blocks are carried forward verbatim regardless of section rewrite status
+(R5).
+
+**3.5 — Write**
+
+Write the assembled buffer to `.forge/context/onboard.md`, overwriting any
+existing file. (Incremental mode handles the merge before this write; by
+the time we reach here, the buffer already reflects the final state.)
+
+---
+
+### Step 4 — Append JOURNAL entry
+
+Append one entry to `.forge/JOURNAL.md`:
+
+```markdown
+## YYYY-MM-DD — /forge:onboard
+- Kind:        {kind-id} (confidence {score})
+- Sections:    {N} written / {M} preserved / {K} skipped
+- Profiles:    {list of profile-ids loaded}
+- Mode:        {first-run | incremental | regenerate | single-section}
+- Commit:      {short-sha}
+- Next:        /forge:calibrate
+```
+
+---
+
+## Run Modes
+
+### Mode A — first-run (no existing artifact)
+
+1. Full Stage 1 detection
+2. Full Stage 2 profile pass
+3. Write artifact with all sections
+4. JOURNAL entry with `mode: first-run`
+
+### Mode B — incremental (default when artifact exists)
+
+1. Read existing artifact header to extract `kind`, `commit`, section markers
+2. If current kind signals still support the recorded kind → reuse it
+   (no Stage 1 rescoring). Otherwise trigger **kind drift handling**
+   (see `reference/incremental-mode.md`).
+3. For each section: compare `verified` hash against recomputed hash of the
+   rendered content → identify dirty sections
+4. Rewrite dirty sections + all sections downstream of changed profiles
+5. Preserve blocks carried forward verbatim (R5)
+6. JOURNAL entry with `mode: incremental`
+
+Details of merge / diff logic live in `reference/incremental-mode.md`.
+This SKILL.md defines the contract; the reference defines the algorithm.
+
+### Mode C — regenerate (`--regenerate`)
+
+Full Stage 1 + Stage 2, as if first-run, but preserve blocks from the
+existing artifact are extracted first and re-inserted at the end.
+JOURNAL entry with `mode: regenerate`.
+
+### Mode D — single-section (`--section=<name>`)
+
+1. Read existing artifact, locate the requested section marker
+2. Read the profile that produced that section (from marker metadata)
+3. Execute read-do-discard for that single profile
+4. Splice the new section back into the artifact, preserving all others
+5. JOURNAL entry with `mode: single-section`
+
+**Constraint:** single-section mode cannot change the kind. For kind
+changes, use `--regenerate` or `--kind=<id>`.
+
+### Mode E — force kind (`--kind=<kind-id>`)
+
+Equivalent to Mode A/C with user-forced kind. Bypasses detection (R3/R4
+not evaluated). Confidence recorded as `1.0 (user-forced)`.
+
+---
+
+## Interaction Messages
+
+All messages use `[forge:onboard]` lowercase prefix.
+
+### Low confidence halt
+
+```
+[forge:onboard] Kind detection confidence is low
+
+Top candidates:
+  1. {kind-1}  — score {s1}
+  2. {kind-2}  — score {s2}
+  3. {kind-3}  — score {s3}
+
+Minimum confidence required: 0.60.
+
+Options:
+  1. Re-run with --kind=<kind-id> to force one of the candidates
+  2. Describe the project type so a new kind definition can be added
+  3. Exit and inspect the signals manually
+
+Which do you prefer?
+```
+
+### Unknown kind halt
+
+```
+[forge:onboard] No matching kind found
+
+Available kinds:
+  - web-backend         — long-running HTTP service with persistence
+  - claude-code-plugin  — Claude Code skill / agent / command package
+  - monorepo            — workspace coordinating multiple sub-packages
+
+Options:
+  1. Re-run with --kind=<kind-id> if one of the above fits
+  2. Describe the project so a new kind definition can be added
+  3. Exit
+
+Which do you prefer?
+```
+
+### Ambiguous (margin < 0.15)
+
+```
+[forge:onboard] Two kinds scored close
+
+  1. {kind-1}  — score {s1}
+  2. {kind-2}  — score {s2}
+  Margin: {diff} (required ≥ 0.15)
+
+Signals favouring {kind-1}: {list}
+Signals favouring {kind-2}: {list}
+
+Options:
+  1. Use {kind-1}
+  2. Use {kind-2}
+  3. Re-run with --kind=<kind-id>
+  4. Exit
+
+Which do you prefer?
+```
+
+### Kind drift detected (incremental mode)
+
+```
+[forge:onboard] Kind drift detected
+
+Recorded kind:  {old-kind}  (at commit {old-sha})
+Current signals support: {new-kind}  (confidence {score})
+
+This usually means the project has changed significantly. Incremental
+merge across kinds is not safe.
+
+Options:
+  1. Re-detect and regenerate (--regenerate with auto-detected new kind)
+  2. Force previous kind (--kind={old-kind}, ignore drift)
+  3. Force new kind (--kind={new-kind})
+  4. Exit to investigate
+
+Which do you prefer?
+```
+
+---
+
+## Reference Documents
+
+| File | Purpose |
+|------|---------|
+| `profiles/README.md` | Profile + kind file schema, execution contract |
+| `profiles/kinds/*.md` | Kind definitions (detection signals + profile list) |
+| `profiles/{category}/*.md` | Individual profile files (scan + extract + template) |
+| `reference/scan-patterns.md` | Language/framework grep patterns + confidence decision tree |
+| `reference/incremental-mode.md` | Incremental merge + kind drift algorithm (MUST read when in Mode B) |
 
 ---
 
 ## Constraints
 
-- Strictly read-only to source files. This skill never modifies code.
-- Never guess project purpose from directory names — read at least one
-  substantive file per module before describing it.
-- Aim for navigation over inventory: 20% of information that gives 80%
-  of orientation. Do not list every route or every file.
-- In incremental mode, never overwrite a section whose scan result is
-  unchanged — the `verified=` marker update is the only write.
-- Preserve blocks are sacred: even `--regenerate` carries them across.
+- Do not modify any source file. This skill is read + write-to-.forge/ only.
+- Do not read more than ~50 source files during Stage 2 total, across all
+  profiles, to stay within long-context stability (DG2).
+- Do not fabricate evidence (R7). If a profile cannot find signals, it
+  produces an empty section body (not omitted — so the user sees the gap)
+  with a single "No signals matched for this profile" note.
+- Do not re-enter Stage 1 once Stage 2 has begun (R1).
+- Do not reopen the selected kind file once closed (R2).
+- Examples in any profile output must follow Content Hygiene (see
+  `.forge/context/constraints.md` C8).
