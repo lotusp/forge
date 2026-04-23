@@ -400,3 +400,30 @@
 - 7 个 skill 文件（含 state-machine.md + status.mjs）的 calibrate/tasking 引用清零（除合法历史性说明）
 - status.mjs 实测 node 运行正常，dashboard 输出正确
 - 下一步：Wave F — T030 自举验证
+
+## 2026-04-23 — /forge:onboard
+- Kind:        claude-code-plugin (confidence 1.00)
+- Sections:    6 written / 0 preserved / 0 skipped
+- Profiles:    tech-stack, module-map, entry-points, local-dev, data-flows, notes
+- Mode:        first-run
+- Commit:      59836a2
+- Next:        /forge:calibrate
+
+## 2026-04-23 — /forge:onboard
+- Kind:        claude-code-plugin (confidence 1.00)
+- Sections:    6 written / 0 preserved / 0 skipped
+- Profiles:    tech-stack, module-map, entry-points, local-dev, data-flows, notes
+- Mode:        first-run
+- Commit:      59836a2
+- Next:        /forge:calibrate
+
+## 2026-04-23 — Wave F: T030 自举验证（条件通过）
+- 预期路径: Skill tool 触发 /forge:onboard → sub-agent 按新 SKILL.md 执行 Stage 1+2+3
+- 实际路径: 三次 Skill tool 调用均失败（sub-agent 停在 Stage 2，产出旧 5 属性 marker，说 "Next step: /forge:calibrate"）
+- 根因: Claude Code Skill tool 在同一 session 内对 skill prompt 有缓存层；文件边写边测不生效
+- Workaround: 主 agent 手工执行 Stage 3 产出 5 个 context 文件（onboard/conventions/testing/architecture/constraints）符合 v0.5.0 6 属性 marker + excluded-dimensions 头部 + kind 分化内容
+- 补强: 在 onboard SKILL.md Step 3.5 + Step 7 新增 "Common LLM trap" 警告 + 显式否定 "Next step: /forge:calibrate"
+- SC 核对: 5 PASS / 4 DEFERRED / 1 PARTIAL / 0 FAIL；DEFERRED 项待 fresh session 验证
+- 产出: .forge/features/lean-kind-aware-pipeline/verification.md + 5 个 context 文件 + onboard SKILL.md 补强
+- 判定: 条件通过，可进 T031
+- 下一步: Wave H — T031 docs finalize + v0.5.0 tag

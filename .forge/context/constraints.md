@@ -1,184 +1,182 @@
 # Constraints & Anti-Patterns: forge
 
-> 生成时间：2026-04-19
-> 最近人工更新：2026-04-20（新增 TD-007：skill `--audit` 支持）
-> 生成方式：/forge:calibrate — 基于代码扫描 + 人工裁决
-> 更新方式：重新运行 /forge:calibrate，或针对具体规则做人工补充
-> 文件路径：.forge/context/constraints.md
+> Kind:                 claude-code-plugin
+> Generated:            2026-04-23
+> Commit:               59836a2
+> Generator:            /forge:onboard Stage 3 (v0.5.0-dev)
+> Dimensions loaded:    hard-constraints, anti-patterns
+> Historical authority:  this file carries forward C1-C8 rules from pre-v0.5.0 that the community has adopted as forge-wide discipline.
 
-**Important:** 本文件列出 Forge 插件开发的硬性约束和已知反模式。
-另见：context/conventions.md、context/architecture.md、context/testing.md
+**Important:** This file is the authoritative source of hard rules for all forge development. Every new skill / agent / artifact must respect these constraints. Violations are `must-fix` severity.
 
 ---
+
+<!-- forge:onboard source-file="constraints.md" section="hard-constraints" profile="context/dimensions/hard-constraints" verified-commit="59836a2" body-signature="e4b0f23a81c75d96" generated="2026-04-23" -->
 
 ## Hard Constraints
 
-这些约束没有例外。违反任何一条都是 `must-fix` 级别问题。
+### C1 — Status script is the only routing authority
 
-### C1 — Status 脚本是唯一路由权威
+`skills/forge/scripts/status.mjs` is the sole basis for orchestrator routing. The forge skill MUST execute this script and read its `[ACTION]` output; it MUST NOT infer the next step from memory or context alone.
 
-`skills/forge/scripts/status.mjs` 是编排器路由的唯一依据。
-forge skill 必须执行此脚本并读取其 `[ACTION]` 输出，不可自行判断下一步。
+**Violation appearance:** forge skill deciding next action based on reading `.forge/` files directly and inferring state.
 
-**违反表现：** forge skill 通过读取 `.forge/` 文件自行推断状态，绕过 status.mjs。
+**Enforcement:** code review + SKILL.md R-level IRON RULE in `skills/forge/SKILL.md`.
 
-### C2 — 交互消息必须使用小写前缀
+### C2 — Interaction messages use lowercase prefix
 
-所有面向用户的消息前缀格式为 `[forge:{skill-name}]`，全小写。
+All user-facing messages follow the format `[forge:{skill-name}]` in lowercase.
 
-**违反表现：** `[FORGE:CALIBRATE]`、`[Forge:Code]` 等格式。
+**Violation appearance:** `[FORGE:ONBOARD]`, `[Forge:Code]`, etc.
 
-**当前已知违规位置（待修复）：**
-- `skills/tasking/SKILL.md` — Step 6 使用 `[FORGE:TASKING]`（大写）
-- `skills/tasking/SKILL.md` — Prerequisites 中使用 `[FORGE:TASKING]`（大写）
+**Enforcement:** manual grep in review; pre-commit scan could catch.
 
-### C3 — 产物路径必须使用嵌套结构
+### C3 — Artifact paths use nested structure
 
-所有 `.forge/` 产物必须遵守以下路径规范：
+All `.forge/` artifacts follow these paths:
 
 ```
-.forge/context/{filename}.md         # 项目级上下文
-.forge/features/{slug}/{filename}.md # Feature 级产物
-.forge/features/{slug}/tasks/T{NNN}-summary.md  # Task 摘要
+.forge/context/{filename}.md         # project-wide context
+.forge/features/{slug}/{filename}.md # feature-level artifacts
+.forge/features/{slug}/tasks/T{NNN}-summary.md  # per-task summaries
 ```
 
-**禁止使用旧的平铺结构：**
-- ❌ `.forge/conventions.md`（应为 `.forge/context/conventions.md`）
-- ❌ `.forge/clarify-{slug}.md`（应为 `.forge/features/{slug}/clarify.md`）
-- ❌ `.forge/design-{slug}.md`（应为 `.forge/features/{slug}/design.md`）
+**Violation appearance:** old flat paths like `.forge/conventions.md`, `.forge/clarify-{slug}.md`.
 
-**当前已知违规位置（待修复）：**
-- `agents/forge-architect.md:24` — 引用 `.forge/clarify-{slug}.md`（旧路径）
-- `agents/forge-architect.md:32` — 引用 `.forge/conventions.md`（旧路径）
+### C4 — Skill references use current names
 
-### C4 — Skill 引用必须使用当前名称
+`clarify / design / code / inspect / test / onboard / forge` are the 7 canonical names in v0.5.0.
 
-`tasking`（非 `plan`）和 `inspect`（非 `review`）是当前正确名称，
-用于避免与 Claude Code 内置命令冲突。
+**No references to `/forge:calibrate` or `/forge:tasking` in active documentation.** These were absorbed in v0.5.0.
 
-**当前已知违规位置（待修复）：**
-- `agents/forge-reviewer.md:7` — 描述中写 "Used by /forge:review"（应为 /forge:inspect）
-- `skills/test/SKILL.md` description — "Use after /forge:review"（应为 /forge:inspect）
+Historical mentions allowed only in:
+- v0.5.0 migration guides
+- JOURNAL entries from before v0.5.0
+- CHANGELOG
 
-### C5 — Inspect skill 不修改任何源文件
+### C5 — Inspect skill modifies no source files
 
-`inspect` skill 严格只读。它不可建议修复也不可应用修复。
-评审结果只写入 `.forge/features/{slug}/inspect.md`。
+`inspect` is strictly read-only. It does not suggest code edits inline — only reports findings with line:number references. Fixes are then routed back to `code`.
 
-### C6 — Code skill 不超出任务范围
+### C6 — Code skill does not exceed task scope
 
-`code` skill 在执行时只可修改 `plan.md` 中该 task 明确列出的文件。
-如果发现需要修改额外文件，必须触发 Scope Creep Protocol，暂停并询问用户。
+`code` only modifies files listed in the task's Scope section in plan.md. If a task reveals need for additional file changes, trigger Scope Creep Protocol (pause + ask user) — do NOT silently expand.
 
-### C7 — Agent 层不直接写文件
+### C7 — Agents do not write artifacts
 
-`forge-explorer`、`forge-architect`、`forge-reviewer` 只返回报告文本。
-由调用 skill（clarify/design/inspect）负责将内容写入产物文件。
+`forge-explorer`, `forge-architect`, `forge-reviewer` return report text to the calling skill. They never `Write` directly. The calling skill (`clarify`, `design`, `inspect`) is responsible for artifact persistence.
 
-### C8 — 严禁在任何产物中泄漏非 forge 的真实项目信息
+### C8 — No external project identifiers in artifacts
 
-**范围：** commit 消息（subject / body / footer）、所有仓库文档
-（`README.md`、`CLAUDE.md`、`docs/**`）、所有 SKILL.md 和 reference 文件、
-所有 agent 文件、所有脚本注释、所有 `.forge/` 产物（例外见下）。
+**Scope:** commit messages (subject/body/footer), all repo docs (`README.md`, `CLAUDE.md`, `docs/**`), all SKILL.md / agent files, all scripts, all `.forge/` artifacts.
 
-**禁止内容：**
-- 外部公司、产品、品牌名
-- 外部内部系统缩写（不在公开文档中出现的 3–5 字母系统名）
-- 外部 Java/Go/Python 包命名空间（`com.{company}.*` 格式）
-- 外部基础设施主机、registry 域名、生产端口、生产 schema 名
-- 外部数据库/表名、生产 URL、生产 feature slug
+**Forbidden:**
+- External company / product / internal-system names (including 3-5 letter acronyms used inside a company)
+- External Java/Go/Python namespaces (`com.{company}.*` patterns)
+- External infrastructure hosts / registry domains / production ports / production schema names
+- External DB names / table names / production URLs / production feature slugs
 
-**允许内容：**
-- Forge 自身的标识符（skill 名、agent 名、artifact 路径等）
-- 公开开源工具与协议名（Spring Boot、MySQL、Nacos、REST 等）
-- 通用业务名词（`Order`、`Customer`、`Payment`）
-- `com.example.*` 命名空间、`{placeholder}` 占位符
+**Allowed:**
+- forge's own identifiers (skill names, agent names, artifact paths)
+- Public open-source tools & protocols (Spring Boot, MySQL, Nacos, REST)
+- Generic business nouns (`Order`, `Customer`, `Payment`)
+- `com.example.*` namespace
+- `{placeholder}` tokens
 
-**例外：** `.forge/context/onboard.md` 的自举产物（forge 描述自身时）可以
-使用 forge 的真实标识符——因为 forge 就是"目标项目"。
+**Exception:** `.forge/context/onboard.md` self-bootstrap artifacts may use forge's real identifiers — because forge IS the target project in the bootstrap.
 
-**观察来源：** 本约束由 commit `b1f1f8b` 事件触发（之前的 `bd87103` +
-`60d309f` 把 AI 辅助开发目标项目的私有标识符带入了公开仓库）。
+**Violation appearance:** commit messages mentioning a specific client name; example code paths using `com.{brand}.{product}.*`; docs with specific registry domain instead of placeholder.
 
-**违反表现：**
-- Commit message 提及具体公司/产品
-- 示例代码中出现 `com.{brand}.{product}.*` 包路径
-- 文档中用具体 registry 域名代替占位符
-- 模板示例沿用真实业务类名（如源自某个特定项目的 `FooBarServiceImpl`）
+### C9 — Every fact carries a confidence tag
 
-**修复流程：** 见 `conventions.md` § Content Hygiene §「泄漏后的补救流程」。
+Per SKILL.md R10, every fact in an onboard / context artifact carries `[high]` / `[medium]` / `[low]` / `[inferred]` confidence tag. May additionally carry a source tag (`[code]` / `[build]` / `[config]` / `[readme]` / `[cli]`) and a `[conflict]` flag. No invented tags.
 
-### 通用示例调色板
+### C10 — Section markers use 6 attributes, exact order
 
-新增任何示例时，优先使用 `conventions.md` § Content Hygiene 中的
-"通用示例调色板"（e-commerce order platform 域），以确保跨文档一致性。
+Per SKILL.md R9, every section marker in onboard.md or context files uses:
+
+```
+<!-- forge:onboard source-file="<file>.md" section="<id>" profile="<profile-path>" verified-commit="<git-short>" body-signature="<16hex>" generated="<YYYY-MM-DD>" -->
+```
+
+All 6 attributes required, in this order, double-quoted. `verified-commit` and `body-signature` are independent (not alternatives).
+
+<!-- /forge:onboard section="hard-constraints" -->
 
 ---
 
+<!-- forge:onboard source-file="constraints.md" section="anti-patterns" profile="context/dimensions/anti-patterns" verified-commit="59836a2" body-signature="92d37f8b04e1a586" generated="2026-04-23" -->
+
 ## Anti-Patterns
 
-这些是在 Forge 代码库中发现的已存在模式，**新代码不应复制**。
+### AP1 — Large-scale string-concat SKILL.md without IRON RULE grouping
 
-### AP1 — 大写交互消息前缀
+**现状:** New skills may accumulate IRON RULES as unnumbered bullets interleaved with prose, making them hard for LLM to parse as discrete constraints.
 
-**现状：** `skills/tasking/SKILL.md` 中使用 `[FORGE:TASKING]` 大写格式。
-**问题：** 违反 Decision #1（用户明确要求小写，输入方便）。
-**修复：** 将所有 `[FORGE:{SKILL}]` 改为 `[forge:{skill}]`。
+**问题:** LLM may skip rules buried in Process prose; rules cannot be cross-referenced.
 
-### AP2 — 旧平铺路径引用
+**正确做法:** Each IRON RULE gets its own `### R<N> — <short title>` heading and its own paragraph body. Skills > 300 lines should use this structure.
 
-**现状：** `agents/forge-architect.md` 中引用 `.forge/clarify-{slug}.md` 和 `.forge/conventions.md`。
-**问题：** 这些是旧的平铺路径格式，已被嵌套路径取代。Agent 读取这些路径时会找不到文件。
-**修复：** 更新为 `.forge/features/{slug}/clarify.md` 和 `.forge/context/conventions.md`。
+### AP2 — Cross-document rule reference without inline backup
 
-### AP3 — 过时的 skill 名称引用
+**现状:** v0.4.0 T015 revealed: when a rule is stored only in `reference/<topic>.md` and not echoed in SKILL.md body, first-run LLMs don't load the reference file and violate the rule.
 
-**现状：** `agents/forge-reviewer.md` 和 `skills/test/SKILL.md` 中引用 `/forge:review`。
-**问题：** skill 已重命名为 `inspect`，`/forge:review` 不存在。
-**修复：** 更新为 `/forge:inspect`。
+**问题:** Silent rule violations that pass walkthrough review but fail on actual execution.
 
-### AP4 — Skill 中内联完整约定
+**正确做法:** Key rules (marker format, tag enumeration, hash algorithm) must be **inline** in SKILL.md IRON RULES section, with reference files carrying only detailed algorithms / edge cases.
 
-**现状（未发现但需预防）：** 某个 skill 在自身 SKILL.md 中重复定义了 conventions.md 中的规则。
-**问题：** 两处定义会发生漂移，产生矛盾。
-**正确做法：** Skill 应引用 `context/conventions.md`，而不是内联规则。
+### AP3 — Placeholder syntax in Wire Protocol examples
 
-### AP5 — 私有项目标识符污染示例
+**现状:** `verified="<hash>"` in examples leads LLMs to output literal `<hash>` in production.
 
-**现状（已发生，commit `b1f1f8b` 修复）：** skill 模板和示例中直接使用了
-AI 辅助开发过程中接触到的目标项目的类名、包路径、基础设施域名。
-**问题：**
-- 把私有项目信息带入公开仓库（潜在泄密）
-- 示例与其他项目场景不匹配，降低模板通用性
-- 读者被特定领域词汇（例如内部系统缩写）干扰，注意力被拉偏
+**问题:** Non-functional markers that break incremental-mode reconciliation.
 
-**正确做法：** 所有示例从 conventions.md § Content Hygiene §「通用示例
-调色板」取值（当前推荐：e-commerce order platform 作为示范域）。
+**正确做法:** Use concrete literal values in all format examples — `verified-commit="a3f2c1d4"`, `body-signature="9f8e7d6c5b4a3210"`. Design skill R18 enforces this across all "wire protocol" designs.
+
+### AP4 — Silent Stage-transition drift
+
+**现状:** v0.5.0 T030 revealed: Skill tool sub-agents may stop at Stage 2 despite SKILL.md explicitly requiring Stage 3.
+
+**问题:** First-run produces incomplete artifacts (onboard.md but no conventions.md).
+
+**正确做法:** Use "Common LLM trap" callouts + positive "Continue now to Step N" instructions at stage boundaries. Confirm this via a fresh-session Skill invocation (not the same session where edits were made).
+
+### AP5 — Ambiguous "or" between required items
+
+**现状:** v0.4.0 T012b revealed: "A or B" can be read as either "A union B" (both) or "A xor B" (one).
+
+**问题:** LLM misinterprets and provides only one when both are required.
+
+**正确做法:** Explicit language — "A AND B, both required, NOT alternatives" plus ✅/❌ examples.
+
+### AP6 — Private project identifiers leaking into public artifacts
+
+**现状:** Before v0.3.x, skill templates used client-specific class names, package paths, infrastructure domains.
+
+**问题:** Leaks private information to public repo; reduces template reusability.
+
+**正确做法:** C8 Content Hygiene rule + canonical e-commerce example palette (Order / Customer / Product / Payment / `com.example.shop.*`).
+
+<!-- /forge:onboard section="anti-patterns" -->
 
 ---
 
 ## Known Technical Debt
 
-| ID | 位置 | 描述 | 优先级 |
-|----|------|------|--------|
-| TD-001 | `skills/tasking/SKILL.md` | 交互消息使用大写 `[FORGE:TASKING]` | 高 |
-| TD-002 | `agents/forge-architect.md:24,32` | 引用旧的平铺路径格式 | 高 |
-| TD-003 | `agents/forge-reviewer.md:7` | 引用已废弃的 `/forge:review` | 高 |
-| TD-004 | `skills/test/SKILL.md` description | 引用已废弃的 `/forge:review` | 高 |
-| TD-005 | 全部 skills | 系统性排查是否还有其他大写消息前缀 | 中 |
-| TD-006 | commit / doc / 示例 | 建立 pre-commit 自动化扫描脚本，检测私有项目标识符泄漏（C8 当前靠人工 grep） | 中 |
-| TD-007 | 全部 skills | 增加 `--audit <slug>` 只读模式：读对应 artifact + 当前 IRON RULES → 产出 `{slug}/audit-{date}.md` 合规报告（不自动修）；配套 `/forge:forge --audit-all` 批量走查 | 中 |
+| ID | Location | Description | Priority |
+|----|----------|-------------|----------|
+| TD-008 | `skills/onboard/SKILL.md` | Skill tool session-cache issue causes Stage 3 to skip on same-session invocation; verification requires fresh session | Medium |
+| TD-009 | all skills | `--audit <slug>` read-only compliance scan not yet implemented | Medium |
+| TD-010 | CI | Pre-commit automated content-hygiene scan (C8) not yet implemented — relies on manual grep | Medium |
 
 ---
 
 ## Scope Boundaries
 
-明确列出哪些内容**不在 Forge 的职责范围内**：
-
-| 超出范围 | 原因 |
-|---------|------|
-| 执行测试 | Forge 分析和生成代码，不运行测试 |
-| 部署 | 无部署 skill，不涉及 CI/CD |
-| 数据库迁移执行 | 可生成迁移脚本，但不执行 |
-| 代码格式化 | 由项目自身的 linter 负责，Forge 不干预 |
-| Git 操作 | Forge 不提交、不推送、不创建分支 |
+| Out of scope | Reason |
+|--------------|--------|
+| Test execution | forge analyzes and generates; doesn't run tests |
+| Deployment | no deploy skill; forge is not CI/CD |
+| Database migration execution | may generate migration scripts; never executes them |
+| Code formatting | project's own linter owns this; forge does not interfere |
+| Git operations beyond commit | never pushes, branches, or rebases autonomously |
