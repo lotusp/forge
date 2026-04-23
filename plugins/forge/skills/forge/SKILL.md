@@ -29,7 +29,7 @@ effort: high
 These rules have no exceptions. Do not rationalise around them.
 
 - **The status script determines the next action — not your inference.** Run the status script (found via `find ~/.claude -name "status.mjs" -path "*/forge/scripts/*"`) and follow the `[ACTION]` line exactly. Never decide the next step from memory or context alone.
-- **Never skip onboard or calibrate.** If `[ACTION]` says `skill=onboard` or `skill=calibrate`, that is the only valid next step regardless of what the user asked for.
+- **Never skip onboard.** If `[ACTION]` says `skill=onboard`, that is the only valid next step regardless of what the user asked for (onboard absorbed calibrate as its Stage 3; there's no longer a separate calibrate step).
 - **Never chain skills without user confirmation.** After each skill completes, ask "Continue to the next step?" before proceeding. Never auto-chain silently.
 - **Never invent feature state.** If `.forge/features/` is empty or a feature has no artifacts, report it accurately — do not assume a prior step was done.
 - **When executing a sub-skill, read its full SKILL.md first.** Do not execute from memory. Read `{SKILLS}/SKILL_NAME/SKILL.md` before starting its process.
@@ -44,15 +44,14 @@ These rules have no exceptions. Do not rationalise around them.
 | `{SKILLS}` | `..` | Parent directory — all sibling skill folders |
 | `{REFERENCE}` | `reference` | State machine and routing reference docs |
 
-Use these when reading sub-skill files:
-- `{SKILLS}/onboard/SKILL.md`
-- `{SKILLS}/calibrate/SKILL.md`
+Use these when reading sub-skill files (7 skills total as of v0.5.0):
+- `{SKILLS}/onboard/SKILL.md`  (absorbed the old calibrate)
 - `{SKILLS}/clarify/SKILL.md`
-- `{SKILLS}/design/SKILL.md`
-- `{SKILLS}/tasking/SKILL.md`
+- `{SKILLS}/design/SKILL.md`  (absorbed the old tasking)
 - `{SKILLS}/code/SKILL.md`
 - `{SKILLS}/inspect/SKILL.md`
 - `{SKILLS}/test/SKILL.md`
+- `{SKILLS}/forge/SKILL.md`  (this file — the orchestrator itself)
 
 ---
 
@@ -112,27 +111,25 @@ Is that correct? (yes / use a different slug)
 Based on the `[ACTION]` line:
 
 **`skill=onboard`**
-→ Explain: "Your project has not been mapped yet. Running /forge:onboard first."
+→ Explain: "Your project has not been mapped yet. Running /forge:onboard
+  (which includes Stage 3 context extraction — there's no separate
+  calibrate step in v0.5.0)."
 → Read `{SKILLS}/onboard/SKILL.md` and execute its process in full.
-
-**`skill=calibrate`**
-→ Explain: "No coding conventions have been extracted yet. Running /forge:calibrate first."
-→ Read `{SKILLS}/calibrate/SKILL.md` and execute its process in full.
 
 **`skill=clarify arg={text}`**
 → Read `{SKILLS}/clarify/SKILL.md` and execute its process with `{text}` as the feature description.
 
 **`skill=design arg={slug}`**
 → Read `{SKILLS}/design/SKILL.md` and execute its process with `{slug}`.
-
-**`skill=tasking arg={slug}`**
-→ Read `{SKILLS}/tasking/SKILL.md` and execute its process with `{slug}`.
+  Note: design produces both design.md AND plan.md (it absorbed the old
+  tasking skill's responsibilities — no separate /forge:tasking step).
 
 **`skill=code arg={task-id}`**
 → Read `{SKILLS}/code/SKILL.md` and execute its process with `{task-id}`.
 
 **`skill=inspect arg={slug}`**
 → Read `{SKILLS}/inspect/SKILL.md` and execute its process with `{slug}`.
+  Note: inspect now requires a feature slug (file-path mode removed in v0.5.0).
 
 **`skill=test arg={slug}`**
 → Read `{SKILLS}/test/SKILL.md` and execute its process with `{slug}`.
@@ -145,8 +142,7 @@ Based on the `[ACTION]` line:
 Options:
   1. Start a new feature — describe what you want to build
   2. Continue an existing feature — provide the feature slug
-  3. Run a specific skill — onboard / calibrate / clarify / design /
-                            tasking / code / inspect / test
+  3. Run a specific skill — onboard / clarify / design / code / inspect / test
   4. Show full workflow guide
 ```
 
@@ -197,15 +193,21 @@ The user can pass explicit skill names as the argument to jump directly:
 
 | Argument | Routes to |
 |----------|-----------|
-| `onboard` | /forge:onboard |
-| `calibrate` | /forge:calibrate |
+| `onboard` | /forge:onboard (includes Stage 3 context extraction) |
 | `clarify {desc}` | /forge:clarify |
-| `design {slug}` | /forge:design |
-| `tasking {slug}` | /forge:tasking |
+| `design {slug}` | /forge:design (produces design.md + plan.md) |
 | `code {id}` | /forge:code |
 | `inspect {slug}` | /forge:inspect |
 | `test {slug}` | /forge:test |
 | `status` | Show dashboard only, no action |
+
+**Removed in v0.5.0:**
+- `calibrate` — absorbed into `onboard` Stage 3. Old `/forge:calibrate`
+  invocations should route to `/forge:onboard`.
+- `tasking` — absorbed into `design` Stage 4. Old `/forge:tasking`
+  invocations should route to `/forge:design` (which will produce both
+  design.md and plan.md). If the user passes `{slug}` to a legacy
+  `tasking` argument, route to design but note plan.md will regenerate.
 
 > **Artifact paths:** All project context lives under `.forge/context/` and
 > all feature artifacts live under `.forge/features/{slug}/`. See

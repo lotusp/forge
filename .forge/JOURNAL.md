@@ -385,3 +385,18 @@
 - 两个 skill 的 IRON RULES 全部保留 R1-R6 原有项并用编号式
 - 人工走读两个 skill 的 Process 流程均可跑通（clarify: Step 5 → 6 → 7 → 8 → 9 → 10；design: Stage 1 → 2 → 3 → 4）
 - 下一步：Wave E — T026 code / T027 inspect / T028 orchestrator / T029 版本
+
+## 2026-04-23 — Wave E: T026 + T027 + T028 + T029 complete
+- T026 code SKILL.md: +Step 0.5 convention gap check + R21/R22；focused Q&A 触发条件明确；答案写回 conventions.md § Development Workflow
+- T027 inspect SKILL.md: +R23 feature-slug 确定性范围（通过 plan.md + task summaries 枚举）；移除 file-path 参数支持；argument-hint 更新
+- T028 forge orchestrator + state-machine.md 重写 + status.mjs 修正：
+  - forge/SKILL.md: IRON RULES 去掉 calibrate；Path variables 更新为 7 个 skill；Action routing 合并 calibrate/tasking 分支；Quick shortcuts 去掉 2 个旧 shortcut；新增 "Removed in v0.5.0" 章节说明
+  - reference/state-machine.md 全量重写：9 态 → 7 态（clarify → design → code → inspect → test + onboard + forge 编排器）；Artifact mapping 更新为 Stage 3 归属
+  - status.mjs 修正（K-12 判断错误）：phase machine 去掉 tasking；action 合并 calibrate 路由到 onboard；状态排序删除 tasking；dashboard 显示 4 个 context 文件存在性而非仅 conventions
+- T029 版本 + README + CLAUDE.md:
+  - plugin.json 0.4.0 → 0.5.0-dev（过渡版；T031 正式升 0.5.0）
+  - README badge + skill 表格重写（9→7）+ 使用指南去掉旧命令
+  - CLAUDE.md 目录树更新（含 profiles/context/ 子目录）+ Skill Flow breaking change 说明
+- 7 个 skill 文件（含 state-machine.md + status.mjs）的 calibrate/tasking 引用清零（除合法历史性说明）
+- status.mjs 实测 node 运行正常，dashboard 输出正确
+- 下一步：Wave F — T030 自举验证
