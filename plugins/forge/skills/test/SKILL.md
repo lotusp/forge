@@ -48,8 +48,8 @@ If testing.md does not exist:
 [forge:test] Missing testing conventions
 
 .forge/context/testing.md not found. Without it I cannot match your project's
-testing patterns. Please run /forge:calibrate first, or describe your
-testing conventions so I can proceed.
+testing patterns. Please run /forge:onboard first (Stage 3 produces
+testing.md), or describe your testing conventions so I can proceed.
 ```
 
 ### Recommended (read if they exist)

@@ -62,11 +62,17 @@ For **claude-code-plugin** kind, use this form instead:
 ```markdown
 ## Key Data Flows
 
-1. **Skill pipeline**: `/forge:onboard` produces `.forge/context/onboard.md` →
-   `/forge:calibrate` reads onboard.md + samples code → produces
-   `.forge/context/conventions.md` (+ 3 other context files) →
-   `/forge:clarify <feature>` reads conventions + explores code → produces
-   `.forge/features/{slug}/clarify.md`
+1. **First-run context bootstrap**: `/forge:onboard` (Stage 1) detects
+   project kind → (Stage 2) produces `.forge/context/onboard.md` →
+   (Stage 3) scans convention dimensions + batch-resolves conflicts +
+   smart-merges → writes `.forge/context/conventions.md` + 3 other
+   kind-applicable context files
+
+2. **Feature pipeline**: `/forge:clarify <feature>` reads context files +
+   explores code → produces `.forge/features/{slug}/clarify.md` →
+   `/forge:design <slug>` produces `design.md` + `plan.md` together →
+   `/forge:code T{NNN}` implements each task → `/forge:inspect <slug>`
+   reviews → `/forge:test <slug>` generates tests
 ```
 
 ## Confidence Tags

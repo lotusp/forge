@@ -16,8 +16,9 @@ token-budget: 1000
 ## Scope Boundary
 
 This profile produces **a table inventory**, not ERD diagrams or full column schemas.
-Detailed schema analysis is `/forge:calibrate`'s job (architecture.md) or a dedicated
-data-modelling skill. Onboard stays high-level.
+Detailed schema analysis lives in onboard Stage 3's `architecture.md`
+(when the `database-access` dimension is loaded) or in a feature-level
+`design.md`. Onboard Stage 2 (this profile) stays high-level.
 
 **Explicit non-goals:**
 - ❌ Column-level enumeration
@@ -71,7 +72,8 @@ data-modelling skill. Onboard stays high-level.
 | Catalog | `products`, `categories`, `inventory` [high] |
 | Audit | `audit_log` [medium] |
 
-For full column definitions run `/forge:calibrate` or read `prisma/schema.prisma`.
+For full column definitions read `prisma/schema.prisma` or the migrations
+directory directly — onboard keeps the view high-level.
 ```
 
 ## Confidence Tags

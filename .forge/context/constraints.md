@@ -1,163 +1,115 @@
-# Constraints & Anti-Patterns: forge
+# Constraints: forge
 
-> Kind:                 claude-code-plugin
-> Generated:            2026-04-23
-> Commit:               59836a2
-> Generator:            /forge:onboard Stage 3 (v0.5.0-dev)
-> Dimensions loaded:    hard-constraints, anti-patterns
-> Historical authority:  this file carries forward C1-C8 rules from pre-v0.5.0 that the community has adopted as forge-wide discipline.
+> Kind:      claude-code-plugin
+> Generated: 2026-04-23
+> Commit:    9dbca95
+> Generator: /forge:onboard (v0.5.0-dev)
 
-**Important:** This file is the authoritative source of hard rules for all forge development. Every new skill / agent / artifact must respect these constraints. Violations are `must-fix` severity.
-
----
-
-<!-- forge:onboard source-file="constraints.md" section="hard-constraints" profile="context/dimensions/hard-constraints" verified-commit="59836a2" body-signature="e4b0f23a81c75d96" generated="2026-04-23" -->
+<!-- forge:onboard source-file="constraints.md" section="hard-constraints" profile="context/dimensions/hard-constraints" verified-commit="9dbca95" body-signature="6686507870e5aa90" generated="2026-04-23" -->
 
 ## Hard Constraints
 
-### C1 — Status script is the only routing authority
+These rules have zero exceptions. Violations are `must-fix` severity.
 
-`skills/forge/scripts/status.mjs` is the sole basis for orchestrator routing. The forge skill MUST execute this script and read its `[ACTION]` output; it MUST NOT infer the next step from memory or context alone.
+### C1 — Skills are read + write-to-.forge/ only
 
-**Violation appearance:** forge skill deciding next action based on reading `.forge/` files directly and inferring state.
+No skill may modify project source files, configs, or manifests. Every skill's write permission is limited to `.forge/` paths declared in its `allowed-tools` and Output section.
 
-**Enforcement:** code review + SKILL.md R-level IRON RULE in `skills/forge/SKILL.md`.
+**Violation appearance:** `Write` calls to non-`.forge/` paths inside a skill's execution [high] [code]
 
-### C2 — Interaction messages use lowercase prefix
+**Enforcement:** SKILL.md Constraints section + code review [medium] [readme]
 
-All user-facing messages follow the format `[forge:{skill-name}]` in lowercase.
-
-**Violation appearance:** `[FORGE:ONBOARD]`, `[Forge:Code]`, etc.
-
-**Enforcement:** manual grep in review; pre-commit scan could catch.
-
-### C3 — Artifact paths use nested structure
-
-All `.forge/` artifacts follow these paths:
-
-```
-.forge/context/{filename}.md         # project-wide context
-.forge/features/{slug}/{filename}.md # feature-level artifacts
-.forge/features/{slug}/tasks/T{NNN}-summary.md  # per-task summaries
-```
-
-**Violation appearance:** old flat paths like `.forge/conventions.md`, `.forge/clarify-{slug}.md`.
-
-### C4 — Skill references use current names
-
-`clarify / design / code / inspect / test / onboard / forge` are the 7 canonical names in v0.5.0.
-
-**No references to `/forge:calibrate` or `/forge:tasking` in active documentation.** These were absorbed in v0.5.0.
-
-Historical mentions allowed only in:
-- v0.5.0 migration guides
-- JOURNAL entries from before v0.5.0
-- CHANGELOG
-
-### C5 — Inspect skill modifies no source files
-
-`inspect` is strictly read-only. It does not suggest code edits inline — only reports findings with line:number references. Fixes are then routed back to `code`.
-
-### C6 — Code skill does not exceed task scope
-
-`code` only modifies files listed in the task's Scope section in plan.md. If a task reveals need for additional file changes, trigger Scope Creep Protocol (pause + ask user) — do NOT silently expand.
-
-### C7 — Agents do not write artifacts
-
-`forge-explorer`, `forge-architect`, `forge-reviewer` return report text to the calling skill. They never `Write` directly. The calling skill (`clarify`, `design`, `inspect`) is responsible for artifact persistence.
-
-### C8 — No external project identifiers in artifacts
-
-**Scope:** commit messages (subject/body/footer), all repo docs (`README.md`, `CLAUDE.md`, `docs/**`), all SKILL.md / agent files, all scripts, all `.forge/` artifacts.
-
-**Forbidden:**
-- External company / product / internal-system names (including 3-5 letter acronyms used inside a company)
-- External Java/Go/Python namespaces (`com.{company}.*` patterns)
-- External infrastructure hosts / registry domains / production ports / production schema names
-- External DB names / table names / production URLs / production feature slugs
-
-**Allowed:**
-- forge's own identifiers (skill names, agent names, artifact paths)
-- Public open-source tools & protocols (Spring Boot, MySQL, Nacos, REST)
-- Generic business nouns (`Order`, `Customer`, `Payment`)
-- `com.example.*` namespace
-- `{placeholder}` tokens
-
-**Exception:** `.forge/context/onboard.md` self-bootstrap artifacts may use forge's real identifiers — because forge IS the target project in the bootstrap.
-
-**Violation appearance:** commit messages mentioning a specific client name; example code paths using `com.{brand}.{product}.*`; docs with specific registry domain instead of placeholder.
-
-### C9 — Every fact carries a confidence tag
-
-Per SKILL.md R10, every fact in an onboard / context artifact carries `[high]` / `[medium]` / `[low]` / `[inferred]` confidence tag. May additionally carry a source tag (`[code]` / `[build]` / `[config]` / `[readme]` / `[cli]`) and a `[conflict]` flag. No invented tags.
-
-### C10 — Section markers use 6 attributes, exact order
-
-Per SKILL.md R9, every section marker in onboard.md or context files uses:
-
-```
-<!-- forge:onboard source-file="<file>.md" section="<id>" profile="<profile-path>" verified-commit="<git-short>" body-signature="<16hex>" generated="<YYYY-MM-DD>" -->
-```
-
-All 6 attributes required, in this order, double-quoted. `verified-commit` and `body-signature` are independent (not alternatives).
-
-<!-- /forge:onboard section="hard-constraints" -->
+**Current known violations:** none observed [high] [code]
 
 ---
 
-<!-- forge:onboard source-file="constraints.md" section="anti-patterns" profile="context/dimensions/anti-patterns" verified-commit="59836a2" body-signature="92d37f8b04e1a586" generated="2026-04-23" -->
+### C2 — Never proceed by guessing; halt when context is insufficient
+
+When a required input is absent or confidence is below threshold, a skill MUST surface a structured halt message rather than proceeding with assumptions.
+
+**Violation appearance:** skill generating content without sufficient evidence; "N/A", "TBD", "unknown" values in artifact rows [high] [code]
+
+**Enforcement:** IRON RULES R3, R4, R7 in onboard; "Pause before guessing" design principle [high] [readme]
+
+**Current known violations:** none [high] [code]
+
+---
+
+### C3 — Scope discipline; skills do not exceed their declared role
+
+`code` does not redesign; `design` does not implement; `inspect` does not modify source. If a task requires broader scope than stated, stop and surface it.
+
+**Violation appearance:** skill writing outside its declared artifact paths; implementing logic during design phase [high] [code]
+
+**Enforcement:** per-skill Constraints section in SKILL.md [high] [code]
+
+---
+
+### C4 — No external project identifiers in artifacts or skill files
+
+Commit messages, docs, SKILL.md files, agent files, profile files, and `.forge/` artifacts must not contain real external company/product names, internal system acronyms, private namespaces, production hostnames/registries/ports, or private DB/table names.
+
+**Allowed:** forge's own identifiers, public open-source tool names (Spring Boot, MySQL, Nacos), generic business terms (Order, Customer, Payment), `com.example.*` namespace, `{placeholder}` tokens.
+
+**Violation appearance:** `com.<real-company>.*` namespace, specific production hostnames, private feature slugs [high] [readme]
+
+**Enforcement:** manual review; grep scan in code review [medium] [readme]
+
+---
+
+### C5 — Preserve blocks are sacred
+
+Any `<!-- forge:preserve -->...<!-- /forge:preserve -->` block in any forge artifact MUST be carried forward verbatim in every incremental update or regeneration. These blocks always win over generated content.
+
+**Violation appearance:** preserve block content absent from regenerated artifact [high] [code]
+
+**Enforcement:** R5 in onboard SKILL.md; incremental-mode algorithm [high] [code]
+
+---
+
+### C6 — Section markers must be complete (all 6 attributes)
+
+Every forge artifact section marker must carry all 6 attributes in the exact order: `source-file`, `section`, `profile`, `verified-commit`, `body-signature`, `generated`. Missing, reordered, or merged attributes break incremental reconciliation.
+
+**Violation appearance:** marker with fewer than 6 attributes; `verified="..."` instead of separate `verified-commit` + `body-signature` [high] [code]
+
+**Enforcement:** R9 in onboard SKILL.md; `/forge:inspect` structural check [high] [code]
+
+<!-- /forge:onboard section="hard-constraints" -->
+
+<!-- forge:onboard source-file="constraints.md" section="anti-patterns" profile="context/dimensions/anti-patterns" verified-commit="9dbca95" body-signature="a66e4dab2e3fcff8" generated="2026-04-23" -->
 
 ## Anti-Patterns
 
-### AP1 — Large-scale string-concat SKILL.md without IRON RULE grouping
+### AP1 — Stale deprecated skill references
 
-**现状:** New skills may accumulate IRON RULES as unnumbered bullets interleaved with prose, making them hard for LLM to parse as discrete constraints.
+**Status:** Found in approximately 5 profile files and 1 SKILL.md file (test/SKILL.md line 51) — references to `/forge:calibrate` which no longer exists as a standalone skill since v0.5.0.
 
-**问题:** LLM may skip rules buried in Process prose; rules cannot be cross-referenced.
+**Problem:** These references mislead users and new contributors into thinking a separate `calibrate` step is required. They also indicate the files were not updated during the v0.5.0 consolidation.
 
-**正确做法:** Each IRON RULE gets its own `### R<N> — <short title>` heading and its own paragraph body. Skills > 300 lines should use this structure.
+**Correct approach:** Replace all `/forge:calibrate` references with the correct v0.5.0 equivalent: `/forge:onboard` (which covers Stage 3 context generation that calibrate formerly did).
 
-### AP2 — Cross-document rule reference without inline backup
+**Found in:** ~5 profile files, 1 SKILL.md, 1 reference file [medium] [cli]
 
-**现状:** v0.4.0 T015 revealed: when a rule is stored only in `reference/<topic>.md` and not echoed in SKILL.md body, first-run LLMs don't load the reference file and violate the rule.
+---
 
-**问题:** Silent rule violations that pass walkthrough review but fail on actual execution.
+### AP2 — Skills writing outside declared output contracts
 
-**正确做法:** Key rules (marker format, tag enumeration, hash algorithm) must be **inline** in SKILL.md IRON RULES section, with reference files carrying only detailed algorithms / edge cases.
+**Status:** Not observed in current code. Preemptive constraint from design principles.
 
-### AP3 — Placeholder syntax in Wire Protocol examples
+**Problem:** A skill writing to paths not declared in its Output section breaks the artifact isolation model and makes cross-skill dependencies unpredictable.
 
-**现状:** `verified="<hash>"` in examples leads LLMs to output literal `<hash>` in production.
+**Correct approach:** Audit any `Write` call's path against the skill's declared output paths. [inferred]
 
-**问题:** Non-functional markers that break incremental-mode reconciliation.
+---
 
-**正确做法:** Use concrete literal values in all format examples — `verified-commit="a3f2c1d4"`, `body-signature="9f8e7d6c5b4a3210"`. Design skill R18 enforces this across all "wire protocol" designs.
+### AP3 — Invocation message using wrong prefix format
 
-### AP4 — Silent Stage-transition drift
+**Status:** Not observed. Known risk from anti-patterns dimension scan.
 
-**现状:** v0.5.0 T030 revealed: Skill tool sub-agents may stop at Stage 2 despite SKILL.md explicitly requiring Stage 3.
+**Problem:** Using capitalized `[FORGE:` in interaction messages instead of lowercase `[forge:` breaks the consistent user-facing pattern established across all 7 skills.
 
-**问题:** First-run produces incomplete artifacts (onboard.md but no conventions.md).
-
-**正确做法:** Use "Common LLM trap" callouts + positive "Continue now to Step N" instructions at stage boundaries. Confirm this via a fresh-session Skill invocation (not the same session where edits were made).
-
-### AP5 — Ambiguous "or" between required items
-
-**现状:** v0.4.0 T012b revealed: "A or B" can be read as either "A union B" (both) or "A xor B" (one).
-
-**问题:** LLM misinterprets and provides only one when both are required.
-
-**正确做法:** Explicit language — "A AND B, both required, NOT alternatives" plus ✅/❌ examples.
-
-### AP6 — Private project identifiers leaking into public artifacts
-
-**现状:** Before v0.3.x, skill templates used client-specific class names, package paths, infrastructure domains.
-
-**问题:** Leaks private information to public repo; reduces template reusability.
-
-**正确做法:** C8 Content Hygiene rule + canonical e-commerce example palette (Order / Customer / Product / Payment / `com.example.shop.*`).
-
-<!-- /forge:onboard section="anti-patterns" -->
+**Correct approach:** All skill interaction messages use `[forge:<skill-name>]` lowercase prefix. [inferred]
 
 ---
 
@@ -165,18 +117,21 @@ All 6 attributes required, in this order, double-quoted. `verified-commit` and `
 
 | ID | Location | Description | Priority |
 |----|----------|-------------|----------|
-| TD-008 | `skills/onboard/SKILL.md` | Skill tool session-cache issue causes Stage 3 to skip on same-session invocation; verification requires fresh session | Medium |
-| TD-009 | all skills | `--audit <slug>` read-only compliance scan not yet implemented | Medium |
-| TD-010 | CI | Pre-commit automated content-hygiene scan (C8) not yet implemented — relies on manual grep | Medium |
+| TD-001 | `plugins/forge/skills/test/SKILL.md:51` | References deprecated `/forge:calibrate` | Medium |
+| TD-002 | `plugins/forge/skills/onboard/profiles/core/entry-points.md:87` | References deprecated `/forge:calibrate` | Low |
+| TD-003 | `plugins/forge/skills/onboard/profiles/core/data-flows.md:66` | References deprecated `/forge:calibrate` | Low |
+| TD-004 | `plugins/forge/skills/onboard/reference/incremental-mode.md:275` | References deprecated `/forge:calibrate` | Low |
 
 ---
 
 ## Scope Boundaries
 
 | Out of scope | Reason |
-|--------------|--------|
-| Test execution | forge analyzes and generates; doesn't run tests |
-| Deployment | no deploy skill; forge is not CI/CD |
-| Database migration execution | may generate migration scripts; never executes them |
-| Code formatting | project's own linter owns this; forge does not interfere |
-| Git operations beyond commit | never pushes, branches, or rebases autonomously |
+|-------------|--------|
+| HTTP API design | Plugin has no HTTP surface |
+| Database schema | Plugin has no persistence layer |
+| Authentication/Authorization | Handled by Claude Code client |
+| Deployment pipelines | Plugin is distributed via marketplace, no deployment artifacts |
+| Monorepo workspace coordination | Plugin is a single-package unit |
+
+<!-- /forge:onboard section="anti-patterns" -->

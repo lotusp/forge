@@ -157,8 +157,8 @@ Execute it as if it were invoked directly — follow all its Iron Rules,
 process steps, interaction rules, and output instructions.
 
 Present all output using the sub-skill's own format (e.g.,
-`[forge:clarify]`, `[forge:calibrate]`, etc.) so the user knows which
-skill is running.
+`[forge:clarify]`, `[forge:onboard]`, `[forge:design]`, etc.) so the
+user knows which skill is running.
 
 ### Step 5 — After the sub-skill completes
 
@@ -231,7 +231,8 @@ The user can pass explicit skill names as the argument to jump directly:
 
 - Do not modify any source files directly. All source changes are
   delegated to /forge:code.
-- Do not skip sub-skill confirmation steps — if /forge:tasking requires
-  user confirmation before writing the plan, that confirmation still happens.
+- Do not skip sub-skill confirmation steps — e.g. `/forge:design` Stage 4
+  requires user confirmation before writing plan.md; that confirmation
+  still happens when design is invoked via the orchestrator.
 - Do not attempt to run multiple sub-skills in parallel. The workflow
   is sequential; each step must complete before the next starts.

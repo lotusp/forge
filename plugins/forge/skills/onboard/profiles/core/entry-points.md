@@ -83,8 +83,8 @@ Representative routes:
 - `order.created` → Kafka topic `orders.events` (`src/consumers/order.ts`) [high]
 
 ### Plugin Skills (claude-code-plugin only)
-- `/forge:onboard` — project map generation [high]
-- `/forge:calibrate` — conventions extraction [high]
+- `/forge:onboard` — project map generation + context file extraction (Stage 3) [high]
+- `/forge:design` — technical design + task plan in one pass [high]
 ```
 
 ## Confidence Tags
