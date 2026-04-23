@@ -338,3 +338,12 @@
 - T018: 建立 plugins/forge/skills/onboard/profiles/context/{kinds,dimensions}/ 目录 + README（206 行）
 - README 含：目录结构图、kind file schema、dimension file schema、执行合约、section marker 合约、Content Hygiene、扩展指南
 - 下一步：Wave B — T019 3 kind 索引 + T020/T021/T022 16 个 dimension 文件
+
+## 2026-04-23 — Wave B: T019 + T020 + T021 + T022 complete
+- T019: 3 个 context kind 索引（web-backend / claude-code-plugin / monorepo），声明每个 kind 加载的 dimension 子集 + excluded-dimensions
+- T020: 7 个通用 dimension（naming / error-handling / commit-format / architecture-layers / hard-constraints / anti-patterns / testing-strategy），含 kind 分支输出模板
+- T021: 6 个 web-backend 专用 dimension（logging / validation / api-design / database-access / messaging / authentication）
+- T022: 3 个 claude-code-plugin 专用 dimension（skill-format / artifact-writing / markdown-conventions）
+- 共计 19 个新文件，2180 行；所有示例遵守 C8（e-commerce 调色板 + C8 redaction）
+- 每个文件符合 profiles/context/README.md 的 schema：frontmatter + 4 小节（Scan/Extraction/Output/Confidence）
+- 下一步：Wave C — T023 onboard SKILL.md Stage 3 改写（高风险）
