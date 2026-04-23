@@ -23,7 +23,17 @@ forge/                             ← marketplace root (github.com/lotusp/forge
 │       │   │   ├── SKILL.md
 │       │   │   ├── reference/state-machine.md
 │       │   │   └── scripts/status.mjs
-│       │   ├── onboard/SKILL.md
+│       │   ├── onboard/
+│       │   │   ├── SKILL.md
+│       │   │   ├── profiles/       ← kind definitions + per-section scan profiles
+│       │   │   │   ├── kinds/      ← web-backend / claude-code-plugin / monorepo
+│       │   │   │   ├── core/       ← 6 core profiles loaded by every kind
+│       │   │   │   ├── structural/ ← build / config / deployment
+│       │   │   │   ├── model/      ← domain-model / db-schema
+│       │   │   │   ├── entry-points/
+│       │   │   │   ├── integration/
+│       │   │   │   └── monorepo/
+│       │   │   └── reference/      ← scan-patterns + incremental-mode
 │       │   ├── calibrate/
 │       │   │   ├── SKILL.md
 │       │   │   ├── reference/
@@ -73,7 +83,7 @@ When Forge is used in a target project, all persistent context lives in `.forge/
 ```
 .forge/
 ├── context/                    ← project-wide knowledge
-│   ├── onboard.md              ← project map
+│   ├── onboard.md              ← kind-driven project map (composed from profiles/; supports incremental + preserve blocks)
 │   ├── conventions.md          ← coding style: naming, logging, error handling, validation, API, DB, messaging
 │   ├── testing.md              ← testing strategy: framework, isolation, mocks, data patterns, coverage
 │   ├── architecture.md         ← layering rules, inter-module communication, tech debt
