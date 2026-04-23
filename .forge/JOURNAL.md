@@ -277,3 +277,21 @@
 - Step 3.3 开头添加 R9 cross-reference 强化语
 - cache 同步到 0.3.2-dev，准备第三轮自举
 - 下一步：清理产物 → 再跑 /forge:onboard → 验证 5 属性合规
+
+## 2026-04-23 — /forge:onboard
+- Kind:        claude-code-plugin (confidence 1.00)
+- Sections:    6 written / 0 preserved / 0 skipped
+- Profiles:    tech-stack, module-map, entry-points, local-dev, data-flows, notes
+- Mode:        first-run
+- Commit:      460e04d
+- Next:        /forge:calibrate
+
+## 2026-04-23 — T016 正式升 0.4.0
+- plugin.json 版本 0.3.2-dev → 0.4.0
+- README.md：badge 0.3.1 → 0.4.0；onboard 描述更新为"Kind 驱动 + profiles 组合加载 + 增量 + preserve 块"
+- CLAUDE.md：
+  - 仓库结构树加入 onboard/profiles/ + reference/ 层级（kinds / core / structural / model / entry-points / integration / monorepo 分类可见）
+  - .forge/context/onboard.md 描述更新为 kind-driven
+- 打标签 v0.4.0
+- onboard-kind-profiles 功能完整闭环：T006–T016 + T012a + T012b + T013a（11 + 3 = 14 个 commit）
+- 下一步：self-bootstrap 再跑一次验证 T016 后 onboard.md 的 verified-commit 会随 HEAD 自动演进；或直接进 T5 质量改进 / 其他 feature
