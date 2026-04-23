@@ -272,7 +272,7 @@ Sections:
 
 Kind:            <kind-id>
 Commit:          <new-sha>
-Next step:       /forge:calibrate (if not yet run)
+Next step:       /forge:clarify <your first feature>
 ```
 
 Note: if `<Y>` is non-zero, the user is advised to consider

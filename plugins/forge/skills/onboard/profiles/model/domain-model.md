@@ -39,8 +39,8 @@ token-budget: 1000
 3. **Note aggregate boundaries** — if DDD-style, group entities by aggregate root.
 4. **Relationships at a glance** — note 1–2 key relationships per aggregate ("Order has
    many OrderItems, belongs to Customer").
-5. **Skip entity fields entirely** — field lists belong in `/forge:calibrate` or code-level
-   context, not onboard.
+5. **Skip entity fields entirely** — field lists belong in `/forge:design`'s
+   Component Changes section or code-level context, not onboard.
 6. **Generic domain only** — when example needed, use `Order`, `Customer`, `Product`,
    `Payment` (e-commerce palette per C8).
 

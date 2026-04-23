@@ -1,71 +1,39 @@
 # Architecture: forge
 
-> Kind:                 claude-code-plugin
-> Generated:            2026-04-23
-> Commit:               59836a2
-> Generator:            /forge:onboard Stage 3 (v0.5.0-dev)
-> Dimensions loaded:    architecture-layers
+> Kind:      claude-code-plugin
+> Generated: 2026-04-23
+> Commit:    9dbca95
+> Generator: /forge:onboard (v0.5.0-dev)
 
----
-
-<!-- forge:onboard source-file="architecture.md" section="architecture-layers" profile="context/dimensions/architecture-layers" verified-commit="59836a2" body-signature="c8b13e6af27905d4" generated="2026-04-23" -->
+<!-- forge:onboard source-file="architecture.md" section="architecture-layers" profile="context/dimensions/architecture-layers" verified-commit="9dbca95" body-signature="395a16e6043e9fb8" generated="2026-04-23" -->
 
 ## Architecture Layers
 
-**Model:** Skill / Agent / Script / Artifact 四层
+**Model:** Skill / Agent / Script / Artifact (四层架构)
 
-**Layers (top → bottom):**
-
-- `skills/<name>/SKILL.md` — skill layer (instructions for main agent) [high] [code]
-- `agents/<name>.md` — sub-agent layer (specialized, tools limited) [high] [code]
-- `skills/<name>/scripts/*.mjs` — script layer (deterministic helpers, no LLM) [medium] [code]
-- `.forge/<path>.md` — artifact layer (persistent structured context) [high] [code]
+**Layers:**
+- `skills/<name>/SKILL.md` — Skill layer: instruction files for the main agent; each skill is self-contained [high] [code]
+- `agents/<name>.md` — Sub-agent layer: specialized agents with limited tool sets, spawned by skills [high] [code]
+- `skills/<name>/scripts/*.mjs` — Script layer: deterministic Node.js helpers invoked via Bash; no LLM [medium] [code]
+- `.forge/<path>.md` — Artifact layer: persistent structured context produced and consumed by skills [high] [code]
 
 **Composition rules:**
+- Skill may spawn sub-agents (via Agent tool call) [high] [code]
+- Skill may invoke scripts via Bash [high] [code]
+- Skill reads/writes artifacts per its declared output contract [high] [code]
+- Agent does NOT write artifacts directly; it returns report text to the skill [high] [code]
+- Skills do not call other skills directly; the `forge` orchestrator routes between them [high] [code]
 
-- Skill may spawn agents (declared via `Agent` tool in SKILL.md's `allowed-tools`) [high] [code]
-- Skill may invoke scripts via `Bash` [high] [code]
-- Skill reads/writes artifacts per its declared `## Output` contract [high] [code]
-- Agent does NOT write artifacts; returns report text to calling skill [high] [code]
-- Script is deterministic, no LLM — for routing decisions (`status.mjs`) or data validation [high] [code]
+**Kind awareness (onboard-specific):**
+- `profiles/kinds/<kind-id>.md` — Stage-2 kind definitions driving onboard.md composition [high] [code]
+- `profiles/context/kinds/<kind-id>.md` — Stage-3 kind definitions driving context file composition [high] [code]
+- `profiles/{category}/*.md` — Stage-2 profile templates (one per output section) [high] [code]
+- `profiles/context/dimensions/*.md` — Stage-3 dimension templates (one per convention dimension) [high] [code]
 
-### Marketplace-plugin composition
-
-forge's repo structure nests plugin content under `plugins/forge/` to satisfy the Claude Code marketplace model:
-
-```
-forge/                              ← marketplace repo root
-├── .claude-plugin/
-│   └── marketplace.json            ← marketplace manifest
-└── plugins/
-    └── forge/                      ← the actual plugin
-        ├── .claude-plugin/
-        │   └── plugin.json         ← plugin manifest
-        ├── skills/
-        └── agents/
-```
-
-Users install via `extraKnownMarketplaces` pointing to the repo URL; Claude Code resolves the plugin from `plugins/forge/`. [high] [build]
-
-### v0.5.0 pipeline consolidation
-
-Skill dependency graph (7 skills):
-
-```
-onboard  ──→ clarify  ──→ design  ──→ code (loop) ──→ inspect  ──→ test
-                                                         │
-                           ┌─────────────────────────────┘
-                           ▼
-              (feedback if needs-work)
-```
-
-`forge` orchestrator is cross-cutting: reads all artifact states, routes to correct skill. [high] [code]
-
-### What to avoid
-
-- Agent directly writing to `.forge/` (violates agent-skill boundary)
-- Skills bypassing `status.mjs` (the routing authority for orchestrator)
-- Cross-skill imports (each skill is self-contained prompt — no shared "lib")
-- Modifying `.forge/` artifacts from inside skill scripts (scripts read-only to artifacts)
+**What to avoid:**
+- Agent directly writing to `.forge/` (violates agent-skill boundary) [high] [code]
+- Skills bypassing `status.mjs` in the forge orchestrator [high] [code]
+- Cross-skill imports (each skill is a self-contained prompt document) [high] [code]
+- Putting business logic in the orchestrator (`forge`) that belongs in a specific skill [medium] [code]
 
 <!-- /forge:onboard section="architecture-layers" -->

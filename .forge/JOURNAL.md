@@ -427,3 +427,27 @@
 - 产出: .forge/features/lean-kind-aware-pipeline/verification.md + 5 个 context 文件 + onboard SKILL.md 补强
 - 判定: 条件通过，可进 T031
 - 下一步: Wave H — T031 docs finalize + v0.5.0 tag
+
+## 2026-04-23 — /forge:onboard
+- Kind:              claude-code-plugin (confidence 1.00)
+- Mode:              first-run
+- Commit:            9dbca95
+- onboard.md:        7 sections written / 0 preserved blocks / 0 skipped
+- context files:     conventions.md (6 sections), testing.md (1 section), architecture.md (1 section), constraints.md (2 sections)
+- conflicts resolved: (none)
+- orphans migrated:  (none)
+- excluded dims:     6 — logging, validation, api-design, database-access, messaging, authentication
+- Next:              /forge:clarify <your first feature>
+
+## 2026-04-23 (evening) — Fresh-session 自举 + Wave G (G1+G4)
+- 用户关闭 Claude Code 会话后重启，删除 .forge/context/*.md 后直接执行 /forge:onboard
+- 假设 1 得到验证：fresh sub-agent 按新 SKILL.md 完整跑完 Stage 1+2+3，自动产出 5 个 context 文件
+- 产物 review：全部合规（R9 6 属性 marker / R10 tag / R13 header / kind-applicable 内容）
+- 亮点：sub-agent 在 constraints.md 主动识别 4 处真实代码债务（TD-001~004），全部 true positive
+- G1 修复 9 处 stale /forge:calibrate|tasking references：
+  - test/SKILL.md:51, profiles/core/module-map.md:46, profiles/core/entry-points.md:87
+  - profiles/core/data-flows.md:66, profiles/model/domain-model.md:42
+  - profiles/model/db-schema.md:19,74, reference/incremental-mode.md:275
+  - forge/SKILL.md:160,234
+- G4 更新 verification.md：条件通过 → 通过；6 PASS / 3 DEFERRED / 1 PARTIAL / 0 FAIL
+- 下一步：T031 v0.5.0 正式升版 + docs/upgrade-0.5.md + tag

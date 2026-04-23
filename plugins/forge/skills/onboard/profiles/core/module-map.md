@@ -43,8 +43,8 @@ token-budget: 1500
 4. **Skip generated / vendor directories** — `node_modules/`, `vendor/`, `target/`,
    `dist/`, `build/`, `.gradle/`, `__pycache__/`.
 5. **If no clear module boundary exists** — output a single row "`src/`" describing the
-   whole codebase and tag `[low]`; recommend running `/forge:calibrate` for deeper
-   architecture analysis.
+   whole codebase and tag `[low]`; architecture.md (produced by onboard
+   Stage 3) will contain the deeper per-layer analysis.
 
 ## Section Template
 
