@@ -86,8 +86,11 @@ for (let i = 0; i < args.length; i++) {
 
 // ── build state ───────────────────────────────────────────────────────────────
 
-const onboardExists     = forgeExists(join('context', 'onboard.md'));
-const conventionsExists = forgeExists(join('context', 'conventions.md'));
+const onboardExists      = forgeExists(join('context', 'onboard.md'));
+const conventionsExists  = forgeExists(join('context', 'conventions.md'));
+const testingExists      = forgeExists(join('context', 'testing.md'));
+const architectureExists = forgeExists(join('context', 'architecture.md'));
+const constraintsExists  = forgeExists(join('context', 'constraints.md'));
 
 const allSlugs = listFeatureSlugs();
 
@@ -109,9 +112,11 @@ for (const slug of allSlugs) {
     pendingTasks = allTasks.filter(id => !completedTaskIds.includes(id));
   }
 
+  // v0.5.0 phase machine: design produces design.md + plan.md in one run
+  // (tasking is absorbed into design Stage 4).
   let phase = 'clarify';
   if (hasClarify)  phase = 'design';
-  if (hasDesign)   phase = 'tasking';
+  if (hasDesign && !hasPlan) phase = 'design'; // abnormal; re-run design
   if (hasPlan && pendingTasks.length > 0) phase = 'code';
   if (hasPlan && pendingTasks.length === 0 && allTasks.length > 0) phase = 'inspect';
   if (hasInspect)  phase = 'test';
@@ -159,10 +164,7 @@ if (!action && featureArg) {
         action = { skill: 'clarify', arg: fs.slug, reason: `Clarify requirement for ${fs.slug}` };
         break;
       case 'design':
-        action = { skill: 'design', arg: fs.slug, reason: `Design feature ${fs.slug} (clarify done)` };
-        break;
-      case 'tasking':
-        action = { skill: 'tasking', arg: fs.slug, reason: `Create task plan for ${fs.slug} (design done)` };
+        action = { skill: 'design', arg: fs.slug, reason: `Design feature ${fs.slug} (clarify done; produces design.md + plan.md)` };
         break;
       case 'code':
         action = { skill: 'code', arg: fs.pendingTasks[0], reason: `Next pending task for ${fs.slug}` };
@@ -183,15 +185,17 @@ if (!action && featureArg) {
 // Priority 3: infer from global state
 if (!action) {
   if (!onboardExists) {
-    action = { skill: 'onboard', arg: '', reason: 'No context/onboard.md — map the codebase first' };
-  } else if (!conventionsExists) {
-    action = { skill: 'calibrate', arg: '', reason: 'No context/conventions.md — extract coding standards first' };
+    action = { skill: 'onboard', arg: '', reason: 'No context/onboard.md — map the codebase first (onboard includes Stage 3 convention extraction)' };
+  } else if (!conventionsExists && !testingExists && !architectureExists && !constraintsExists) {
+    // onboard.md exists but NO context files — likely pre-v0.5.0 onboard.
+    // Re-run onboard to pick up Stage 3.
+    action = { skill: 'onboard', arg: '', reason: 'onboard.md present but context files missing — re-run onboard Stage 3' };
   } else {
     // Find the most advanced in-progress feature
     const inProgress = Object.values(featureStates)
       .filter(f => f.phase !== 'complete')
       .sort((a, b) => {
-        const order = ['test', 'inspect', 'code', 'tasking', 'design', 'clarify'];
+        const order = ['test', 'inspect', 'code', 'design', 'clarify'];
         return order.indexOf(a.phase) - order.indexOf(b.phase);
       });
 
@@ -199,10 +203,7 @@ if (!action) {
       const f = inProgress[0];
       switch (f.phase) {
         case 'design':
-          action = { skill: 'design', arg: f.slug, reason: `Continue ${f.slug} → design (clarify done)` };
-          break;
-        case 'tasking':
-          action = { skill: 'tasking', arg: f.slug, reason: `Continue ${f.slug} → tasking (design done)` };
+          action = { skill: 'design', arg: f.slug, reason: `Continue ${f.slug} → design (clarify done; produces design.md + plan.md)` };
           break;
         case 'code':
           action = { skill: 'code', arg: f.pendingTasks[0], reason: `Continue ${f.slug} → code ${f.pendingTasks[0]}` };
@@ -230,13 +231,16 @@ console.log('║           FORGE — Workflow Status                            
 console.log('╚══════════════════════════════════════════════════════════════╝');
 console.log('');
 console.log('PROJECT SETUP');
-console.log(`  onboard     ${onboardExists     ? '✓ (.forge/context/onboard.md)' : '✗ missing → run /forge:onboard first'}`);
-console.log(`  calibrate   ${conventionsExists ? '✓ (.forge/context/conventions.md)' : '✗ missing → run /forge:calibrate first'}`);
+console.log(`  onboard           ${onboardExists     ? '✓ (.forge/context/onboard.md)' : '✗ missing → run /forge:onboard first'}`);
+console.log(`  conventions.md    ${conventionsExists  ? '✓ (from onboard Stage 3)' : '○ not generated for this kind (or re-run onboard)'}`);
+console.log(`  testing.md        ${testingExists      ? '✓ (from onboard Stage 3)' : '○ not generated for this kind'}`);
+console.log(`  architecture.md   ${architectureExists ? '✓ (from onboard Stage 3)' : '○ not generated for this kind'}`);
+console.log(`  constraints.md    ${constraintsExists  ? '✓ (from onboard Stage 3)' : '○ not generated for this kind'}`);
 console.log('');
 
 if (allSlugs.length > 0) {
   console.log('FEATURES');
-  const phaseEmoji = { clarify: '🔍', design: '📐', tasking: '📋', code: '⚙️', inspect: '🔎', test: '🧪', complete: '✅' };
+  const phaseEmoji = { clarify: '🔍', design: '📐', code: '⚙️', inspect: '🔎', test: '🧪', complete: '✅' };
   for (const [slug, fs] of Object.entries(featureStates)) {
     const nextLabel = fs.phase === 'complete' ? 'complete' : `→ next: ${fs.phase}`;
     console.log(`  ${phaseEmoji[fs.phase] || '·'} ${slug.padEnd(28)} ${nextLabel}`);

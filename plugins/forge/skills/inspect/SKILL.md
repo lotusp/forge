@@ -2,9 +2,11 @@
 name: inspect
 description: |
   Reviews implemented code against project conventions and feature design.
-  Use after /forge:code has completed one or more tasks for a feature,
-  or to review a specific file path.
-argument-hint: "<feature-slug or file-path>"
+  Scoped to one feature at a time: enumerates ALL changed files for the
+  given feature slug via its plan.md / task summaries (R23 — no "recent
+  changes" heuristic). Use after /forge:code has completed one or more
+  tasks for a feature.
+argument-hint: "<feature-slug>"
 allowed-tools: "Read Glob Grep Write"
 context: fork
 model: sonnet
@@ -28,6 +30,7 @@ These rules have no exceptions.
 - **Line numbers are required for every finding.** Vague findings ("this file has naming issues") are not acceptable.
 - **Spawn all forge-reviewer agents in parallel.** Never review files sequentially — it wastes time and context.
 - **`consider` findings are never blockers.** They must never use language like "problem" or "issue" — use "suggestion" or "opportunity" only.
+- **R23 — Review scope is deterministic, derived from feature-slug.** Enumerate changed files via `.forge/features/{slug}/plan.md` + `.forge/features/{slug}/tasks/T*-summary.md`. NEVER fall back to "recent git changes" or other heuristics. If no summaries exist, halt and tell the user to run `/forge:code` first.
 
 ---
 
@@ -37,17 +40,31 @@ Read `.forge/context/conventions.md`. This is the primary benchmark for review.
 If it does not exist, note the absence and review only for internal
 consistency and general quality — not convention compliance.
 
-Determine the review scope from the argument:
+Argument must be a `<feature-slug>` (e.g. `phone-verification`).
+File-path arguments are **no longer supported** (R23 — scope must be
+deterministic per feature).
 
-- **Feature slug** (e.g. `phone-verification`): review all files modified
-  by any task summary under `.forge/features/{slug}/tasks/` whose Feature field matches this slug.
-- **File path** (e.g. `src/auth/phone.ts`): review that specific file only.
+**Scope enumeration (R23 — deterministic):**
 
-If the argument is a feature slug, read:
-- All `.forge/features/{feature-slug}/tasks/T*-summary.md` files to get the list of
-  changed files and to extract the **Assumptions Made** and **Deviations from Plan**
-  sections — these are intentional and must not be penalised
-- `.forge/features/{feature-slug}/design.md` if it exists (to verify implementation
+1. Read `.forge/features/{feature-slug}/plan.md` to get the authoritative
+   task list for this feature
+2. For each task, read its summary at
+   `.forge/features/{feature-slug}/tasks/T{id}-summary.md`
+3. Union every "Changes Made" / "Files Touched" entry across summaries →
+   this is the definitive file list for review
+
+**Halt conditions:**
+
+- No `plan.md` at expected path → halt: "Feature slug not found;
+  run /forge:design {slug} first"
+- No task summaries → halt: "No implementation yet for this feature;
+  run /forge:code T{first} first"
+
+**Also read:**
+- All `.forge/features/{feature-slug}/tasks/T*-summary.md` files — also
+  extract **Assumptions Made** and **Deviations from Plan** sections
+  (these are intentional and must not be penalised)
+- `.forge/features/{feature-slug}/design.md` (to verify implementation
   matches design intent)
 
 ---

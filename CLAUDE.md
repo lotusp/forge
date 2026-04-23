@@ -23,26 +23,24 @@ forge/                             ← marketplace root (github.com/lotusp/forge
 │       │   │   ├── SKILL.md
 │       │   │   ├── reference/state-machine.md
 │       │   │   └── scripts/status.mjs
-│       │   ├── onboard/
+│       │   ├── onboard/             ← absorbed calibrate as Stage 3 (v0.5.0)
 │       │   │   ├── SKILL.md
-│       │   │   ├── profiles/       ← kind definitions + per-section scan profiles
-│       │   │   │   ├── kinds/      ← web-backend / claude-code-plugin / monorepo
-│       │   │   │   ├── core/       ← 6 core profiles loaded by every kind
-│       │   │   │   ├── structural/ ← build / config / deployment
-│       │   │   │   ├── model/      ← domain-model / db-schema
+│       │   │   ├── profiles/
+│       │   │   │   ├── kinds/       ← web-backend / claude-code-plugin / monorepo
+│       │   │   │   ├── core/        ← 6 core profiles (onboard.md sections)
+│       │   │   │   ├── structural/  ← build / config / deployment
+│       │   │   │   ├── model/       ← domain-model / db-schema
 │       │   │   │   ├── entry-points/
 │       │   │   │   ├── integration/
-│       │   │   │   └── monorepo/
-│       │   │   └── reference/      ← scan-patterns + incremental-mode
-│       │   ├── calibrate/
-│       │   │   ├── SKILL.md
-│       │   │   ├── reference/
-│       │   │   └── scripts/
-│       │   ├── clarify/SKILL.md
-│       │   ├── design/SKILL.md
-│       │   ├── tasking/SKILL.md   ← formerly "plan"
-│       │   ├── code/SKILL.md
-│       │   ├── inspect/SKILL.md   ← formerly "review"
+│       │   │   │   ├── monorepo/
+│       │   │   │   └── context/     ← Stage 3 templates (v0.5.0)
+│       │   │   │       ├── kinds/       ← context kind indexes
+│       │   │   │       └── dimensions/  ← 16 dimension templates
+│       │   │   └── reference/       ← scan-patterns + incremental-mode
+│       │   ├── clarify/SKILL.md     ← Step 6 Q classification + Step 8 self-review (v0.5.0)
+│       │   ├── design/SKILL.md      ← absorbed tasking; 4-stage with Walkthrough + spec-review (v0.5.0)
+│       │   ├── code/SKILL.md        ← Step 0.5 convention gap check (v0.5.0)
+│       │   ├── inspect/SKILL.md     ← formerly "review"; feature-slug scope only (v0.5.0)
 │       │   └── test/SKILL.md
 │       └── agents/
 │           ├── forge-explorer.md
@@ -59,16 +57,23 @@ forge/                             ← marketplace root (github.com/lotusp/forge
 > marketplace (via `.claude-plugin/marketplace.json`) and `plugins/forge/` is the
 > actual installable plugin content.
 
-## Skill Flow
+## Skill Flow (v0.5.0 — 7 skills)
 
 ```
-onboard → calibrate → clarify → design → tasking → code → inspect → test
+onboard → clarify → design → code → inspect → test
 ```
+
+Plus `forge` (orchestrator, not a stage).
 
 Or use the master orchestrator which auto-detects state and routes:
 ```
 /forge:forge [intent or slug or task-id]
 ```
+
+> **v0.5.0 breaking change:** pipeline shrunk from 9 skills to 7.
+> - `calibrate` — absorbed into `onboard` Stage 3 (kind-aware context extraction)
+> - `tasking` — absorbed into `design` Stage 4 (task decomposition)
+> - See `docs/upgrade-0.5.md` (generated in T031) for migration details.
 
 > Note: `tasking` was formerly `plan` and `inspect` was formerly `review`.
 > Both were renamed because Claude Code has native `/plan` and `/review` commands
@@ -98,13 +103,12 @@ When Forge is used in a target project, all persistent context lives in `.forge/
 │       └── tasks/
 │           └── T{NNN}-summary.md  ← implementation summary per task
 ├── JOURNAL.md                  ← chronological log of all skill invocations
-└── _session/
-    └── calibrate-scan.md       ← calibrate scan state (resume checkpoint)
+└── _session/                   ← transient scratch (not committed)
 ```
 
 ## Core Design Principles to Uphold When Implementing Skills
 
-1. **Context files as collective source of truth** — `calibrate` produces four files under `.forge/context/`. Every `code`, `inspect`, and `test` skill must read the relevant context files before acting.
+1. **Context files as collective source of truth** — `onboard` Stage 3 produces up to four files under `.forge/context/` (kind-applicable subset only). Every `code`, `inspect`, and `test` skill must read the relevant context files before acting.
 2. **Pause before guessing** — when context is insufficient, surface a structured list of questions rather than assuming. Never silently assume.
 3. **Scope discipline** — `code` does not redesign; `design` does not implement. If a task requires broader scope than stated, stop and surface it.
 4. **Legacy-first** — work with existing inconsistencies; nudge new code toward better patterns without breaking existing code.
@@ -118,7 +122,7 @@ When Forge is used in a target project, all persistent context lives in `.forge/
 | `docs/detailed-design.md` | Full technical spec: SKILL.md format, plugin.json schema, per-skill I/O contracts |
 | `docs/artifact-structure.md` | Where every artifact lives, how it's named, how to read the project timeline |
 | `.forge/JOURNAL.md` | Chronological log of all skill invocations and decisions — start here to understand history |
-| `.forge/context/conventions.md` | SKILL.md writing standards (generated by `/forge:calibrate` when ready) |
+| `.forge/context/conventions.md` | SKILL.md writing standards (generated by `/forge:onboard` Stage 3) |
 
 ## Self-Hosting
 

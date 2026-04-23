@@ -29,6 +29,8 @@ These rules have no exceptions.
 - **Never start a task with unmet dependencies.** Check that each dependency's summary file exists before writing a single line.
 - **One task at a time.** If the user provides multiple IDs, implement, summarise, and confirm each before starting the next.
 - **Document assumptions as they are made.** Any decision not explicitly specified in the task description or `conventions.md` is an assumption. Record it immediately in the Assumptions Made section — not retrospectively.
+- **R21 — Never assume undocumented development conventions.** If the task requires a development practice (unit tests, TDD, commit format, branching, review process) not covered by `conventions.md § Development Workflow` or other context files, Step 0.5 MUST trigger a focused Q&A before implementation begins.
+- **R22 — Convention gap answers persist.** Answers to Step 0.5 Q&A MUST be written back to the appropriate context file (default `conventions.md § Development Workflow`; testing-specific → `testing.md`; architecture-level → `architecture.md`). Future runs must not ask the same question again.
 
 ---
 
@@ -77,6 +79,90 @@ and proceed — but flag it.
 ---
 
 ## Process
+
+### Step 0.5 — Convention Gap Check (R21, R22)
+
+Before reading the task scope, check whether `conventions.md` (and
+testing.md / architecture.md as relevant) documents the development
+practices this task will need. This is a **non-invasive** check: if
+the needed conventions are already present, Step 0.5 completes silently
+and Step 1 begins immediately.
+
+**0.5.1 — Infer required conventions from task type + scope**
+
+| Task type | Required conventions to check |
+|-----------|------------------------------|
+| `test` | `testing.md § <framework / location / mock strategy / coverage>` |
+| `logic` / `api` / `model` | `conventions.md § Development Workflow` (TDD preference, commit format) |
+| `migration` | `conventions.md § Development Workflow` + migration practice |
+| `docs` | `conventions.md § Development Workflow § commit format` |
+| `skill` / `agent` / `profile` / `kind-def` (claude-code-plugin) | `conventions.md § Artifact Writing + SKILL Format` |
+
+**0.5.2 — Detect gaps**
+
+For each required convention:
+```pseudo
+required = infer_required_conventions(task)
+gaps = []
+
+for conv in required:
+    section = find_section(conventions_or_related, conv)
+    if section is None or section is empty:
+        gaps.append(conv)
+```
+
+**0.5.3 — If no gaps: proceed silently**
+
+If `gaps` is empty, emit a single line:
+```
+[forge:code] Conventions covered. Proceeding with T{id}.
+```
+Then jump to Step 1.
+
+**0.5.4 — If gaps exist: Q&A then persist**
+
+Present a focused, task-scoped Q&A. Only ask about conventions that
+THIS task needs (not a general interview):
+
+```
+[forge:code T{id}] Convention gap detected
+
+This task ({task-name}) requires {N} development practice(s) that
+.forge/context/conventions.md does not yet document:
+
+Q1. {practice name}
+    Why: <how it affects this task>
+    Options: [A] <choice> / [B] <choice> / [C] <other>
+    Recommend: <X>, because <reason>
+
+Q2. {practice name}
+    ...
+
+Your answers will be written to {target file} § {target section}
+so all future /forge:code runs inherit them silently.
+```
+
+Wait for user answers. Once received:
+
+1. Write answers back to the appropriate file + section (per R22)
+2. If the file's relevant section doesn't exist, create it with a
+   section marker (following onboard's section marker schema)
+3. Re-read the conventions file (to have authoritative state)
+4. Proceed to Step 1
+
+**0.5.5 — Example: first-task-in-project trigger**
+
+When the very first `/forge:code` runs in a project, it's almost
+certain that some development conventions haven't been captured
+(because onboard Stage 3 focused on production patterns, not
+workflow-level practices like TDD preference). Step 0.5 naturally
+interviews the user once, persists answers, and subsequent runs
+proceed without friction.
+
+**Non-triggers:** If conventions already cover what this task needs,
+do NOT ask again. Respect the user's time.
+
+---
 
 ### Step 1 — Read the task scope
 
