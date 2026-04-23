@@ -347,3 +347,24 @@
 - 共计 19 个新文件，2180 行；所有示例遵守 C8（e-commerce 调色板 + C8 redaction）
 - 每个文件符合 profiles/context/README.md 的 schema：frontmatter + 4 小节（Scan/Extraction/Output/Confidence）
 - 下一步：Wave C — T023 onboard SKILL.md Stage 3 改写（高风险）
+
+## 2026-04-23 — Wave C: T023 onboard Stage 3 rewrite 完成 ⚠
+- SKILL.md 从 637 行扩到 1027 行 (+390 行)
+- 新增 4 条 IRON RULES：R11 (Stage 3 非交互 + 批量冲突) / R12 (不创建非适用 context 文件) / R13 (onboard.md header Excluded-dimensions 元数据) / R14 (context 文件 smart merge 禁止整覆盖)
+- R1 扩展为"Three-stage hard isolation" 涵盖 Stage 1 ⊥ Stage 2 ⊥ Stage 3
+- R2 扩展为"Single kind-file read per stage"（两个 kind 文件各读一次：profiles/kinds/<id>.md + profiles/context/kinds/<id>.md）
+- R5 扩展 preserve 块适用范围到所有 forge 产物（不仅 onboard.md）
+- R9 marker 属性从 5 升到 6（新增 source-file 识别哪个产物文件）
+- frontmatter description 全面改写为 three-stage 描述
+- Runtime snapshot 新增 Existing context files + recent commit subjects（为 Stage 3 smart-merge + commit-format 扫描做准备）
+- Process Overview ASCII 图从 2 stage 升到 3 stage，Stage 3 含 3.1/3.2/3.3/3.4 四子步
+- Execution Plan（Step 1.6）增补 context-kinds-file / context-dimensions / context-output-files / excluded-dimensions 字段
+- Step 3.1 header 新增 Excluded-dimensions 必备元数据行
+- Step 3.3 marker 示例升级到 6 属性（含 source-file），给出 onboard.md 和 context file 两种字面示例 + 4 个❌反例
+- 新增 Step 4 (Stage 3.1 非交互扫描伪代码) / Step 5 (Stage 3.2 批量冲突交互模板) / Step 6 (Stage 3.3+3.4 smart-merge 伪代码)
+- 新增 Interaction Messages：Batch conflict resolution + Stage 3 no conflicts
+- Run Modes A-E 全部更新反映 Stage 3：Mode A 从 3 步升到 4 步；Mode B 拆分 Stage 2 + Stage 3 incremental；Mode C 拓展 context files preserve；Mode D 增加冲突 halt 约束
+- Constraints 章节新增 5 条 Stage 3 相关硬约束
+- Reference Documents 表格新增 3 行（profiles/context/ 子目录）
+- 人工走读 3 场景（forge self-bootstrap / fresh web-backend / monorepo workspace）流程均可跑通
+- 下一步：Wave D — T024 clarify self-review + T025 design 4-stage 改写
