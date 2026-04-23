@@ -451,3 +451,12 @@
   - forge/SKILL.md:160,234
 - G4 更新 verification.md：条件通过 → 通过；6 PASS / 3 DEFERRED / 1 PARTIAL / 0 FAIL
 - 下一步：T031 v0.5.0 正式升版 + docs/upgrade-0.5.md + tag
+
+## 2026-04-23 — T031 v0.5.0 formal release
+- plugin.json 0.5.0-dev → 0.5.0
+- README badge 0.5.0-dev → 0.5.0 + 新增 "v0.5.0 is here" 精简变更告知 + 链接 upgrade-0.5.md
+- 新建 docs/upgrade-0.5.md（迁移向导：pipeline 变化 / 步骤 1-3 升级流程 / breaking changes 详情 / 回滚说明）
+- CLAUDE.md 的 upgrade-0.5.md 链接修复（之前是 placeholder）
+- onboard-kind-profiles feature (v0.4.0) + lean-kind-aware-pipeline feature (v0.5.0) 至此闭环
+- 打 tag v0.5.0 并 push
+- forge v0.5.0 正式发布
