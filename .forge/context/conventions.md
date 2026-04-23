@@ -1,412 +1,348 @@
 # Project Conventions: forge
 
-> 生成时间：2026-04-19
-> 最近人工更新：2026-04-20（新增 Skill Rule Evolution 节 + Decision #8）
-> 生成方式：/forge:calibrate — 基于代码扫描 + 人工裁决
-> 更新方式：重新运行 /forge:calibrate，或针对具体规则做人工补充
-> 文件路径：.forge/context/conventions.md
-
-**Important:** 本文件是 Forge 插件自身开发的权威约定。
-/forge:code、/forge:inspect、/forge:test 均以此文件为基准。
-另见：context/testing.md、context/architecture.md、context/constraints.md
+> Kind:                 claude-code-plugin
+> Generated:            2026-04-23
+> Commit:               59836a2
+> Generator:            /forge:onboard Stage 3 (v0.5.0-dev)
+> Dimensions loaded:    naming, error-handling, skill-format, artifact-writing, markdown-conventions, commit-format
+> Excluded-dimensions:  logging, validation, api-design, database-access, messaging, authentication
 
 ---
+
+<!-- forge:onboard source-file="conventions.md" section="naming" profile="context/dimensions/naming" verified-commit="59836a2" body-signature="a7c4e2f891b03d56" generated="2026-04-23" -->
 
 ## Naming Conventions
 
-### Skill 名称
-- 全小写，无连字符，单个英文单词或缩写
-- 示例：`onboard`、`calibrate`、`tasking`、`inspect`
-- 避免与 Claude Code 内置命令重名（如 `plan`、`review` 已被占用）
-- 观察来源：`skills/*/SKILL.md` frontmatter `name` 字段（全部 9 个 skill）
+### Files
+kebab-case — e.g. `forge-explorer.md`, `state-machine.md`, `incremental-mode.md` [high] [code]
 
-### Agent 名称
-- 格式：`forge-{role}`，带连字符，全小写
-- 示例：`forge-explorer`、`forge-architect`、`forge-reviewer`
-- 观察来源：`agents/*.md` frontmatter `name` 字段
+### SKILL.md names
+Fixed literal `SKILL.md` (uppercase, no variation). [high] [code]
 
-### 文件名
-- SKILL.md：固定名称，每个 skill 目录一个
-- Agent 文件：`forge-{role}.md`，位于 `agents/` 目录
-- 脚本文件：kebab-case，`.mjs` 扩展名（`check-prerequisites.mjs`、`status.mjs`）
-- 参考文档：`output-template.md`、`dimensions.md`、`conflict-examples.md`
+### Directory names
+kebab-case for skill directories (`onboard/`, `forge/`); singular nouns (`profiles/` is plural because it's a collection). [high] [code]
 
-### Feature Slug
-- 格式：2–4 个英文单词，kebab-case
-- 示例：`plugin-bootstrap`、`phone-verification`、`order-export-csv`
+### Frontmatter keys
+kebab-case — `allowed-tools`, `argument-hint`, `kind-id`, `verified-commit`, `body-signature`. [high] [code]
 
-### Task ID
-- 格式：`T{NNN}`，三位数字，零填充，全局唯一
-- 示例：`T001`、`T023`、`T100`
-- 全局唯一：跨所有 feature 的 plan.md，不可重置或复用
-- 观察来源：`skills/tasking/SKILL.md` IRON RULES
+### IRON RULES identifiers
+`R<N>` format, globally numbered per skill (e.g. `R1..R14` in onboard/SKILL.md). [high] [code]
+
+### Task IDs
+`T<NNN>` three-digit zero-padded; globally unique across all features (shared pool). [high] [code]
+
+### Section IDs (marker attributes)
+kebab-case matching the `output-sections` entry in the kind file. [high] [code]
+
+<!-- /forge:onboard section="naming" -->
 
 ---
 
-## SKILL.md Format
+<!-- forge:onboard source-file="conventions.md" section="error-handling" profile="context/dimensions/error-handling" verified-commit="59836a2" body-signature="c3f91e4a7b250648" generated="2026-04-23" -->
 
-### Frontmatter 必填字段
+## Error Handling
 
-```yaml
----
-name: <skill-name>
-description: |
-  多行描述，首行是一句话摘要（显示在 /skills 列表中）。
-  后续行补充使用时机和前置条件。
-argument-hint: "<hint>"      # 无参数时为空字符串 ""
-allowed-tools: "Tool1 Tool2" # 空格分隔，带引号
-model: sonnet
-effort: high                 # high / medium / max
----
-```
+**Mode:** Skill halt-and-surface pattern.
 
-### Frontmatter 可选字段
+Skills that cannot proceed must produce a structured block and halt — never silently fall back to defaults. [high] [code]
 
-```yaml
-context: fork   # 需要子会话时加（当前使用：onboard、inspect）
-agent: Explore  # 委托给内置 agent 时加（当前使用：onboard）
-```
+### Convention for new skills
 
-### 章节顺序（强制）
+- Use `[forge:<skill-name>]` lowercase prefix for all user-facing messages (consistency with `/forge:<skill>` invocation form). [high] [code]
+- Halt messages must include: (1) WHAT went wrong, (2) WHICH options the user has, (3) HOW to recover. Never dead-end. [high] [code]
+- IRON RULE violations halt the run immediately; the offending rule is cited by number. [high] [code]
+- Scripts (`.mjs`) exit non-zero on hard errors; SKILL.md may route on exit code. [medium] [code]
 
-1. `## Runtime snapshot`
-2. `## IRON RULES`
-3. `## Prerequisites`
-4. `## Process`（包含 `### Step N` 子节）
-5. `## Output`
-6. `## Interaction Rules`
-7. `## Constraints`
-
-允许在 Process 和 Output 之间插入协议节（如 `## Scope Creep Protocol`）。
-
-### Runtime snapshot 格式
-
-```markdown
-## Runtime snapshot
-- 标签描述: !`bash命令 2>/dev/null || echo "(none)"`
-```
-
-- 每行一个检测项；命令失败时用 `|| echo "(fallback)"` 给出友好默认值
-
-### IRON RULES 格式
-
-```markdown
-## IRON RULES
-
-These rules have no exceptions.
-
-- **规则名称。** 规则描述，说明 why。
-```
-
-- 规则名称加粗，以句点结尾，与描述在同一段落内
-
----
-
-## Agent File Format
-
-### Frontmatter
-
-```yaml
----
-name: forge-{role}
-description: |
-  一句话描述职责。
-  第二行：调用方式和使用时机。
-tools: Tool1, Tool2, Tool3   # 逗号分隔，无引号
-model: sonnet
-color: yellow                 # yellow(explorer) / green(architect) / red(reviewer)
----
-```
-
-### 正文结构顺序
-
-1. `## Input` — 编号列表，列出接收的输入项
-2. `## Process` — 分阶段（`### Phase 1 …`）
-3. `## Output Format` — 返回报告的精确格式（含填充示例）
-4. `## Rules` — agent 级别的硬性约束
-
----
-
-## User Interaction Format
-
-### 消息前缀
-- 格式：`[forge:{skill-name}]` — **全小写**，与命令调用风格一致
-- 示例：`[forge:calibrate]`、`[forge:code]`、`[forge:tasking]`
-- 观察来源：裁决 #1（原为全大写，用户要求改为小写）
-
-### 选项呈现格式
+### Example halt message format
 
 ```
-[forge:{skill}] {标题}
+[forge:onboard] Kind detection confidence is low
 
-{说明段落}
+Top candidates:
+  1. web-backend        — score 0.42
+  2. claude-code-plugin — score 0.38
+
+Minimum confidence required: 0.60.
 
 Options:
-  1. {选项 A}（recommended）
-  2. {选项 B}
+  1. Re-run with --kind=<kind-id> to force one of the candidates
+  2. Describe the project so a new kind definition can be added
+  3. Exit
 
-Your choice:
+Which do you prefer?
 ```
 
-### 矛盾裁决格式（calibrate 专用）
+### What to avoid
 
-```
-[forge:calibrate] Convention conflict {N} of {M}
+- Proceeding with best-guess defaults when a required input is missing
+- `try { } catch { }` blocks in `.mjs` scripts that swallow errors silently
+- Halt messages that tell the user "failed" without explaining why or what to do
 
-Dimension: {维度名}
-
-Pattern A — used in {Module}:
-  {描述}（{file:line}）
-
-Pattern B — used in {Module}:
-  {描述}（{file:line}）
-
-Recommendation: Pattern A
-Reason: {推荐理由}
-
-Options:
-  1. Adopt Pattern A（recommended）
-  2. Adopt Pattern B
-  3. Allow both — context-dependent
-  4. Neither — describe what you want
-```
+<!-- /forge:onboard section="error-handling" -->
 
 ---
 
-## Artifact Format
+<!-- forge:onboard source-file="conventions.md" section="skill-format" profile="context/dimensions/skill-format" verified-commit="59836a2" body-signature="e1b0a6d8cf47f392" generated="2026-04-23" -->
 
-### 文件头（所有 .forge/ 产物必须包含）
+## SKILL.md / Agent File Format
 
-```markdown
-# {Artifact Type}: {feature-slug 或 project-name}
+### SKILL.md frontmatter
 
-> 生成时间：YYYY-MM-DD
-> 生成方式：/forge:{skill-name}
-> 文件路径：.forge/{相对路径}
+Required keys:
+- `name` — skill id, matches directory name [high] [code]
+- `description` — multi-paragraph describing when to use; may span multiple lines with YAML `|` [high] [code]
+- `allowed-tools` — whitespace-separated tool list [high] [code]
+- `model` — `sonnet` / `opus` / `haiku` [high] [code]
+
+Optional keys:
+- `argument-hint` — shown in help for the argument [high] [code]
+- `effort` — `low` / `medium` / `high` (rarely `low`) [medium] [code]
+- `context` — `fork` (spawns a forked session) [medium] [code]
+
+### Canonical body outline
+
+Every SKILL.md follows this top-level section order [high] [code]:
+
+1. `## Runtime snapshot` — bash-backticked context for invocation-time state
+2. `## IRON RULES` — hard constraints, numbered `R<N>` with bold sentinel
+3. `## Prerequisites` — required inputs + missing-input handling
+4. `## Process` — numbered `### Step <N>` subsections, may group under Stages
+5. `## Output` — artifact file path(s) + template reference
+6. `## Interaction Rules` — user-facing conversation patterns
+7. `## Constraints` — what the skill will not do
+
+### IRON RULES style
+
+- Each rule headed with `### R<N> — <short title>` [high] [code]
+- Body: one paragraph explaining the rule + rationale [high] [code]
+- Imperative / directive voice ("MUST NOT", "MUST", "NEVER") [high] [code]
+
+### Agent file frontmatter
+
+```yaml
+---
+name: forge-explorer
+description: |
+  Traces a single code path end-to-end...
+tools: [Read, Glob, Grep, Bash]
+model: sonnet
+color: yellow
+---
 ```
 
-### 产物路径规范
+### Skill subdirectory conventions
 
-| 产物 | 路径 |
-|------|------|
-| 活动日志 | `.forge/JOURNAL.md` |
-| 项目地图 | `.forge/context/onboard.md` |
-| 代码约定 | `.forge/context/conventions.md` |
-| 测试约定 | `.forge/context/testing.md` |
-| 架构约定 | `.forge/context/architecture.md` |
-| 约束规则 | `.forge/context/constraints.md` |
-| 需求分析 | `.forge/features/{slug}/clarify.md` |
-| 技术设计 | `.forge/features/{slug}/design.md` |
-| 任务列表 | `.forge/features/{slug}/plan.md` |
-| 评审结果 | `.forge/features/{slug}/inspect.md` |
-| 测试计划 | `.forge/features/{slug}/test.md` |
-| 实现摘要 | `.forge/features/{slug}/tasks/T{NNN}-summary.md` |
-| 会话状态 | `.forge/_session/calibrate-scan.md` |
+- `<skill>/reference/` — detailed algorithm docs loaded only when needed [high] [code]
+- `<skill>/scripts/*.mjs` — deterministic helpers invoked via Bash [medium] [code]
+- `<skill>/profiles/` — kind-aware templates (onboard uses this) [medium] [code]
 
-### JOURNAL.md 条目格式
+### What to avoid
 
-每个 skill 执行后强制追加，条目由新到旧（追加到文件末尾）：
+- Ad-hoc frontmatter keys not in the schema (breaks plugin loader)
+- IRON RULES as bullet points buried in Process prose (LLM may miss them)
+- Describing "how" inside IRON RULES (should be imperative constraints)
+- Cross-file rule references without inline backup (LLM may not load reference files; key rules MUST be in SKILL.md body — lesson from v0.4.0 T015)
 
-```markdown
-## YYYY-MM-DD — /forge:{skill} {arg}
-- 产出：{主产物文件}
-- {skill-specific key metric, e.g. 假设/任务/发现数量}
-- 下一步：{recommended next command}
-```
-
-**关键规则：**
-- 每次 skill 执行追加一条，不修改已有条目
-- forge 编排器（`/forge:forge`）在 Runtime snapshot 中读取末尾 30 行作为会话上下文
-- 不删除、不重写日志；错误记录也保留（便于追溯）
+<!-- /forge:onboard section="skill-format" -->
 
 ---
 
-## Content Hygiene
+<!-- forge:onboard source-file="conventions.md" section="artifact-writing" profile="context/dimensions/artifact-writing" verified-commit="59836a2" body-signature="b8e2f04d7c91a358" generated="2026-04-23" -->
 
-> 所有面向外部的文字内容（commit message、文档、SKILL.md 示例、reference 文件、
-> agent 文件、测试夹具）必须使用**中性的、通用的、虚构的**示例标识符。
-> **除 forge 自身之外**，不得出现任何其他真实项目、公司、产品、系统的名称。
+## Artifact Writing Discipline
 
-### 适用范围
+### Path schema
 
-| 类型 | 具体包含 |
-|------|----------|
-| Commit 消息 | Subject + Body + footer |
-| 仓库文档 | `README.md`、`CLAUDE.md`、`docs/**/*.md` |
-| Skill 文件 | `plugins/forge/skills/**/SKILL.md`、`reference/*.md` |
-| Agent 文件 | `plugins/forge/agents/*.md` |
-| Artifact 模板 | `output-template.md`、`scan-patterns.md`、`incremental-mode.md` |
-| 脚本文件 | `scripts/*.mjs` 中的注释和示例 |
-| `.forge/` 产物 | `.forge/context/*.md`、`.forge/features/**/*.md` |
-
-### 什么可以出现
-
-| 类别 | 允许值 | 示例 |
-|------|--------|------|
-| Forge 自身标识符 | skill 名、agent 名、artifact 文件名、目录结构 | `onboard`、`forge-explorer`、`clarify.md`、`.forge/context/` |
-| 公开开源工具 | 通用技术栈名称，无品牌敏感性 | `Spring Boot`、`MySQL`、`Redis`、`Feign`、`Flyway`、`Nacos`、`Togglz`、`WireMock`、`Testcontainers` |
-| 通用生态术语 | 行业中立的架构/协议术语 | `REST`、`Webhook`、`Message Queue`、`Feature Toggle` |
-| Claude Code 生态 | 官方产品名 | `Claude Code`、`Anthropic API`、`claude.ai/code` |
-
-### 什么必须避免
-
-| 类别 | 禁止值 | 替换为 |
-|------|--------|--------|
-| 公司名 | 任何真实公司（特别是 forge 的 AI 辅助开发目标用户的雇主） | 省略，或 `{company}` 占位符 |
-| 产品名 | 任何其他真实产品/系统 | 通用业务名词（如 `order`、`catalog`、`inventory`） |
-| 内部系统缩写 | 外部不可识别的 3–5 字母全大写缩写（来自具体项目的内部系统名） | 可识别的功能描述（如 `Payment Gateway`、`Vendor Catalog Feed`） |
-| Java 包命名空间 | `com.{company}.*`、`com.{brand}.*` | `com.example.*` |
-| 基础设施主机 | 具体的 registry / endpoint 域名 | `registry.example.com`、`{registry-host}` 占位符 |
-| 实际 schema 名 | 生产数据库 schema | 通用名（`shop_orders`）或 `{schema-name}` |
-| 实际端口号 | 生产端口 | `{N}` 或 `8080` 等大众默认值 |
-| 实际 feature slug | 真实业务特性名 | `phone-verification`、`order-export-csv` 等泛用示例 |
-
-### 通用示例调色板（推荐沿用）
-
-为保持跨文档一致性，**所有新增示例优先从下表取值**：
-
-| 领域 | 标识符 |
-|------|--------|
-| 示例业务域 | 通用电商订单平台（e-commerce order platform） |
-| Java 包基址 | `com.example.shop` |
-| 服务名 | `order-service` |
-| 聚合根 | `Order`、`LineItem`、`Customer`、`Payment`、`PromotionProgram` |
-| 枚举 | `OrderStatus: DRAFT → SUBMITTED → CONFIRMED → SHIPPED → DELIVERED` |
-| Controller | `OrderController`、`PaymentController` |
-| Service | `OrderService`、`PaymentService` |
-| Feign client | `InventoryClient`、`ShippingClient`、`NotificationClient`、`ReportingClient` |
-| Event | `OrderPlacedEvent`、`OrderConfirmedEvent`、`OrderCancelledEvent` |
-| Listener | `OrderPlacedListener`、`FulfilmentInitListener`、`ShippingDispatchListener` |
-| 外部系统 | Payment Gateway、Notification Service、Warehouse Scheduler、Customer Data Platform、Vendor Catalog Feed |
-| 占位域名 | `registry.example.com`、`api.example.com` |
-| 占位命名空间 | `com.example.internal:*`（私有仓标识符） |
-| 占位路径 | `{project-root}`、`{module}`、`{vendor-name}` |
-
-### Commit 提交前的自检
-
-在 `git commit` 之前手动运行：
-
-```bash
-# 检查当前工作区是否混入非 forge 项目标识符
-# （补充自己熟悉的企业/产品名到 pattern 里）
-git diff --cached | grep -iE "{company-patterns}|{product-patterns}" \
-  && echo "⚠ 发现可疑标识符，清理后再提交" \
-  || echo "✓ 可提交"
+```
+.forge/
+├── context/                   ← project-wide, generated by onboard
+│   ├── onboard.md
+│   ├── conventions.md
+│   ├── testing.md
+│   ├── architecture.md
+│   └── constraints.md
+├── features/                  ← one directory per feature
+│   └── {slug}/
+│       ├── clarify.md
+│       ├── design-inputs.md   (optional, from clarify Step 6 HOW-routing)
+│       ├── design.md
+│       ├── plan.md
+│       ├── inspect.md
+│       ├── test.md
+│       └── tasks/
+│           └── T{NNN}-summary.md
+├── JOURNAL.md                 ← append-only log of all skill invocations
+└── _session/                  ← transient scratch (not committed)
 ```
 
-不强制在 hook 里执行（forge 当前无 git hook 基础设施），但任何 AI 辅助提交
-前必须做一次人眼 diff review。
+[high] [code]
 
-### 泄漏后的补救流程
+### Section marker contract
 
-1. **commit 消息已泄漏** → 需要 rebase/force-push（仅限仓库 owner 协调，
-   普通用户严禁自行 force-push）
-2. **仅工作区文件泄漏，未 push** → `git commit --amend` 清理后提交
-3. **已 push 但 commit 消息干净，仅文件内容泄漏** → 前向修复 commit
-   （新 commit 清理 + 明确说明泄漏上下文），**不**重写历史
+6 attributes required, in exact order, double-quoted values:
 
-本次泄漏修复采用方式 3（见 commit `b1f1f8b`）——历史消息本来就干净，
-只需前向修复即可。
+```
+<!-- forge:onboard source-file="<file>.md" section="<id>" profile="<profile-path>" verified-commit="<git-short>" body-signature="<16hex>" generated="<YYYY-MM-DD>" -->
+```
 
-### 反面清单的陷阱（元规则）
+`verified-commit` and `body-signature` are **two separate, independently required attributes** — not alternatives. [high] [code]
 
-**写"禁止使用 X"时，列举真实的 X 本身就泄漏 X。**
+### Preserve blocks (sacred)
 
-正确姿势：用**类别描述** + **无害占位符**，不要把真实违规案例写进文档。
+```
+<!-- forge:preserve -->
+...user content to survive regeneration...
+<!-- /forge:preserve -->
+```
 
-错误写法（反例）：
-> 禁止使用 `XYZ_ACRONYM_FROM_REAL_PROJECT` 这种内部缩写
+Preserve blocks are carried forward verbatim across all runs, even when the enclosing section is rewritten. Orphaned preserve blocks (anchor text changed) get `orphaned=true` attribute and append to section tail — never deleted. [high] [code]
 
-正确写法：
-> 禁止使用外部不可识别的 3–5 字母全大写缩写（来自具体项目的内部系统名）
+### JOURNAL.md discipline
 
-### 例外
+- Append-only — never rewrite history [high] [code]
+- One section per skill invocation, headed `## YYYY-MM-DD — /forge:<skill> <args>` [high] [code]
+- Content: bulleted facts about what was produced + next step [high] [code]
 
-Forge 在自举场景下，`.forge/context/onboard.md` 会描述 forge 自己作为
-"项目"。此时使用 forge 自身的标识符（`forge-explorer`、`/forge:onboard`、
-`plugins/forge/skills/*` 等）是允许的，因为 forge 就是 THE 项目。
+### Skill output contracts
+
+Each skill's `## Output` section declares the exact artifact path(s) it writes. No skill may write outside its declared output paths. [high] [code]
+
+### What to avoid
+
+- Editing section marker attributes by hand (breaks incremental reconciliation)
+- Removing preserve blocks silently (user content must survive)
+- Editing old JOURNAL entries (breaks timeline)
+- Writing to non-declared `.forge/` paths
+- Bypassing status.mjs in the forge orchestrator (`/forge:forge` always consults it)
+
+<!-- /forge:onboard section="artifact-writing" -->
 
 ---
 
-## Skill Rule Evolution & Artifact Compliance
+<!-- forge:onboard source-file="conventions.md" section="markdown-conventions" profile="context/dimensions/markdown-conventions" verified-commit="59836a2" body-signature="6a4e1f2b90c83d47" generated="2026-04-23" -->
 
-> Skill 的 IRON RULES / Process / Output 要求随着项目认知演进会发生变化。
-> 之前已生成的 `.forge/` 产物（onboard.md、clarify.md、design.md 等）**不会
-> 自动跟随**。本节定义变更发生时的责任分配与流程。
+## Markdown Conventions (plugin-internal)
 
-### 三条规则
+### Heading hierarchy
 
-**R1 — Skill IRON RULES 变更等同于 breaking change。**
-当 `plugins/forge/skills/{name}/SKILL.md` 的 IRON RULES 节发生新增、删除
-或语义修改时：
+- `#` reserved for document title (one per file) [high] [code]
+- `##` top-level sections [high] [code]
+- `###` subsections [high] [code]
+- `####` sparingly, only when really needed [medium] [code]
 
-- 必须 bump 至少 patch 版本（`plugin.json` 的 `version`）
-- 必须在同一 commit 中说明受影响的 artifact 类型
-- 若变更影响语义（非仅排版），须在 `JOURNAL.md` 明示"此变更触发下游审计"
+### Code fences
 
-**R2 — 变更 commit 必须附带同期的 artifact 审计。**
-Skill 规则变更后、进入下一个 feature 之前，必须对当前仓库所有同类型 artifact
-做一次人工审计：
+- Always include language tag: ` ```yaml `, ` ```bash `, ` ```json `, ` ```markdown `, ` ```typescript ` [high] [code]
+- Use ` ```text ` for generic pseudo-code that shouldn't be highlighted [medium] [code]
 
-```
-受影响 skill = X
-审计目标 = .forge/features/*/X.md + （若适用）.forge/context/{X 对应的 context 文件}.md
-判据 = 变更后的 SKILL.md 全部 IRON RULES
-```
+### Lists
 
-审计产出三种动作之一：
+- Bullet character: `- ` (dash-space); never `*` or `+` [high] [code]
+- Nested bullets indent by 2 spaces [high] [code]
 
-| 动作 | 适用场景 |
-|------|---------|
-| **Rewrite** | Artifact 有违规点，有明确修正路径 |
-| **Regenerate** | 违规点多 / 结构需重构，重新跑对应 skill 更经济 |
-| **Preserve with exception** | 旧 artifact 代表历史状态，不应改写；用 `<!-- preserve -->` 块标记，在 JOURNAL 记录例外理由 |
+### Emphasis
 
-**R3 — 审计结果必须记录 JOURNAL。**
-每次 skill 变更后的审计都在 `JOURNAL.md` 追加一条形如：
+- Bold: `**word**` (double asterisk) [high] [code]
+- Italic: `*word*` (single asterisk) [medium] [code]
 
-```markdown
-## YYYY-MM-DD — {skill} 合规审计 (触发：{variant commit hash})
-- 审计范围：{列出检查的 artifact 文件}
-- 发现：{N 条违规}
-- 动作：{rewrite/regenerate/preserve-with-exception 分布}
-- 修正 commit：{后续修正的 commit hash；若本次同步修 → 同 commit}
-```
+### Tag system for evidence claims (SKILL.md R10 authoritative definition)
 
-### 执行模式的演进路径
+Every fact in a context / onboard artifact carries:
+- Required: one confidence tag — `[high]` / `[medium]` / `[low]` / `[inferred]`
+- Optional: one source tag — `[code]` / `[build]` / `[config]` / `[readme]` / `[cli]`
+- Optional: conflict flag — `[conflict]`
 
-| 阶段 | 模式 | 说明 |
-|------|------|------|
-| **现在** | 纯人工审计 | Skill 改动较少，artifact 数量有限；审计者把 SKILL.md 当 checklist 手工对照 |
-| **中期** | Skill 提供 `--audit <slug>` | 每个 skill 加只读审计模式：读 artifact + 当前 IRON RULES，产 `{slug}/audit-{date}.md` 报告（见 `constraints.md` TD-007） |
-| **远期** | `/forge:forge --audit-all` 批量 | 全仓走查；CI 集成阻塞非合规发布 |
+Order: `<fact> [confidence] [source?] [conflict?]`. See plugins/forge/skills/onboard/SKILL.md R10 for full enumeration. [high] [code]
 
-### 元规则
+### Bilingual conventions (forge-specific)
 
-- 本节本身是"规则的规则"。如果未来变更了这里的三条规则（R1/R2/R3），同样
-  触发一次本节审计（审计自己是否还覆盖变更后的情况）。
-- 若跳过审计（例如紧急修复），JOURNAL 必须显式记录"跳过原因"；下次 skill
-  变更时补做。
+- User-facing text may be Chinese (interaction messages, JOURNAL entries, CLAUDE.md sections, README user guides) [high] [readme]
+- Structural keywords stay English (frontmatter keys, section IDs, profile names, marker attributes) [high] [code]
+- SKILL.md body may mix: IRON RULES bilingual OK; Process usually English; examples use e-commerce palette per C8 [medium] [code]
+
+### Marker comments
+
+- `<!-- forge:<skill> ... -->` HTML comments are machine-parseable markers [high] [code]
+- Always paired (opening + closing) for wrapping blocks [high] [code]
+- Attribute syntax: `key="value"` with double quotes [high] [code]
+
+### What to avoid
+
+- Deep nesting beyond `####` (hurts outline readability)
+- Missing code-fence languages (breaks highlighting)
+- Unpaired preserve / section markers (breaks incremental reconciliation)
+- Invented confidence / source tags (R10 closed enumeration)
+
+<!-- /forge:onboard section="markdown-conventions" -->
 
 ---
 
-## Decision Log
+<!-- forge:onboard source-file="conventions.md" section="commit-format" profile="context/dimensions/commit-format" verified-commit="59836a2" body-signature="d3a7e2f49b81c056" generated="2026-04-23" -->
 
-| # | 维度 | 裁决 | 理由 |
-|---|------|------|------|
-| 1 | 交互消息格式 | `[forge:{skill}]` 全小写 | 与命令调用风格一致，输入方便 |
-| 2 | Skill 命名 | `tasking`（非 `plan`），`inspect`（非 `review`） | 避免与 Claude Code 内置命令冲突 |
-| 3 | 产物结构 | `context/` + `features/{slug}/` 嵌套 | 多功能项目清晰，避免根目录堆积 |
-| 4 | allowed-tools 格式 | 空格分隔带引号字符串 | Claude Code 解析格式要求 |
-| 5 | Agent tools 格式 | 逗号分隔无引号 | Agent frontmatter 格式要求 |
-| 6 | 会话连续性 | JOURNAL.md 强制追加 + task summary Assumptions Made 章节 | 解决 AI 冷启动和隐性假设可追溯问题 |
-| 7 | 内容洁净原则 | Commit message + 文档 + 示例代码 均使用中性/虚构标识符；除 forge 自身外禁止提及任何真实项目 | 防止 AI 辅助开发场景下把目标项目信息泄漏进 forge 公开仓库（已有先例：commit `b1f1f8b` 清理） |
-| 8 | Skill 规则演进与 artifact 合规 | Skill IRON RULES 变更 = breaking；变更 commit 必须附带同期 artifact 审计；审计结果记录 JOURNAL | 变更发生时的责任边界清晰；防止规则与产物长期不同步；为未来工具化（`--audit` flag）留下约定基础（已有先例：commit `52f2e75` 新增 Q&A 边界规则后 `2bd25b3` 审计修正 T3 clarify.md）|
+## Commit Message Format
+
+**Style:** Conventional Commits (project-enforced) [high] [cli]
+
+**Format:**
+```
+<type>(<scope>): <subject>
+
+[body — optional, explains why]
+
+[footer — optional, Co-Authored-By lines]
+```
+
+**Types used:** `feat`, `fix`, `chore`, `docs`, `refactor`, `test`, `perf`, `build` [high] [cli]
+
+**Scope conventions:**
+- `skill/<name>` — changes to a specific skill (e.g. `skill/onboard`) [high] [cli]
+- `agent/<name>` — changes to an agent (e.g. `agent/explorer`) [high] [cli]
+- `plugin` — plugin-level changes (`.claude-plugin/plugin.json`, etc.) [high] [cli]
+- `forge` — repo-level (`.forge/` artifacts, design docs) [high] [cli]
+- `pipeline` — cross-skill restructure (used for v0.5.0 consolidation) [medium] [cli]
+
+**Subject rules:**
+- Lowercase start, imperative mood ("add", not "added") [high] [cli]
+- ≤ 72 characters [high] [cli]
+- No period at end [high] [cli]
+
+**Body / footer:**
+- `Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>` for AI-paired work [high] [cli]
+- Body explains WHY, not WHAT (the diff shows WHAT) [medium] [cli]
+
+**Cadence:** One commit per Task (T{NNN}); no batch commits across tasks. `.forge/` artifacts (design, plan) committed on produce, separate from task commits. [high] [readme]
+
+**Example (from recent history):**
+```
+feat(skill/onboard): absorb calibrate as Stage 3 (T023) ⚠ high risk
+
+Wave C 核心改造：onboard 从两阶段升级到三阶段...
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+```
+
+<!-- /forge:onboard section="commit-format" -->
 
 ---
 
-## Open Questions
+## Development Workflow
 
-| 维度 | 问题 | 影响 |
-|------|------|------|
-| effort 取值 | `max` 和 `high` 的边界定义不明确 | 影响 calibrate（max）与其他 high skill 的资源分配 |
+### Pair-programming pattern
+
+forge development follows a human+AI pair pattern:
+- Claude does the skill-writing and code execution
+- Human provides domain intent, validates output, and catches misinterpretations [high] [readme]
+
+### Testing paradigm
+
+Traditional unit tests are NOT applicable to SKILL.md / agent markdown files. Validation is via **self-bootstrap**: running the plugin against itself or a sample project. See `testing.md`. [high] [readme]
+
+### Review cadence
+
+- Each Wave (cluster of related Tasks) ends with a commit + checkpoint with human [high] [readme]
+- High-risk Tasks (marked `⚠` in plan.md) get independent commits for rollback granularity [high] [readme]
+
+### Branch strategy
+
+- `main` is the only long-lived branch [high] [readme]
+- Push directly to `main` (pre-1.0 dogfooding phase); tag releases via `git tag vX.Y.Z` [high] [readme]

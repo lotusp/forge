@@ -628,8 +628,22 @@ Write the assembled buffer to `.forge/context/onboard.md`, overwriting any
 existing file. (Incremental mode handles the merge before this write; by
 the time we reach here, the buffer already reflects the final state.)
 
-**Stage 2 terminates here.** Do NOT proceed to Stage 3 unless the onboard.md
-write succeeded.
+**Stage 2 writes onboard.md. Stage 3 (Steps 4–6 below) is the other
+half of a first-run / regenerate pass and MUST execute next.**
+
+> ⚠ **Common LLM trap:** Do NOT stop here even though onboard.md is
+> written. A run that ends after Stage 2 is incomplete — the user will
+> have onboard.md but NO conventions.md / testing.md / architecture.md /
+> constraints.md, which are needed by every downstream skill
+> (/forge:clarify, /forge:design, /forge:code, /forge:inspect, /forge:test).
+>
+> In Mode B (incremental), if Stage 3 was completed in a prior run and
+> nothing has changed, Stage 3 may short-circuit with "no changes
+> detected" — but it still MUST be entered to make that determination.
+>
+> The run ONLY terminates at Step 7 (JOURNAL entry after Stage 3 finishes).
+
+**Continue now to Step 4 (Stage 3 scan).**
 
 ---
 
@@ -789,9 +803,11 @@ rewrite, append it to the section body's end with a comment marker
 
 ---
 
-### Step 7 — Append JOURNAL entry
+### Step 7 — Append JOURNAL entry (final step — run ends here)
 
-Append one entry to `.forge/JOURNAL.md`:
+This is the **only** correct place for the run to terminate. If you
+reach this step, Stages 1 + 2 + 3 have all completed. Append one entry
+to `.forge/JOURNAL.md`:
 
 ```markdown
 ## YYYY-MM-DD — /forge:onboard
@@ -805,6 +821,10 @@ Append one entry to `.forge/JOURNAL.md`:
 - excluded dims:     {count} (or "(none)") — see onboard.md header for list
 - Next:              /forge:clarify <your first feature>
 ```
+
+**Never say "Next step: /forge:calibrate" — that skill no longer exists
+in v0.5.0 (its responsibility absorbed into Stage 3 of this skill).**
+The next step after onboard is always `/forge:clarify`.
 
 ---
 
