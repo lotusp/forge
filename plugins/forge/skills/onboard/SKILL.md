@@ -121,21 +121,61 @@ Do NOT wrap the header in an HTML comment (`<!-- forge:onboard header ... -->`).
 The header is plain-text markdown so humans reading the file get project
 identity immediately.
 
-**Section marker** (Step 3.3) — every section MUST have these 5 attributes,
-exactly this order, double-quoted values:
+**Section marker** (Step 3.3) — every section marker MUST carry **all 5**
+of the following attributes, in the exact order shown, with double-quoted
+values:
 
 ```
 <!-- forge:onboard section="<id>" profile="<profile-id>" verified-commit="<git-short>" body-signature="<16hex>" generated="<YYYY-MM-DD>" -->
 ```
 
-Closing marker uses only the `section` attribute:
+**`verified-commit` and `body-signature` are two separate, independently
+required attributes. They are NOT alternatives.** Both must be present on
+every section marker. They encode different signals:
+
+- `verified-commit` = git short-hash (7–12 hex) — Mode B's fast-skip trigger
+- `body-signature` = SHA-256 first 16 hex of canonicalized body — Mode B's
+  tamper-detect trigger
+
+A marker carrying only one of them is **non-compliant** and will be
+flagged as structurally broken by `/forge:inspect`.
+
+**Examples:**
+
+✅ Correct (5 attributes):
+
+```
+<!-- forge:onboard section="tech-stack" profile="tech-stack" verified-commit="a3f2c1d4" body-signature="9f8e7d6c5b4a3210" generated="2026-04-23" -->
+```
+
+❌ Wrong — single `verified` attribute (legacy form, deprecated):
+
+```
+<!-- forge:onboard section="tech-stack" profile="tech-stack" verified="9f8e7d6c5b4a3210" generated="2026-04-23" -->
+```
+
+❌ Wrong — missing `body-signature`:
+
+```
+<!-- forge:onboard section="tech-stack" profile="tech-stack" verified-commit="a3f2c1d4" generated="2026-04-23" -->
+```
+
+❌ Wrong — missing `verified-commit`:
+
+```
+<!-- forge:onboard section="tech-stack" profile="tech-stack" body-signature="9f8e7d6c5b4a3210" generated="2026-04-23" -->
+```
+
+**Closing marker** uses only the `section` attribute (closing markers are
+positional anchors, not state carriers):
 
 ```
 <!-- /forge:onboard section="<id>" -->
 ```
 
-Missing attributes, changed order, or unquoted values violate R9 and break
-incremental mode reconciliation.
+Missing attributes, changed order, unquoted values, or collapsing
+`verified-commit` + `body-signature` into a single `verified=` all
+violate R9 and break incremental-mode reconciliation.
 
 ### R10 — Tag system is a closed enumeration
 
@@ -363,8 +403,9 @@ directory observations. 1–2 paragraphs, non-technical audience.
 **3.3 — Section markers**
 
 Each profile-generated section is wrapped in a marker pair. R9 enforces
-the exact format. Use this literal shape (substitute values, keep
-attribute order and quotes):
+the exact format — in particular, `verified-commit` and `body-signature`
+are **two separate, independently required attributes** (not alternatives).
+Use this literal shape (substitute values, keep attribute order and quotes):
 
 ```markdown
 <!-- forge:onboard section="tech-stack" profile="tech-stack" verified-commit="a3f2c1d4" body-signature="9f8e7d6c5b4a3210" generated="2026-04-22" -->

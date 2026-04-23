@@ -259,3 +259,21 @@
 - `--refresh-stale` 标注 future（不在 MVP，不污染 SKILL.md Run Modes）
 - incremental-mode.md 428 → 567 行；与 T012a SKILL.md 交叉一致
 - 下一步：重跑自举验证 T012a + T013a 修复是否生效
+
+---
+
+## 2026-04-23 — /forge:onboard
+- Kind:        claude-code-plugin (confidence 0.95)
+- Sections:    6 written / 0 preserved / 0 skipped
+- Profiles:    tech-stack, module-map, entry-points, local-dev, data-flows, notes
+- Mode:        first-run
+- Commit:      edb4f98
+- Next:        /forge:calibrate
+
+## 2026-04-23 — T012b SKILL.md R9 强化（marker 双属性歧义修复）
+- 第二轮自举发现：Run-2 sub-agent 把 `verified-commit="..." body-signature="..."` 理解成"二选一"，只输出 `verified="<16hex>"` 单属性
+- T012b 修复：R9 新增显式段落 "two separate, independently required attributes. They are NOT alternatives."
+- 新增 4 个反例（legacy `verified=` / 缺 body-signature / 缺 verified-commit / 合并成单属性）
+- Step 3.3 开头添加 R9 cross-reference 强化语
+- cache 同步到 0.3.2-dev，准备第三轮自举
+- 下一步：清理产物 → 再跑 /forge:onboard → 验证 5 属性合规
