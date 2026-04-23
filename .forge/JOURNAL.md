@@ -368,3 +368,20 @@
 - Reference Documents 表格新增 3 行（profiles/context/ 子目录）
 - 人工走读 3 场景（forge self-bootstrap / fresh web-backend / monorepo workspace）流程均可跑通
 - 下一步：Wave D — T024 clarify self-review + T025 design 4-stage 改写
+
+## 2026-04-23 — Wave D: T024 clarify self-review + T025 design 4-stage 完成 ⚠
+- T024 clarify SKILL.md: 194 → 279 行
+  - 新 IRON RULES: R15 Q 必带 [WHAT]/[HOW] label / R16 self-review 必执行
+  - Step 6 升级：Q 分类矩阵 + 启发式判据 + [HOW] 自动路由到 design-inputs.md
+  - Step 7 只招待 [WHAT] 项；Step 8 新增 synthesize + self-review 5 检查 + 3 轮 revise 上限 + 元数据块嵌入
+  - Step 9 写入，Step 10 JOURNAL
+- T025 design SKILL.md: 202 → 652 行（3.2 倍膨胀，吸收 tasking + 三个新阶段）
+  - 新 IRON RULES: R17 Scenario Walkthrough 3 场景必出 / R18 线协议字面化禁 placeholder / R19 embedded spec-review 硬阻断 + decision 层回溯 / R20 plan.md 必带 T{last} docs 任务
+  - 4 stage 架构：Ingest → Design draft (approach + components + Walkthrough + Wire Protocol) → Embedded spec-review → Task decomposition
+  - Runtime snapshot 新增 onboard kind 识别 + 最高 Task ID 查询
+  - Task 类型枚举扩展：+skill/agent/profile/kind-def（for claude-code-plugin）
+  - 输出两个独立文件：design.md 和 plan.md（DI-1）
+  - JOURNAL template 更新为新 4 阶段
+- 两个 skill 的 IRON RULES 全部保留 R1-R6 原有项并用编号式
+- 人工走读两个 skill 的 Process 流程均可跑通（clarify: Step 5 → 6 → 7 → 8 → 9 → 10；design: Stage 1 → 2 → 3 → 4）
+- 下一步：Wave E — T026 code / T027 inspect / T028 orchestrator / T029 版本
