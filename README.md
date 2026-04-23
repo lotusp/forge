@@ -3,7 +3,7 @@
   <p>AI-driven development workflow for existing codebases.</p>
 
   <p>
-    <a href="https://github.com/lotusp/forge/releases"><img src="https://img.shields.io/badge/version-0.5.0--dev-blue" alt="version"/></a>
+    <a href="https://github.com/lotusp/forge/releases"><img src="https://img.shields.io/badge/version-0.5.0-blue" alt="version"/></a>
     <a href="https://github.com/lotusp/forge/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="license"/></a>
     <img src="https://img.shields.io/badge/Claude%20Code-plugin-orange" alt="Claude Code plugin"/>
   </p>
@@ -20,6 +20,8 @@
 Forge 将软件开发的完整流程拆解为一组相互衔接的 Claude Code skill。每个 skill 产出结构化的文档产物，存储在 `.forge/` 目录，下一个 skill 直接读取，形成可跨会话持续的上下文链。
 
 **核心理念：AI 是开发者，人类提供意图和判断。**
+
+> **v0.5.0 is here.** 流水线从 9 skill 精简到 7（`calibrate` 并入 `onboard` Stage 3，`tasking` 并入 `design` Stage 4），全面 kind-aware，质量关卡内嵌。0.4.x 用户升级详见 [`docs/upgrade-0.5.md`](docs/upgrade-0.5.md)。
 
 ---
 

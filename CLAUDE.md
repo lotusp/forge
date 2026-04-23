@@ -73,7 +73,7 @@ Or use the master orchestrator which auto-detects state and routes:
 > **v0.5.0 breaking change:** pipeline shrunk from 9 skills to 7.
 > - `calibrate` — absorbed into `onboard` Stage 3 (kind-aware context extraction)
 > - `tasking` — absorbed into `design` Stage 4 (task decomposition)
-> - See `docs/upgrade-0.5.md` (generated in T031) for migration details.
+> - See [`docs/upgrade-0.5.md`](docs/upgrade-0.5.md) for migration details.
 
 > Note: `tasking` was formerly `plan` and `inspect` was formerly `review`.
 > Both were renamed because Claude Code has native `/plan` and `/review` commands
