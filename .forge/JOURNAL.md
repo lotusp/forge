@@ -295,3 +295,46 @@
 - 打标签 v0.4.0
 - onboard-kind-profiles 功能完整闭环：T006–T016 + T012a + T012b + T013a（11 + 3 = 14 个 commit）
 - 下一步：self-bootstrap 再跑一次验证 T016 后 onboard.md 的 verified-commit 会随 HEAD 自动演进；或直接进 T5 质量改进 / 其他 feature
+
+## 2026-04-23 — /forge:clarify skill-quality-hardening
+- 触发来源：onboard-kind-profiles v0.4.0 复盘暴露的流水线质量 + kind-awareness 两类系统性缺陷
+- 产出：.forge/features/skill-quality-hardening/clarify.md + design-inputs.md
+- 流水线重构（9 → 7 skills）：calibrate 并入 onboard，tasking 并入 design
+- kind-aware 全面推广：所有 onboard 产物（5 文件）按 kind 适配
+- 新机制：onboard 批量冲突裁决 / clarify self-review / design Scenario Walkthrough / design 线协议字面化 / design 内嵌 spec-review / code 首次开发规范对话 / design 自动 T{last} 文档更新任务
+- 5 个需求级 Q 全部解决（Q1:C / Q2:X only / Q3:C / Q4:A / Q5:A+Q）
+- 5 个 DI 记录（tasks 独立存放 / code Q&A 触发条件 / 规范写回多路径 / 文档更新 task / Excluded sections 头部元数据补偿）
+- Y 类 spec-review（SKILL.md 误解模式扫查）不纳入当前 feature，留给 skill-spec-review-tool
+- 未解问题：0 个
+- Gaps 识别 17 个，与 10 条 Success Criteria 一一对照
+- 下一步：/forge:design skill-quality-hardening
+
+## 2026-04-23 — Feature rename
+- skill-quality-hardening → lean-kind-aware-pipeline（范围已超出原 5 项 quality 优化，覆盖整体流水线简化 + kind 自适应）
+- 目录已 mv，clarify.md / design-inputs.md slug 引用已更新
+- 下一步：/forge:design lean-kind-aware-pipeline
+
+## 2026-04-23 — /forge:design lean-kind-aware-pipeline
+- 方案：Option A（扩展 profiles/context/ 目录，与 v0.4.0 profile 架构一脉相承）
+- 12 个 Key Decisions（K-1..K-12）全部明确
+- 3 个 Scenario Walkthrough 通过（web-backend fresh / forge self-bootstrap / monorepo）
+- 全量 Wire Protocol 字面化（onboard header / context marker / batch conflict UX / plan T{last} / code Q&A / embedded spec-review 输出）
+- Embedded spec-review 自检：10 条 Success Criteria 中 9 条 design 层覆盖，#10 自举不回归转为 tasking 层 T{last-1} 处理
+- 17 个 Gap 全覆盖
+- 风险等级：High（skill 名变更 + pipeline 重塑 + kind-aware 铺开）
+- 遗留决策：0 个 deferred
+- 产出：.forge/features/lean-kind-aware-pipeline/design.md
+- 下一步：/forge:tasking lean-kind-aware-pipeline
+
+## 2026-04-23 — /forge:tasking lean-kind-aware-pipeline
+- 产出：.forge/features/lean-kind-aware-pipeline/plan.md
+- 任务：15 个（T017–T031），高风险：4 个（T023 onboard Stage 3 / T024 clarify self-review / T025 design 四阶段 / T028 orchestrator）
+- 执行顺序分 7 波（T017+T018 → T019+T020 → T021+T022 → T023 + {T024..T029} 并行 → T030 验证 → T031 docs finalize）
+- 所有高风险任务均附缓解措施（字面示例照搬 design.md、先骨架后填内容、人工走读）
+- 下一步：/forge:code T017
+
+## 2026-04-23 — Wave A: T017 + T018 complete
+- T017: 删除 plugins/forge/skills/calibrate/ 和 plugins/forge/skills/tasking/ 两个目录；7 skill 保留
+- T018: 建立 plugins/forge/skills/onboard/profiles/context/{kinds,dimensions}/ 目录 + README（206 行）
+- README 含：目录结构图、kind file schema、dimension file schema、执行合约、section marker 合约、Content Hygiene、扩展指南
+- 下一步：Wave B — T019 3 kind 索引 + T020/T021/T022 16 个 dimension 文件
