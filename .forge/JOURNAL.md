@@ -471,3 +471,11 @@
 - 更新 13 个 dimension/profile 的 applies-to 列表加上 web-frontend
 - 更新 profiles/README.md + profiles/context/README.md + onboard SKILL.md + README.md + CLAUDE.md 的 kind 列表
 - 下一步：再次 sync cache + fresh-session 自举验证新 kind 是否正常识别
+
+## 2026-04-24 — docs/testing-kinds.md: 完整 kind 测试指南
+- 3-layer 测试金字塔（structural grep / E2E LLM 执行 / content quality 人工）
+- Workflow 覆盖：加新 kind / 改 detection signals / 改 dimensions / 改 dimension 内容
+- Debug 清单：confidence 过低 / 误识别 / 不适用 dimension 出现
+- Fixture 项目规范（tests/fixtures/<kind-id>/）
+- Ship-checklist 9 条
+- Smoke-test 自动化建议（scripts/validate-kinds.mjs 预留接口，未来工程化）
