@@ -7,5 +7,5 @@
 .DS_Store
 Thumbs.db
 
-# Local Claude settings
-.claude/settings.local.json
+# Local Claude state
+.claude/
