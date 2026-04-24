@@ -8,81 +8,63 @@ applies-to:
 confidence-signals:
   - Dockerfile present
   - k8s/ or kubernetes/ or helm/ directory
-  - terraform/ or infra/ or deploy/ directory
+  - vercel.json / netlify.toml / render.yaml / Procfile present
   - deploy workflow in CI (release.yml / deploy.yml)
-token-budget: 900
+token-budget: 450
 ---
 
 # Profile: Deployment
 
 ## Scan Patterns
 
-**Containerization:**
+**Deploy-shape signals:**
 
-- `Dockerfile` — extract base image, exposed ports, CMD/ENTRYPOINT
-- `docker-compose.yml` — local / dev stack (may differ from prod)
-- `docker-bake.hcl` — multi-target builds
-
-**Orchestration manifests:**
-
-- `k8s/` / `kubernetes/` / `manifests/` — raw YAML
-- `helm/` / `charts/` — Helm charts (look for `Chart.yaml`)
-- `kustomize/` — Kustomize overlays
-
-**Infrastructure as code:**
-
-- `terraform/` / `infra/` — Terraform modules
-- `pulumi/` — Pulumi programs
-- `cdk/` — AWS CDK
-
-**Platform-specific signals:**
-
-- `vercel.json` / `.vercel/` — Vercel
-- `netlify.toml` — Netlify
-- `fly.toml` — Fly.io
-- `railway.json` — Railway
-- `render.yaml` — Render
-- `app.yaml` — Google App Engine
-- `Procfile` — Heroku / Heroku-likes
-
-**Deploy workflow:**
-
-- `.github/workflows/deploy.yml` / `release.yml`
-- `.gitlab-ci.yml` `deploy` stages
+- `Dockerfile` — deployable container target
+- `k8s/` / `kubernetes/` / `manifests/` — raw Kubernetes manifests
+- `helm/` / `charts/` — Helm chart target
+- `vercel.json` / `.vercel/` — Vercel target
+- `netlify.toml` — Netlify target
+- `render.yaml` — Render target
+- `Procfile` — Procfile-style process target
+- `.github/workflows/deploy.yml` / `release.yml` — deploy pipeline signal
 
 ## Extraction Rules
 
-1. **State the deploy target** — platform or infrastructure kind (k8s / serverless / VM /
-   platform-as-a-service).
-2. **Environments list** — dev / staging / prod identified from manifests or CI envs.
-   **Redact** specific cluster / project / account identifiers (follow C8) — use
-   generic placeholders.
-3. **Deploy trigger** — manual / tag push / merge to main / scheduled.
-4. **Rollback mechanism** — if documented (blue-green / canary / rolling).
-5. **Skip if project is a library** — no deployment, omit the section.
-6. **Monorepo note** — if multiple services deploy from one repo, list service names only
-   (no per-service detail; that belongs in sub-package onboards).
+1. Extract only the **deployment shape** that helps a developer locate deploy
+   manifests or understand whether the project is deployable.
+2. Prefer a single line of the form `Target: <platform> via <manifest-path>`.
+3. Do not emit runtime instructions, rollout procedures, rollback procedures,
+   image registries, environment lists, or secret locations.
+4. If no direct deploy-shape signal exists, omit the section rather than infer.
+5. For monorepos, keep this workspace-level and high level; do not enumerate
+   per-service deploy detail.
+
+## Claim Classification Annotations
+
+Each fact extracted by this profile MUST be classified before render.
+
+| Extracted fact type | Claim category | Target artifact | Target section | Min confidence |
+|---------------------|----------------|-----------------|----------------|----------------|
+| Deploy platform directly evidenced by manifest or workflow | `fact` | `onboard.md` | `## Deployment` | `[high]` |
+| Manifest/charts directory locating deploy config | `fact` | `onboard.md` | `## Deployment` | `[high]` |
+
+**Forbidden routes:**
+
+- Deployment commands → omit
+- Registry / URL / secret path → omit
+- Environment names / promotion flow / rollback mechanics → omit
 
 ## Section Template
 
 ```markdown
 ## Deployment
 
-- **Target:** Kubernetes via Helm chart in `helm/orders-api/` [high]
-- **Environments:** `dev`, `staging`, `production` (separate namespaces) [high]
-- **Deploy trigger:** tag push `v*` → `.github/workflows/deploy.yml` → promotes
-  staging → prod after manual approval [high]
-- **Image registry:** configured via `DEPLOY_REGISTRY` env var (value redacted per
-  Content Hygiene) [medium]
-- **Rollback:** Helm `--atomic` with automatic revert on failed readiness probe;
-  manual `helm rollback` for post-deploy issues [medium]
-- **Infrastructure:** Terraform modules in `infra/terraform/` manage cluster + RDS +
-  Redis; applied via separate workflow not in this repo [medium]
+- **Target:** <platform> via `<manifest-path>` [high] [build]
 ```
 
 ## Confidence Tags
 
-- `[high]` — deploy config file read, environments enumerated
-- `[medium]` — platform identified but specifics inferred
-- `[low]` — directory exists without manifest inspection
-- `[inferred]` — avoid
+- `[high]` — target and manifest path both verified from config/build/workflow files
+- `[medium]` — platform is visible but manifest path is indirect
+- `[low]` — weak signal only; should usually be omitted
+- `[inferred]` — not allowed in this profile's output

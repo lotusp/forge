@@ -55,6 +55,9 @@ Read CONTRIBUTING.md  → documented convention
 3. Extract any project-specific scope list (e.g. `skill/<name>`)
    observed in commit history
 4. Note body / footer conventions if any (sign-off, co-author, issue refs)
+5. Do NOT emit task-to-commit granularity, testing-before-done expectations,
+   or `.forge` artifact update requirements here; those belong to
+   `delivery-conventions`
 
 ## Output Template
 
@@ -92,6 +95,8 @@ Read CONTRIBUTING.md  → documented convention
 <one anonymized real example from git log>
 \`\`\`
 ```
+
+This dimension is intentionally limited to commit message structure itself.
 
 ## Confidence Tags
 

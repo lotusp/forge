@@ -30,7 +30,6 @@ profiles:
   - core/tech-stack
   - core/module-map
   - core/entry-points
-  - core/local-dev
   - core/data-flows
   - core/notes
   - monorepo/workspace-layout
@@ -42,7 +41,6 @@ output-sections:
   - Module Map
   - Build System
   - Entry Points
-  - Local Development
   - Key Data Flows
   - Notes
 ---
