@@ -140,7 +140,7 @@ limited to adding new tasks; may adjust core decisions).
 Stage 4 task decomposition MUST emit a final task of type `docs`
 whose description is kind-driven (from onboard.md kind):
 
-- claude-code-plugin → README.md / CLAUDE.md updates
+- plugin → README.md / CLAUDE.md updates
 - web-backend → OpenAPI / CHANGELOG / docs/*
 - monorepo → root README + affected sub-package READMEs
 
@@ -493,7 +493,7 @@ Each task must be:
 - Independently verifiable (≥ 2 file-level acceptance criteria)
 - Scoped to a type from the enum:
   `infra | model | migration | logic | api | ui | test | docs | skill | agent | profile | kind-def`
-  (last 4 for claude-code-plugin kind)
+  (last 4 for plugin kind)
 
 **4.2 — Assign T{NNN} IDs**
 

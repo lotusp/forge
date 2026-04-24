@@ -1,5 +1,5 @@
 ---
-kind-id: claude-code-plugin
+kind-id: plugin
 display-name: Claude Code Plugin
 detection-signals:
   positive:
@@ -60,7 +60,7 @@ Typical signals:
 
 - **Minimal profile set by design** — plugins have no DB, no HTTP surface, no
   third-party integrations. Loading those profiles produces empty sections and wastes
-  tokens. K-12 Decision: claude-code-plugin uses only the 6 core profiles.
+  tokens. K-12 Decision: plugin uses only the 6 core profiles.
 - **Module Map adaptation** — each `skills/<name>/` and `agents/<name>/` counts as
   a module. Responsibility = the skill's one-line purpose from its `description`
   frontmatter.

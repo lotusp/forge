@@ -3,7 +3,7 @@
 > 日期：2026-04-23
 > 被测版本：forge 0.5.0-dev (HEAD 59836a2)
 > 验证对象：v0.5.0 pipeline consolidation (9→7 skills + kind-aware propagation)
-> 自举对象：forge 仓库本身（claude-code-plugin kind）
+> 自举对象：forge 仓库本身（plugin kind）
 
 ---
 
@@ -36,9 +36,9 @@
 作为 workaround 由主 agent 按新 SKILL.md 要求手工产出验证样本：
 
 1. **onboard.md** — sub-agent 产生的 Stage 1+2 结果，主 agent 后处理修正 marker 为 6 属性格式 + 补 `Excluded-dimensions:` 头部行
-2. **conventions.md** (348 行) — 按 `profiles/context/dimensions/*.md` 6 个 claude-code-plugin 适用 dimension 产出（naming, error-handling, skill-format, artifact-writing, markdown-conventions, commit-format）
+2. **conventions.md** (348 行) — 按 `profiles/context/dimensions/*.md` 6 个 plugin 适用 dimension 产出（naming, error-handling, skill-format, artifact-writing, markdown-conventions, commit-format）
 3. **testing.md** (45 行) — 按 testing-strategy dimension + kind 分支"self-bootstrap"模板产出
-4. **architecture.md** (71 行) — 按 architecture-layers dimension + claude-code-plugin kind 分支产出（skill/agent/script/artifact 四层）
+4. **architecture.md** (71 行) — 按 architecture-layers dimension + plugin kind 分支产出（skill/agent/script/artifact 四层）
 5. **constraints.md** (182 行) — 按 hard-constraints + anti-patterns 产出；继承 v0.4.x 的 C1-C8 + 本次新增 C9-C10
 
 产出遵守：

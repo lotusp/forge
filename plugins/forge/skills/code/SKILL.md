@@ -96,7 +96,7 @@ and Step 1 begins immediately.
 | `logic` / `api` / `model` | `conventions.md § Development Workflow` (TDD preference, commit format) |
 | `migration` | `conventions.md § Development Workflow` + migration practice |
 | `docs` | `conventions.md § Development Workflow § commit format` |
-| `skill` / `agent` / `profile` / `kind-def` (claude-code-plugin) | `conventions.md § Artifact Writing + SKILL Format` |
+| `skill` / `agent` / `profile` / `kind-def` (plugin) | `conventions.md § Artifact Writing + SKILL Format` |
 
 **0.5.2 — Detect gaps**
 

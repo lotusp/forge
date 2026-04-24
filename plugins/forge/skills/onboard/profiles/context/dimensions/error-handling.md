@@ -3,7 +3,8 @@ name: error-handling
 output-file: conventions.md
 applies-to:
   - web-backend
-  - claude-code-plugin
+  - web-frontend
+  - plugin
   - monorepo
 scan-sources:
   - glob: "src/**/*.{ts,js,java,go,py,rs}"
@@ -42,7 +43,7 @@ Glob "src/**/errors/**"                 → enumerate error classes
 "extends (Error|RuntimeException|...)"  → inheritance chain
 ```
 
-**For claude-code-plugin kind:** scan SKILL.md for interaction-error
+**For plugin kind:** scan SKILL.md for interaction-error
 patterns (structured `[forge:<skill>]` halts, IRON RULE halt messages).
 
 ## Extraction Rules
@@ -79,7 +80,7 @@ patterns (structured `[forge:<skill>]` halts, IRON RULE halt messages).
 - Mixing the non-chosen mode in new code
 ```
 
-### Output Template — claude-code-plugin
+### Output Template — plugin
 
 ```markdown
 ## Error Handling

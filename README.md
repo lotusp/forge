@@ -55,7 +55,7 @@ onboard → clarify → design → code → inspect → test
 | Skill | 调用方式 | 作用 | 输出 |
 |-------|---------|------|------|
 | `forge` | `/forge:forge [意图或 slug]` | 自动检测项目状态，路由到正确的下一步 | — |
-| `onboard` | `/forge:onboard` | **三阶段**：kind 识别 → onboard.md 项目地图 → 扫描 + 批量冲突裁决 + smart merge 生成 context 文件；全面 kind-aware | `.forge/context/onboard.md` + `conventions.md` / `testing.md` / `architecture.md` / `constraints.md`（kind 适用子集） |
+| `onboard` | `/forge:onboard` | **三阶段**：kind 识别（web-backend / web-frontend / plugin / monorepo）→ onboard.md 项目地图 → 扫描 + 批量冲突裁决 + smart merge 生成 context 文件；全面 kind-aware | `.forge/context/onboard.md` + `conventions.md` / `testing.md` / `architecture.md` / `constraints.md`（kind 适用子集） |
 | `clarify` | `/forge:clarify <需求>` | 追踪代码路径；Q 分类 `[WHAT]` / `[HOW]` 自动路由；产出前 5 项自校验 | `.forge/features/{slug}/clarify.md` + 可选 `design-inputs.md` |
 | `design` | `/forge:design <feature>` | **四阶段**：设计 draft + 强制 Scenario Walkthrough + Wire Protocol 字面化 + 内嵌 spec-review 硬阻断；Stage 4 同时产出 plan.md | `.forge/features/{slug}/design.md` + `plan.md` |
 | `code` | `/forge:code T001` | 首次遇到 convention gap 时触发一次性 Q&A，答案写回 conventions | 源文件 + `.forge/features/{slug}/tasks/T001-summary.md` |

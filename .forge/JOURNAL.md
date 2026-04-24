@@ -78,7 +78,7 @@
 - 产出：.forge/features/onboard-kind-profiles/clarify.md
 - 未知项：10 个问题全部回答（Batch 1 × 5 + Batch 2 × 5），5 个 Open Questions 推迟到 design
 - 关键决策：
-  - 3 个起手 kind：web-backend / claude-code-plugin / monorepo
+  - 3 个起手 kind：web-backend / plugin / monorepo
   - Profile 位置：skill-local `reference/profiles/*.md`
   - 一次性发 v0.4.0 breaking（无存量用户）
   - IRON RULES 用 core + per-kind overlay 结构
@@ -149,7 +149,7 @@
 - DI 声明：DI-1..DI-5 全部 Accept（DI-5 含 minor refinement：5 节正文 + 压缩 IRON RULES 上限 5 行）
 - 遗留决策：0 个 deferred
 - 规模预估：新建 3 个 kind 定义 + 17 个 profile 文件（约 6 core + 3 structural + 2 model + 2 entry-points + 3 integration + 1 monorepo）+ 重写 SKILL.md + 更新 incremental-mode.md + 删除 output-template.md
-- 3 个 kind 的 execution plan 已明确（claude-code-plugin 10 profile / web-backend 12 profile / monorepo 8 profile）
+- 3 个 kind 的 execution plan 已明确（plugin 10 profile / web-backend 12 profile / monorepo 8 profile）
 - 下一步：/forge:tasking onboard-kind-profiles
 
 ## 2026-04-22 — /forge:tasking onboard-kind-profiles
@@ -165,9 +165,9 @@
 - T008：3 个 structural profile 文件（build-system、config-management、deployment）
 - T009：4 个 model/entry-points 文件（domain-model、db-schema、http-api、event-consumers）
 - T010：4 个 integration/monorepo 文件（third-party-apis、auth、messaging、workspace-layout）
-- T011：3 个 kind 定义文件（web-backend、claude-code-plugin、monorepo）
+- T011：3 个 kind 定义文件（web-backend、plugin、monorepo）
 - 所有示例使用 e-commerce 调色板（Order/Customer/Product/Payment + com.example.shop.*），遵守 C8
-- claude-code-plugin kind 明确仅加载 6 个 core profiles（K-12 Decision）
+- plugin kind 明确仅加载 6 个 core profiles（K-12 Decision）
 - monorepo kind 的 workspace-layout 预留 K-14 recursive-targets 扩展点
 - 下一步：检查点 1 — 人工过一遍 profile/kind 一致性，随后进入 Batch B (T012 SKILL.md 改写)
 
@@ -177,7 +177,7 @@
 - Process 两阶段：Step 1 kind detection → Execution Plan (frozen) → Step 2 read-do-discard 伪代码循环
 - 5 Run Modes：first-run / incremental / regenerate / single-section / force-kind
 - 4 halt 场景交互消息模板齐备（低置信度 / unknown / 歧义 / kind drift）
-- 人工走读：3 种 kind 各模拟一次，修复 runtime snapshot 路径依赖 + claude-code-plugin 嵌套布局检测
+- 人工走读：3 种 kind 各模拟一次，修复 runtime snapshot 路径依赖 + plugin 嵌套布局检测
 - 下一步：T013 incremental-mode.md 更新
 
 ## 2026-04-22 — T013 incremental-mode.md 更新
@@ -199,11 +199,11 @@
 
 ## 2026-04-22 — /forge:onboard (Mode A — first run, T015 自举验证)
 - 产出：.forge/context/onboard.md (7 sections written, 0 reused)
-- Kind 检测：claude-code-plugin（置信度 0.90），加载 6 个 core profiles
+- Kind 检测：plugin（置信度 0.90），加载 6 个 core profiles
 - 摘要：9 个 skill, 3 个 agent, 4 个辅助脚本, 0 个外部集成
 - 置信度警示：1 个 [conflict]（plugin.json 版本 0.3.2-dev vs README badge 0.3.1）
 - 自举发现：
-  1. Kind 检测逻辑运行正常 — claude-code-plugin 识别置信度 0.90，无歧义
+  1. Kind 检测逻辑运行正常 — plugin 识别置信度 0.90，无歧义
   2. 6 个 core profile 覆盖了所有有意义的截面；excluded profiles (structural/model/integration) 确实无内容
   3. Section 4 (Core Domain Objects) 对 plugin 项目不适用 — 由 kind 的 output-sections 设计正确排除
   4. notes.md profile 对自举项目效果良好，CLAUDE.md + JOURNAL 提供了充足信号
@@ -211,7 +211,7 @@
 
 ## 2026-04-22 — /forge:onboard (Mode B — incremental)
 - 产出：.forge/context/onboard.md (2 sections rewritten, 5 reused)
-- Kind 检测：claude-code-plugin（置信度 0.90）；HEAD d3db26a 与上次 verified hash 一致，无新提交
+- Kind 检测：plugin（置信度 0.90）；HEAD d3db26a 与上次 verified hash 一致，无新提交
 - 变更摘要：
   - Section 3 (module-map)：修正 `forge` skill 描述（原 [TEST-MARKER-DIRTY-2] → 正确描述），更新 `onboard` 描述反映 kind-aware profile 架构
   - Section 7 (notes)：更新 onboard-kind-profiles 状态（T015 验证完成，T016 待完成）
@@ -220,7 +220,7 @@
 - 下一步：/forge:calibrate
 
 ## 2026-04-22 — T015 自举验证（条件通过）
-- Phase 1 first-run：kind 识别 `claude-code-plugin` @ 0.90 confidence；7 sections 齐备，6 core profiles 加载；219 行产物
+- Phase 1 first-run：kind 识别 `plugin` @ 0.90 confidence；7 sections 齐备，6 core profiles 加载；219 行产物
 - Phase 2 incremental（3 处手改触发）：
   - Tech Stack preserve 块：✅ 原样保留
   - Module Map 非 preserve 修改：✅ 重写覆盖
@@ -263,7 +263,7 @@
 ---
 
 ## 2026-04-23 — /forge:onboard
-- Kind:        claude-code-plugin (confidence 0.95)
+- Kind:        plugin (confidence 0.95)
 - Sections:    6 written / 0 preserved / 0 skipped
 - Profiles:    tech-stack, module-map, entry-points, local-dev, data-flows, notes
 - Mode:        first-run
@@ -279,7 +279,7 @@
 - 下一步：清理产物 → 再跑 /forge:onboard → 验证 5 属性合规
 
 ## 2026-04-23 — /forge:onboard
-- Kind:        claude-code-plugin (confidence 1.00)
+- Kind:        plugin (confidence 1.00)
 - Sections:    6 written / 0 preserved / 0 skipped
 - Profiles:    tech-stack, module-map, entry-points, local-dev, data-flows, notes
 - Mode:        first-run
@@ -340,10 +340,10 @@
 - 下一步：Wave B — T019 3 kind 索引 + T020/T021/T022 16 个 dimension 文件
 
 ## 2026-04-23 — Wave B: T019 + T020 + T021 + T022 complete
-- T019: 3 个 context kind 索引（web-backend / claude-code-plugin / monorepo），声明每个 kind 加载的 dimension 子集 + excluded-dimensions
+- T019: 3 个 context kind 索引（web-backend / plugin / monorepo），声明每个 kind 加载的 dimension 子集 + excluded-dimensions
 - T020: 7 个通用 dimension（naming / error-handling / commit-format / architecture-layers / hard-constraints / anti-patterns / testing-strategy），含 kind 分支输出模板
 - T021: 6 个 web-backend 专用 dimension（logging / validation / api-design / database-access / messaging / authentication）
-- T022: 3 个 claude-code-plugin 专用 dimension（skill-format / artifact-writing / markdown-conventions）
+- T022: 3 个 plugin 专用 dimension（skill-format / artifact-writing / markdown-conventions）
 - 共计 19 个新文件，2180 行；所有示例遵守 C8（e-commerce 调色板 + C8 redaction）
 - 每个文件符合 profiles/context/README.md 的 schema：frontmatter + 4 小节（Scan/Extraction/Output/Confidence）
 - 下一步：Wave C — T023 onboard SKILL.md Stage 3 改写（高风险）
@@ -379,7 +379,7 @@
   - 新 IRON RULES: R17 Scenario Walkthrough 3 场景必出 / R18 线协议字面化禁 placeholder / R19 embedded spec-review 硬阻断 + decision 层回溯 / R20 plan.md 必带 T{last} docs 任务
   - 4 stage 架构：Ingest → Design draft (approach + components + Walkthrough + Wire Protocol) → Embedded spec-review → Task decomposition
   - Runtime snapshot 新增 onboard kind 识别 + 最高 Task ID 查询
-  - Task 类型枚举扩展：+skill/agent/profile/kind-def（for claude-code-plugin）
+  - Task 类型枚举扩展：+skill/agent/profile/kind-def（for plugin）
   - 输出两个独立文件：design.md 和 plan.md（DI-1）
   - JOURNAL template 更新为新 4 阶段
 - 两个 skill 的 IRON RULES 全部保留 R1-R6 原有项并用编号式
@@ -402,7 +402,7 @@
 - 下一步：Wave F — T030 自举验证
 
 ## 2026-04-23 — /forge:onboard
-- Kind:        claude-code-plugin (confidence 1.00)
+- Kind:        plugin (confidence 1.00)
 - Sections:    6 written / 0 preserved / 0 skipped
 - Profiles:    tech-stack, module-map, entry-points, local-dev, data-flows, notes
 - Mode:        first-run
@@ -410,7 +410,7 @@
 - Next:        /forge:calibrate
 
 ## 2026-04-23 — /forge:onboard
-- Kind:        claude-code-plugin (confidence 1.00)
+- Kind:        plugin (confidence 1.00)
 - Sections:    6 written / 0 preserved / 0 skipped
 - Profiles:    tech-stack, module-map, entry-points, local-dev, data-flows, notes
 - Mode:        first-run
@@ -429,7 +429,7 @@
 - 下一步: Wave H — T031 docs finalize + v0.5.0 tag
 
 ## 2026-04-23 — /forge:onboard
-- Kind:              claude-code-plugin (confidence 1.00)
+- Kind:              plugin (confidence 1.00)
 - Mode:              first-run
 - Commit:            9dbca95
 - onboard.md:        7 sections written / 0 preserved blocks / 0 skipped
@@ -460,3 +460,14 @@
 - onboard-kind-profiles feature (v0.4.0) + lean-kind-aware-pipeline feature (v0.5.0) 至此闭环
 - 打 tag v0.5.0 并 push
 - forge v0.5.0 正式发布
+
+## 2026-04-24 — v0.5.1 patch：kind 命名简化 + 新增 web-frontend
+- 重命名 `claude-code-plugin` → `plugin`（更简短、不局限于 Claude Code 生态）
+- 新增 `web-frontend` kind（SPA: React/Vue/Angular/Svelte/etc.）
+  - Stage 2 kind 文件：signals + profiles (11) + output-sections (12)；负信号排除 plugin/backend/monorepo
+  - Stage 3 context kind 文件：6 dimensions (naming, error-handling, logging, validation, authentication, commit-format) + testing-strategy + architecture-layers + hard-constraints + anti-patterns
+  - Excluded dimensions: api-design, database-access, messaging, skill-format, artifact-writing, markdown-conventions
+  - architecture-layers.md + testing-strategy.md 新增 web-frontend 专用输出模板（Page→Component→Hook→Store→Service 五层；三级测试金字塔）
+- 更新 13 个 dimension/profile 的 applies-to 列表加上 web-frontend
+- 更新 profiles/README.md + profiles/context/README.md + onboard SKILL.md + README.md + CLAUDE.md 的 kind 列表
+- 下一步：再次 sync cache + fresh-session 自举验证新 kind 是否正常识别

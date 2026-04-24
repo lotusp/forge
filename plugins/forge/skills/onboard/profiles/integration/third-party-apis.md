@@ -3,6 +3,7 @@ name: third-party-apis
 section: Third-Party Integrations
 applies-to:
   - web-backend
+  - web-frontend
   - monorepo
 confidence-signals:
   - external SDK dependencies (stripe, twilio, sendgrid, etc.)

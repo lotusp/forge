@@ -3,7 +3,8 @@ name: notes
 section: Notes
 applies-to:
   - web-backend
-  - claude-code-plugin
+  - web-frontend
+  - plugin
   - monorepo
 confidence-signals:
   - CLAUDE.md present (project-specific AI guidance)

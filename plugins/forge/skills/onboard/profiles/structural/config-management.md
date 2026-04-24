@@ -3,6 +3,7 @@ name: config-management
 section: Configuration
 applies-to:
   - web-backend
+  - web-frontend
   - monorepo
 confidence-signals:
   - .env.example / .env.sample present

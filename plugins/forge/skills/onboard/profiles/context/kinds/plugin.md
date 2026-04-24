@@ -1,5 +1,5 @@
 ---
-kind-id: claude-code-plugin
+kind-id: plugin
 display-name: Claude Code Plugin
 output-files:
   - conventions.md

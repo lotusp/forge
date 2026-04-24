@@ -3,7 +3,8 @@ name: architecture-layers
 output-file: architecture.md
 applies-to:
   - web-backend
-  - claude-code-plugin
+  - web-frontend
+  - plugin
   - monorepo
 scan-sources:
   - glob: "src/**/*.{ts,js,java,go,py}"
@@ -27,7 +28,7 @@ token-budget: 1000
 - Grep import directions to detect layering violations
 - Read 3–5 representative service files to infer where business logic sits
 
-**For claude-code-plugin:**
+**For plugin:**
 - Enumerate `skills/` subdirectories (each = one skill module)
 - Enumerate `agents/*.md` (sub-agent layer)
 - Enumerate `plugins/*/skills/<name>/{reference,scripts,profiles}/`
@@ -46,7 +47,7 @@ token-budget: 1000
    skill-agent-artifact / workspace packages)
 2. Record **import direction rules** — which layer may depend on which
 3. List **modules in each layer** (top 5–10, skip generated)
-4. For claude-code-plugin: document skill ↔ agent ↔ script boundaries
+4. For plugin: document skill ↔ agent ↔ script boundaries
 5. For monorepo: document package dependency direction + forbidden cycles
 
 ## Output Template
@@ -74,7 +75,7 @@ token-budget: 1000
 - Circular imports between service modules
 ```
 
-### Output Template — claude-code-plugin
+### Output Template — plugin
 
 ```markdown
 ## Architecture Layers
@@ -101,6 +102,48 @@ token-budget: 1000
 - Agent directly writing to `.forge/` (violates agent-skill boundary)
 - Skills bypassing status.mjs (the routing authority for orchestrator)
 - Cross-skill imports (each skill is self-contained prompt)
+```
+
+### Output Template — web-frontend
+
+```markdown
+## Architecture Layers
+
+**Model:** <Page/Route → Component → Hook/Store → API Client>
+
+**Layers (top → bottom):**
+- `<pages/ | routes/ | app/>` — page / route components, 1-to-1 with URL
+  [high] [code]
+- `<components/>` — reusable UI pieces; presentational + container
+  distinction if applicable [high] [code]
+- `<hooks/>` — React hooks / Vue composables; encapsulate stateful logic
+  reusable across components [high] [code]
+- `<stores/ | state/>` — global state containers (Redux / Zustand /
+  Pinia / Vuex / Recoil) [medium] [code]
+- `<services/ | api/>` — API client wrappers, HTTP interceptors, error
+  transformers [high] [code]
+
+**Import direction rules:**
+- `pages → components → hooks → services`; no backward imports
+  [high] [code]
+- `stores` can be read from anywhere but writes centralized in action
+  files or store setters [high] [code]
+- `services` never import from `pages` or `components` [high] [code]
+
+**Routing:** <React Router | Vue Router | Next.js App Router | file-based>
+[high] [code]
+
+**State management:** <Redux Toolkit | Zustand | Pinia | Context+useReducer
+| none> [high] [code]
+
+**Styling:** <CSS Modules | Tailwind | styled-components | emotion |
+vanilla-extract> [high] [code]
+
+**What to avoid:**
+- Direct DOM manipulation (document.querySelector) bypassing the framework
+- Business logic in components (push to hooks or stores)
+- API calls inside components (always via services layer)
+- Global CSS leak (use Modules or CSS-in-JS scoping)
 ```
 
 ### Output Template — monorepo

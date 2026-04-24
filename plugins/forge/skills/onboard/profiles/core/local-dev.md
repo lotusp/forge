@@ -3,7 +3,8 @@ name: local-dev
 section: Local Development
 applies-to:
   - web-backend
-  - claude-code-plugin
+  - web-frontend
+  - plugin
   - monorepo
 confidence-signals:
   - Makefile present

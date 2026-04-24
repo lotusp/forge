@@ -3,12 +3,13 @@ name: module-map
 section: Module Map
 applies-to:
   - web-backend
-  - claude-code-plugin
+  - web-frontend
+  - plugin
   - monorepo
 confidence-signals:
   - src/ or lib/ directory with subdirectories
   - packages/ or apps/ directory (monorepo)
-  - skills/ or agents/ directory (claude-code-plugin)
+  - skills/ or agents/ directory (plugin)
   - explicit module index files (mod.rs / index.ts / __init__.py at subdirectory roots)
 token-budget: 1500
 ---
@@ -21,7 +22,7 @@ token-budget: 1500
 
 - `src/*/` — typical single-app layout
 - `packages/*/` / `apps/*/` / `libs/*/` / `services/*/` — monorepo layout
-- `skills/*/` / `agents/*/` — claude-code-plugin layout
+- `skills/*/` / `agents/*/` — plugin layout
 - `internal/*/` / `pkg/*/` / `cmd/*/` — Go layout convention
 - `<kebab-name>/src/main/java/...` — JVM multi-module
 

@@ -3,6 +3,7 @@ name: build-system
 section: Build System
 applies-to:
   - web-backend
+  - web-frontend
   - monorepo
 confidence-signals:
   - Makefile / build config files present

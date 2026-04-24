@@ -26,7 +26,7 @@ forge/                             ← marketplace root (github.com/lotusp/forge
 │       │   ├── onboard/             ← absorbed calibrate as Stage 3 (v0.5.0)
 │       │   │   ├── SKILL.md
 │       │   │   ├── profiles/
-│       │   │   │   ├── kinds/       ← web-backend / claude-code-plugin / monorepo
+│       │   │   │   ├── kinds/       ← web-backend / web-frontend / plugin / monorepo
 │       │   │   │   ├── core/        ← 6 core profiles (onboard.md sections)
 │       │   │   │   ├── structural/  ← build / config / deployment
 │       │   │   │   ├── model/       ← domain-model / db-schema

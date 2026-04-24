@@ -154,8 +154,8 @@ v0.4.0 落地后，以下 8 条验收项需全部通过：
 
 ### 产品行为
 
-1. **自举（claude-code-plugin）：** 在 forge 自身跑 `/forge:onboard --regenerate`，
-   产出 `.forge/context/onboard.md` 自动检测为 `claude-code-plugin` kind，section
+1. **自举（plugin）：** 在 forge 自身跑 `/forge:onboard --regenerate`，
+   产出 `.forge/context/onboard.md` 自动检测为 `plugin` kind，section
    集合**不含** `domain-entities` / `http-entry-points` / `external-integrations`
    这类不适用 section；**含** `artifact-types` / `slash-command-entry-points`。
 2. **主流后端（web-backend）：** 在一个典型 Spring Boot 单体项目跑 `--regenerate`，
@@ -193,7 +193,7 @@ v0.4.0 落地后，以下 8 条验收项需全部通过：
 
 | # | 需求级问题 | 答案 | 归属层面 |
 |---|-----------|------|----------|
-| Q-1 | v0.4.0 MVP 应支持哪几个 kind？ | **B** — 3 个聚焦：`web-backend` / `claude-code-plugin` / `monorepo` | 产品范围 |
+| Q-1 | v0.4.0 MVP 应支持哪几个 kind？ | **B** — 3 个聚焦：`web-backend` / `plugin` / `monorepo` | 产品范围 |
 | Q-2 | v0.4.0 是否作为 breaking release 一次性推出？ | **A** — 一次性发 v0.4.0 | 产品策略 |
 | Q-3 | 是否为 v0.3.x 旧产物提供向后兼容迁移？ | **D** — 不提供，forge 无存量用户 | 产品策略 |
 | Q-4 | Monorepo kind 是否递归生成每子包独立 onboard？ | **C** — MVP 仅列包图并对每子包做 kind detection；递归生成 defer 至未来版本 | 范围裁剪 |

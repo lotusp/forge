@@ -25,7 +25,7 @@
 
 Where v0.4.x made `onboard.md` kind-aware, v0.5.0 extends kind-awareness to
 **all context files** (conventions / testing / architecture / constraints).
-A `claude-code-plugin` kind project no longer produces a Logging section
+A `plugin` kind project no longer produces a Logging section
 that doesn't apply; a `web-backend` project no longer produces a
 Skill-Format section.
 

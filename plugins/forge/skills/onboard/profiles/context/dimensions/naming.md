@@ -3,7 +3,8 @@ name: naming
 output-file: conventions.md
 applies-to:
   - web-backend
-  - claude-code-plugin
+  - web-frontend
+  - plugin
   - monorepo
 scan-sources:
   - glob: "src/**/*.{ts,js,java,go,py,rs}"
@@ -51,7 +52,7 @@ Glob "src/**/*"  →  collect basename styles
    add to batch conflict list
 3. If a linter config exists, prefer its declared style over observed
    counts (linter declarations carry higher confidence)
-4. For claude-code-plugin kind, skip DB column scan (not applicable)
+4. For plugin kind, skip DB column scan (not applicable)
 
 ## Output Template
 

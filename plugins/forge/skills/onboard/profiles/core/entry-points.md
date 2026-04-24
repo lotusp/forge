@@ -3,14 +3,15 @@ name: entry-points
 section: Entry Points
 applies-to:
   - web-backend
-  - claude-code-plugin
+  - web-frontend
+  - plugin
   - monorepo
 confidence-signals:
   - HTTP route definitions
   - CLI argument parser usage
   - Scheduled job / cron registration
   - Event consumer registration
-  - plugin.json skills/agents declarations (claude-code-plugin)
+  - plugin.json skills/agents declarations (plugin)
 token-budget: 1500
 ---
 
@@ -82,7 +83,7 @@ Representative routes:
 ### Event Consumers
 - `order.created` → Kafka topic `orders.events` (`src/consumers/order.ts`) [high]
 
-### Plugin Skills (claude-code-plugin only)
+### Plugin Skills (plugin only)
 - `/forge:onboard` — project map generation + context file extraction (Stage 3) [high]
 - `/forge:design` — technical design + task plan in one pass [high]
 ```

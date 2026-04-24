@@ -2,7 +2,7 @@
 name: artifact-writing
 output-file: conventions.md
 applies-to:
-  - claude-code-plugin
+  - plugin
 scan-sources:
   - glob: ".forge/**/*.md"
   - glob: "plugins/*/skills/*/SKILL.md"

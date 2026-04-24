@@ -3,6 +3,7 @@ name: auth
 section: Authentication & Authorization
 applies-to:
   - web-backend
+  - web-frontend
   - monorepo
 confidence-signals:
   - auth library in deps (passport / jsonwebtoken / nextauth / spring-security)

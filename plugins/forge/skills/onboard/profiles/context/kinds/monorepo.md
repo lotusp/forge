@@ -57,7 +57,7 @@ itself is not deployed; individual sub-packages are.
 
 - **skill-format / artifact-writing / markdown-conventions** — monorepo
   仓库本体不是 Claude Code plugin；这些维度不适用。若某个子包**是** plugin，
-  将来 K-14 递归 onboard 的该子包会用 claude-code-plugin kind。
+  将来 K-14 递归 onboard 的该子包会用 plugin kind。
 
 ## Forward compatibility note
 
@@ -65,4 +65,4 @@ Per-package recursive onboard (K-14) is out of MVP scope. Currently the
 monorepo kind produces workspace-level context only. Future recursive
 onboard will run `/forge:onboard` inside each sub-package directory,
 producing `packages/<name>/.forge/context/*.md` with whichever kind
-(`web-backend` / `claude-code-plugin`) that sub-package identifies as.
+(`web-backend` / `plugin`) that sub-package identifies as.
