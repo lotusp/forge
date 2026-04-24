@@ -26,7 +26,6 @@ profiles:
   - core/tech-stack
   - core/module-map
   - core/entry-points
-  - core/local-dev
   - core/data-flows
   - core/notes
 output-sections:
@@ -34,7 +33,6 @@ output-sections:
   - Tech Stack
   - Module Map
   - Entry Points
-  - Local Development
   - Key Data Flows
   - Notes
 ---
@@ -60,7 +58,8 @@ Typical signals:
 
 - **Minimal profile set by design** — plugins have no DB, no HTTP surface, no
   third-party integrations. Loading those profiles produces empty sections and wastes
-  tokens. K-12 Decision: plugin uses only the 6 core profiles.
+  tokens. After the evidence-first redesign, plugin uses only the 5 retained core
+  profiles (`tech-stack`, `module-map`, `entry-points`, `data-flows`, `notes`).
 - **Module Map adaptation** — each `skills/<name>/` and `agents/<name>/` counts as
   a module. Responsibility = the skill's one-line purpose from its `description`
   frontmatter.
@@ -69,9 +68,6 @@ Typical signals:
   the traditional sense.
 - **Key Data Flows adaptation** — flows are artifact pipelines (skill A produces
   artifact X → skill B reads X). See `data-flows.md` for the plugin-specific template.
-- **Local Development adaptation** — "run locally" = `claude --plugin-dir ./` or
-  `/reload-plugins` inside Claude Code. No build step unless the plugin has scripts.
-
 ## Excluded Profiles
 
 - All `structural/*` (build-system / config-management / deployment)

@@ -17,6 +17,7 @@ dimensions-loaded:
     - dimensions/messaging
     - dimensions/authentication
     - dimensions/commit-format
+    - dimensions/delivery-conventions
   testing:
     - dimensions/testing-strategy
   architecture:
@@ -24,6 +25,7 @@ dimensions-loaded:
   constraints:
     - dimensions/hard-constraints
     - dimensions/anti-patterns
+    - dimensions/delivery-conventions
 excluded-dimensions:
   - skill-format
   - artifact-writing

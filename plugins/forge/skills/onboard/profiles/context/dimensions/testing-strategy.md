@@ -64,6 +64,24 @@ token-budget: 1200
 5. For plugin kind: describe self-bootstrap workflow in lieu of
    traditional testing; catalogue existing verification reports
 6. Detect fixtures / factories / test data conventions
+7. Apply sample-size confidence floor:
+   - 1 consistent sample → `[low]`
+   - 2 consistent samples → `[medium]`
+   - 3 or more consistent samples → `[high]`
+   - a rule inferred from a single file must not exceed `[low]`
+
+## Claim Classification Annotations
+
+| Extracted fact type | Claim category | Target artifact | Target section | Min confidence |
+|---------------------|----------------|-----------------|----------------|----------------|
+| Test framework / layout / base infrastructure fact | `fact` | `testing.md` | `## Testing Strategy` | `[low]` to `[high]` per sample size |
+| Soft guidance about what to avoid in tests | `recommended-pattern` | `testing.md` | `## Testing Strategy` | `[medium]` |
+| Delivery/process requirement such as "must run verification before done" | `process-rule` | `constraints.md` or `conventions.md` via `delivery-conventions` | `## Process / Quality Gates` or `## Delivery Conventions` | `[medium]` |
+
+**Forbidden routes:**
+
+- process expectations are not emitted directly by this dimension
+- single-file inferred global rules must not exceed `[low]`
 
 ## Output Template
 
@@ -196,8 +214,8 @@ or a representative sample project and observing the produced artifacts.
 
 ## Confidence Tags
 
-- `[high]` — framework declared in build config AND CI gates tests
-- `[medium]` — framework in use but coverage / mocking not consistent
-- `[low]` — minimal test coverage; strategy inferred from < 5 test files
+- `[high]` — framework/rule supported by 3+ consistent samples or strong build+CI evidence
+- `[medium]` — framework/rule supported by 2 consistent samples
+- `[low]` — framework/rule supported by 1 sample only, or inferred from a single file
 - `[inferred]` — strategy recommended based on framework defaults without
                  observed tests

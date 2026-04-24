@@ -14,6 +14,7 @@ dimensions-loaded:
     - dimensions/artifact-writing
     - dimensions/markdown-conventions
     - dimensions/commit-format
+    - dimensions/delivery-conventions
   testing:
     - dimensions/testing-strategy
   architecture:
@@ -21,6 +22,7 @@ dimensions-loaded:
   constraints:
     - dimensions/hard-constraints
     - dimensions/anti-patterns
+    - dimensions/delivery-conventions
 excluded-dimensions:
   - logging
   - validation

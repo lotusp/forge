@@ -117,7 +117,7 @@ Each profile-generated section is wrapped (see SKILL.md R9 for the
 authoritative literal template):
 
 ```markdown
-<!-- forge:onboard section="tech-stack" profile="tech-stack" verified-commit="a3f2c1d4" body-signature="9f8e7d6c5b4a3210" generated="2026-04-22" -->
+<!-- forge:onboard source-file="onboard.md" section="tech-stack" profile="core/tech-stack" verified-commit="a3f2c1d4" body-signature="9f8e7d6c5b4a3210" generated="2026-04-22" -->
 
 ## Tech Stack
 
@@ -130,6 +130,7 @@ authoritative literal template):
 
 | Attribute | Meaning | Set by | Role |
 |-----------|---------|--------|------|
+| `source-file` | artifact file owning the section (`onboard.md`, `conventions.md`, etc.) | Stage 2 / 3 | routing |
 | `section` | kebab-case ID matching the kind's `output-sections` entry | Stage 2 | structural |
 | `profile` | source profile's `name` frontmatter (e.g. `tech-stack`) | Stage 2 | routing (Mode D) |
 | `verified-commit` | git short-hash at scan time (I-R2a) | Stage 2 | **primary** fast-skip |
@@ -148,6 +149,7 @@ The artifact starts with:
 > Generated:        <YYYY-MM-DD>
 > Commit:           <short-sha>
 > Generator:        /forge:onboard (v<plugin-version>)
+> Excluded-dimensions:  <comma-separated list or "(none)">
 ```
 
 Incremental runs read `Kind:` and `Commit:` from this header before any
@@ -243,6 +245,106 @@ Mode B backward-compat path:
   "Artifact uses deprecated marker schema; run --regenerate to upgrade".
 - On the next `--regenerate`, the artifact is rewritten with the new schema
   and warning goes away.
+
+---
+
+## Pre-redesign format detection
+
+The evidence-first redesign introduces structural anchors that older
+artifacts do not have. Incremental mode must detect this before smart-merge.
+
+**Inputs:**
+
+- existing `.forge/context/*.md` files
+- the current kind's `dimensions-loaded` registry
+- each current dimension's required anchors from its Output Template
+- the current run mode (`incremental` vs `regenerate`)
+
+**Output:**
+
+- `pre_redesign_sections[]` — a list of sections that require `--regenerate`
+
+### Detection algorithm
+
+```pseudo
+pre_redesign_sections = []
+
+for output_file in Plan.context-output-files:
+    if file_missing(output_file):
+        continue
+
+    parsed = parse_section_markers(read(output_file))
+
+    for sec in parsed:
+        if sec.profile not in current_registered_profiles():
+            continue
+
+        required_anchors = anchors_required_by(sec.profile, sec.section)
+        missing = []
+        for anchor in required_anchors:
+            if anchor not in sec.body:
+                missing.append(anchor)
+
+        if missing:
+            pre_redesign_sections.append({
+                "file": output_file,
+                "section": sec.section,
+                "profile": sec.profile,
+                "missing_anchors": missing,
+            })
+            continue
+
+        if body_mixes_newly_split_categories(sec.body, sec.profile):
+            pre_redesign_sections.append({
+                "file": output_file,
+                "section": sec.section,
+                "profile": sec.profile,
+                "missing_anchors": [],
+                "reason": "mixed categories under superseded template",
+            })
+
+if pre_redesign_sections and mode != "regenerate":
+    halt_with_pre_redesign_message(pre_redesign_sections)
+
+if pre_redesign_sections and mode == "regenerate":
+    log("pre-redesign sections detected; continuing because mode=regenerate")
+```
+
+### Anchor sources
+
+Required anchors come from the current dimension/profile Output Template,
+not from hand-maintained hardcoded lists in the caller. This keeps the
+detection logic aligned with the active template schema.
+
+Examples under the evidence-first redesign:
+
+- `architecture-layers` requires:
+  - `### Observed Structure`
+  - `### Enforced Rules`
+  - `### Recommended Direction`
+- `hard-constraints` requires:
+  - `## Hard Constraints`
+- `delivery-conventions` may emit:
+  - `## Delivery Conventions`
+  - `## Process / Quality Gates`
+
+### Halt message
+
+Use this literal message shape when `mode != regenerate`:
+
+```text
+[forge:onboard] Pre-redesign artifacts detected
+
+Some existing .forge/context sections use templates superseded by the
+evidence-first redesign. Incremental update is not safe across this
+structural change.
+
+Preserve blocks will be retained automatically.
+
+Please re-run with:
+
+  /forge:onboard --regenerate
+```
 
 ### Announcement (beginning)
 

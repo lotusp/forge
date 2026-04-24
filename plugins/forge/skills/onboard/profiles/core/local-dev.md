@@ -1,11 +1,8 @@
+<!-- forge:deprecated since=v0.6.0 reason="execution-layer content excluded by onboard-evidence-first redesign" -->
 ---
 name: local-dev
 section: Local Development
 applies-to:
-  - web-backend
-  - web-frontend
-  - plugin
-  - monorepo
 confidence-signals:
   - Makefile present
   - package.json scripts block

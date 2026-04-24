@@ -28,7 +28,6 @@ profiles:
   - core/tech-stack
   - core/module-map
   - core/entry-points
-  - core/local-dev
   - core/data-flows
   - core/notes
   - structural/build-system
@@ -56,7 +55,6 @@ output-sections:
   - Build System
   - Configuration
   - Deployment
-  - Local Development
   - Key Data Flows
   - Notes
 ---

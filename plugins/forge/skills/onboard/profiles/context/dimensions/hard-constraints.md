@@ -14,50 +14,47 @@ scan-sources:
 confidence-signals:
   - explicit IRON RULES section in CLAUDE.md or SKILL.md
   - banned-list in CONTRIBUTING.md / style guide
-  - CI checks enforcing constraints (security scanners, linters at "error" level)
-token-budget: 1000
+  - CI checks enforcing constraints (security scanners, linters at error level)
+token-budget: 900
 ---
 
 # Dimension: Hard Constraints
 
 ## Scan Patterns
 
-**Explicit IRON RULE blocks:**
-```
-Grep "IRON RULE" / "hard constraint" / "MUST NOT" / "NEVER" across
-  *.md files (CLAUDE.md, SKILL.md, docs/**)
-  → collect each statement
-```
+**Explicit rule sources:**
 
-**Security rules:**
-```
-Grep for comments / docs referencing:
-  - "secret" / "credential" / "API key" → likely secret-handling rules
-  - "PII" / "personal data" → data-protection rules
-  - "SQL injection" / "XSS" → injection-prevention rules
-```
-
-**CI enforcement:**
-```
-Read .github/workflows/*.yml / .gitlab-ci.yml
-  → lint / format / security-scan / test-coverage gates
-  → each CI-enforced rule becomes a constraint
-```
+- IRON RULE / MUST NOT / NEVER blocks in CLAUDE.md, SKILL.md, CONTRIBUTING.md
+- CI or lint rules that turn violations into hard failures
+- Framework/runtime constraints that stop execution if violated
 
 **Custom scanning:**
-- For forge-like plugins: scan SKILL.md files for C1..CN style constraints
-- For web-backend: scan controllers for SQL strings, services for direct DB calls
+
+- For plugin projects: artifact-writing and source-file mutation prohibitions
+- For application projects: severe security/data-integrity constraints backed
+  by code or policy
 
 ## Extraction Rules
 
-1. Catalogue each hard constraint as a numbered item `C1..CN`
-2. Each constraint gets:
-   - Short imperative title (e.g. "No business logic in controllers")
-   - "Violation appearance" — how violation looks in code
-   - Known locations in current code that comply / violate
-3. Group by category: Security / Layering / API / Data / Style
-4. If multiple sources contradict (e.g. CLAUDE.md says one thing, CI
-   enforces another) → batch as conflict
+1. Only extract claims that are both **stable** and **hard**.
+2. Each constraint must have a concrete enforcement source.
+3. Process expectations are routed to `delivery-conventions`, not this
+   dimension.
+4. Current business exceptions and temporary caveats are routed elsewhere.
+
+## Claim Classification Annotations
+
+| Extracted fact type | Claim category | Target artifact | Target section | Min confidence |
+|---------------------|----------------|-----------------|----------------|----------------|
+| IRON RULE / policy with concrete enforcement location | `enforced-rule` | `constraints.md` | `## Hard Constraints` | `[high]` |
+| CI/lint/static-check rule that blocks merge/build | `enforced-rule` | `constraints.md` | `## Hard Constraints` | `[high]` |
+| Framework/runtime invariant that prevents execution when violated | `enforced-rule` | `constraints.md` | `## Hard Constraints` | `[high]` |
+
+**Forbidden routes:**
+
+- `process-rule` → route to `delivery-conventions`
+- `current-caveat` → route to `anti-patterns`
+- `[inferred]` → not allowed in this dimension's output
 
 ## Output Template
 
@@ -70,43 +67,20 @@ These rules have zero exceptions. Violations are `must-fix` severity.
 
 <One-paragraph explanation of the rule and why it exists>
 
-**Violation appearance:** <what non-compliance looks like in code>
+**Enforcement:** <IRON RULE / CI check / framework constraint with location>
 
-**Enforcement:** <CI check name | pre-commit hook | code review checklist |
-                  manual>
+**Violation appearance:** <what non-compliance looks like in code>
 
 **Current known violations:** <path:line references, if any> [high] [code]
 
 ---
 
 ### C2 — <next rule>
-
-...
-
----
-
-### Content Hygiene (if applicable — plugin kind)
-
-### C<N> — No external project identifiers in artifacts
-
-**Scope:** commit messages, all repo docs, all SKILL.md / agent files,
-all scripts, all `.forge/` artifacts (except self-bootstrap where
-`forge` is the subject).
-
-**Forbidden:** external company / product names, internal system
-acronyms, private Java/Go/Python namespaces, production infrastructure
-hostnames / registries / ports / schemas, private DB / table names,
-production URLs, production feature slugs.
-
-**Allowed:** forge's own identifiers, public open-source tools
-(Spring Boot, MySQL, Nacos, REST), generic business terms (Order,
-Customer, Payment), `com.example.*` namespace, `{placeholder}` tokens.
 ```
 
 ## Confidence Tags
 
-- `[high]` — rule declared in CLAUDE.md / CONTRIBUTING.md / SKILL.md
-            AND enforced (CI / linter / grep check)
-- `[medium]` — rule declared but not enforced; relies on reviewer vigilance
-- `[low]` — rule inferred from a single code-review comment or commit message
-- `[inferred]` — rule guessed from framework norms without explicit statement
+- `[high]` — explicitly documented and concretely enforced
+- `[medium]` — not allowed for final output; downgrade by rerouting or omit
+- `[low]` — not allowed for final output; omit
+- `[inferred]` — not allowed in this dimension's output

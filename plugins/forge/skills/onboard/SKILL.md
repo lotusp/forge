@@ -36,6 +36,7 @@ effort: high
 - Current commit: !`git rev-parse --short HEAD 2>/dev/null || echo "(not a git repo)"`
 - Existing onboard.md: !`test -f .forge/context/onboard.md && echo "FOUND — read header for kind + last verified commit" || echo "(absent — first run)"`
 - Existing context files: !`ls .forge/context/*.md 2>/dev/null | grep -v onboard.md | xargs -n1 basename 2>/dev/null || echo "(none — Stage 3 will produce from scratch)"`
+- Pre-redesign sections: !`if [ -f .forge/context/architecture.md ] && ! grep -q '### Observed Structure' .forge/context/architecture.md; then echo "maybe stale — architecture anchors missing"; else echo "(ok or absent)"; fi`
 - Root contents: !`ls -1 2>/dev/null | head -30`
 - CLAUDE.md: !`test -f CLAUDE.md && echo "present — read fully before Step 1" || echo "absent"`
 - Claude plugin marker: !`test -f .claude-plugin/plugin.json && echo "present" || echo "absent"`
@@ -302,6 +303,74 @@ user-authored content), Stage 3.4 MUST:
 
 Wholesale overwrite without merge is a data-loss bug.
 
+### R15 — Claim classification is required before render
+
+Every extracted claim MUST be classified before it is rendered. Confidence
+tags alone are insufficient; classification decides which artifact and
+section the claim may enter.
+
+Allowed categories:
+
+```
+fact
+inference
+enforced-rule
+recommended-pattern
+process-rule
+current-caveat
+```
+
+Default routing table:
+
+| Claim category | Allowed artifacts / sections |
+|----------------|------------------------------|
+| `fact` | `onboard.md`; `conventions.md`; `testing.md`; `architecture.md` `### Observed Structure`; `constraints.md` only where a dimension explicitly permits it |
+| `inference` | `onboard.md`; `constraints.md` `## Current Business Caveats` only |
+| `enforced-rule` | `architecture.md` `### Enforced Rules`; `constraints.md` `## Hard Constraints` |
+| `recommended-pattern` | `architecture.md` `### Recommended Direction`; `conventions.md` |
+| `process-rule` | `conventions.md` `## Delivery Conventions`; `constraints.md` `## Process / Quality Gates` |
+| `current-caveat` | `constraints.md` `## Current Business Caveats`; optionally echoed in `onboard.md` `## Known Ambiguities` |
+
+Per-dimension or per-profile `## Claim Classification Annotations` MAY
+narrow this routing further, but they MUST NOT widen it beyond the table
+above.
+
+### R16 — Per-artifact confidence floors are enforced
+
+Different claim categories require different confidence floors:
+
+- `enforced-rule` MUST be `[high]` and supported by compile/test/static-check/
+  framework/IRON-RULE evidence with a concrete source location
+- `recommended-pattern` MUST be at least `[medium]`
+- `process-rule` MUST be at least `[medium]`; `[high]` is allowed only when
+  explicitly documented or repeatedly evidenced
+- `[inferred]` is forbidden in `architecture.md` and forbidden in
+  `constraints.md` except under `## Current Business Caveats`
+- Any `[inferred]` claim that is rendered MUST use softened language such as
+  "appears to", "likely", or "seems". It MUST NOT use `MUST`, `NEVER`,
+  `ONLY`, or `ENFORCED`
+
+If a claim does not meet the minimum confidence floor for its category and
+target section, either downgrade its category to an allowed destination or
+omit it.
+
+### R17 — Execution-layer content is excluded from onboard output
+
+`/forge:onboard` is not a runbook. The following content types MUST NOT
+appear in any generated artifact:
+
+- shell command blocks for setup/build/run/deploy (`docker`, `npm install`,
+  `pnpm install`, `pip install`, `make <target>`, `poetry install`,
+  `cargo build`, etc.)
+- `.env` or config-template copy instructions
+- deploy commands (`kubectl`, `helm upgrade`, cloud deploy commands)
+- environment-specific URLs, registry addresses, or secret paths
+
+Exception: a single-line architecture fact describing deployment shape is
+allowed when directly evidenced, for example `Target: Kubernetes via
+\`helm/orders-api/\``. Such a fact is still classified as `fact`, not as an
+instruction.
+
 ---
 
 ## Prerequisites
@@ -344,6 +413,7 @@ Which do you prefer?
 │  for profile in Plan.profiles:                               │
 │      read profile file                                       │
 │      execute Scan Patterns + Extraction Rules                │
+│      classify extracted claims (R15/R16/R17)                │
 │      write section to onboard.md using Section Template      │
 │      discard profile from working context                    │
 │  → writes .forge/context/onboard.md                          │
@@ -354,16 +424,18 @@ Which do you prefer?
 │  3.1 non-interactive scan                                    │
 │      for dim in Plan.context-dimensions:                     │
 │          read dim file; run Scan Patterns; collect evidence  │
+│          classify + pre-route claims                         │
 │          detect conflicts → append to batch list             │
 │  3.2 batch conflict resolution (ONE interactive checkpoint)  │
 │      present all conflicts → user gives per-conflict answers │
-│  3.3 smart-merge with existing context files                 │
+│  3.3 pre-redesign format detection                           │
+│  3.4 smart-merge with existing context files                 │
 │      for each Plan.context-output-files:                     │
 │          read existing file (if any); extract preserve blocks│
-│          synthesize rules from resolved evidence             │
+│          synthesize sections from classified evidence        │
 │          merge: matched sections rewritten, orphans → Legacy │
 │          preserve blocks re-anchored verbatim                │
-│  3.4 write context files (only those kind-applicable)        │
+│  3.5 write context files (only those kind-applicable)        │
 │      → writes .forge/context/{conventions,testing,...}.md    │
 ╰──────────────────────────────────────────────────────────────╯
                               │
@@ -480,6 +552,18 @@ Excluded dimensions (will NOT appear in any file; recorded in onboard.md header)
   - logging
   - database-access
   - ...
+
+Applicable claim categories:
+  - fact
+  - inference
+  - enforced-rule
+  - recommended-pattern
+  - process-rule
+  - current-caveat
+
+Execution content policy:
+  - exclude: setup/build/run/deploy commands, template copy steps, env-specific URLs, secret paths
+  - allow: single-line deployment-shape facts only when directly evidenced
 ```
 
 Show the plan to the user and pause for confirmation on first-run. On
@@ -502,11 +586,19 @@ loop over Plan.profiles:
   patterns    = profile_doc.scan_patterns
   rules       = profile_doc.extraction_rules
   template    = profile_doc.section_template
+  annotations = profile_doc.claim_classification_annotations
   tags_guide  = profile_doc.confidence_tags
 
   evidence = apply(patterns, project_files)     # Glob / Grep / Bash ls
   extracted = extract(rules, evidence)          # follow Extraction Rules
-  section_md = render(template, extracted, tags_guide)
+  classified = classify(
+      extracted,
+      annotations,
+      default_routes = R15,
+      confidence_floors = R16,
+      execution_policy = R17
+  )
+  section_md = render(template, classified, tags_guide)
 
   append_section(artifact_buffer, section_md)
 
@@ -531,6 +623,14 @@ Every row/bullet/fact in a section carries tags per R10:
 Order: `<fact> [confidence] [source?] [conflict?]`. R7 forbids untagged
 facts — no row or bullet may appear without at least the confidence tag.
 
+**Classification discipline (R15 + R16 + R17):**
+
+- Read the profile's `## Claim Classification Annotations` if present
+- Claims that route outside `onboard.md` are omitted in Stage 2
+- Any execution-layer content matched by R17 is omitted even if extracted
+- If no annotation matches, classify as `fact` to `onboard.md` unless that
+  would violate R16 or R17
+
 **Budget enforcement:**
 
 If the extracted content for a profile would exceed its declared
@@ -553,6 +653,7 @@ Emit the artifact header:
 > Generated:        {YYYY-MM-DD}
 > Commit:           {short-sha}
 > Generator:        /forge:onboard (v{plugin-version})
+> Excluded-dimensions:  {comma-separated list from Stage-1 plan or "(none)"}
 ```
 
 **3.2 — "What This Is" section**
@@ -653,13 +754,15 @@ For each dimension in `Plan.context-dimensions` (grouped by output file):
 
 ```pseudo
 evidence_by_dim = {}
+classified_routes = {}
 conflicts      = []
 
-for dim_path in flatten(Plan.context-dimensions.values()):
+for dim_path in unique(flatten(Plan.context-dimensions.values())):
     dim_doc = Read("profiles/context/" + dim_path + ".md")
     patterns = dim_doc.scan_patterns
     rules    = dim_doc.extraction_rules
     sources  = dim_doc.scan_sources
+    annotations = dim_doc.claim_classification_annotations
 
     # Apply glob + grep + cli patterns per sources
     observations = apply_patterns(patterns, sources)
@@ -668,6 +771,13 @@ for dim_path in flatten(Plan.context-dimensions.values()):
     facts, detected_conflicts = extract(rules, observations)
 
     evidence_by_dim[dim_path] = facts
+    classified_routes[dim_path] = classify(
+        facts,
+        annotations,
+        default_routes = R15,
+        confidence_floors = R16,
+        execution_policy = R17
+    )
     conflicts.extend(detected_conflicts)
 
     discard(dim_doc, observations)   # free LLM context
@@ -678,6 +788,19 @@ for dim_path in flatten(Plan.context-dimensions.values()):
 After processing each dimension, only the distilled `facts` (and any
 conflicts flagged) are retained in working memory. The dimension file
 itself and raw observations are evicted.
+
+**Classification + pre-routing (R15 / R16):**
+
+The retained structure for each dimension is not just raw `facts`. It is a
+classified claim set where each claim already carries:
+
+- `claim-category`
+- `target-artifact`
+- `target-section`
+- `confidence`
+- `source-tag`
+
+This pre-routing prevents later stages from inferring routing ad hoc.
 
 **Strictly non-interactive (R11):**
 
@@ -732,18 +855,57 @@ but do not re-surface the full conflict list a second time.
 
 ---
 
-### Step 6 — Stage 3.3 + 3.4: Smart-merge + write context files
+### Step 6 — Stage 3.3 + 3.4 + 3.5: Pre-redesign detection, smart-merge, and write
+
+**6.0 — Pre-redesign format detection**
+
+Before any smart-merge, inspect existing `.forge/context/*.md` files for
+sections whose structure predates the evidence-first redesign. Indicators:
+
+- a section marker points to a still-registered profile/dimension, but the
+  body is missing required anchors from the current Output Template
+- a section body mixes categories now split across separate sections (for
+  example `Hard Constraints` mixed with process gates)
+
+Detection algorithm details live in
+`reference/incremental-mode.md#pre-redesign-format-detection`.
+
+If such sections are found and the current mode is **not** `--regenerate`,
+halt with:
+
+```text
+[forge:onboard] Pre-redesign artifacts detected
+
+Some existing .forge/context sections use templates superseded by the
+evidence-first redesign. Incremental update is not safe across this
+structural change.
+
+Preserve blocks will be retained automatically.
+
+Please re-run with:
+
+  /forge:onboard --regenerate
+```
+
+If the current mode **is** `--regenerate`, record the detection in the run
+summary and continue.
 
 For each `output_file` in `Plan.context-output-files`:
 
 ```pseudo
-dims_for_this_file = Plan.context-dimensions[output_file]   # e.g. ["dimensions/naming", "dimensions/error-handling", ...]
+dims_for_this_file = Plan.context-dimensions[output_file]
 
-# Fresh content synthesis from scanned + resolved evidence
+# Fresh content synthesis from classified + resolved evidence
+sections_for_file = group_by_target_section(
+    classified_routes,
+    output_file,
+)
+
 new_sections = {}
-for dim in dims_for_this_file:
-    template  = get_output_template(dim)               # from dim file
-    new_sections[dim] = render(template, evidence_by_dim[dim])
+for section_id in sections_for_file:
+    template = get_output_template_for_section(output_file, section_id)
+    claims   = sections_for_file[section_id]
+    new_sections[section_id] = render(template, claims)
 
 # Read existing file (if any) and extract preservable content (R14)
 existing_sections = {}
@@ -753,30 +915,32 @@ orphans           = []
 if file_exists(output_file):
     parsed = parse_section_markers(read(output_file))
     for sec in parsed:
-        if sec.profile_key in dims_for_this_file:
-            existing_sections[sec.profile_key] = sec
-            preserve_blocks_by_section[sec.profile_key] = (
+        if sec.section_id in new_sections:
+            existing_sections[sec.section_id] = sec
+            preserve_blocks_by_section[sec.section_id] = (
                 extract_preserve_blocks(sec.body)
             )
         else:
-            orphans.append(sec)   # dimension no longer applies to this kind
+            orphans.append(sec)
 
 # Compose final file
 final = header()
-for dim in dims_for_this_file:
-    body = new_sections[dim]
-    body = re_anchor_preserve_blocks(body,
-                                      preserve_blocks_by_section.get(dim, []))
+for section_id in ordered_sections_for(output_file, new_sections):
+    body = new_sections[section_id]
+    body = re_anchor_preserve_blocks(
+        body,
+        preserve_blocks_by_section.get(section_id, [])
+    )
     final += write_section_marker(
         source_file = output_file,
-        section     = dim_to_section_id(dim),
-        profile     = "context/" + dim,
+        section     = section_id,
+        profile     = resolve_profile_for_section(output_file, section_id),
         verified_commit = current_git_short(),
         body_signature  = sha256_first16(canonicalize(body)),
         generated       = today_iso(),
     )
     final += body
-    final += write_closing_marker(section=dim_to_section_id(dim))
+    final += write_closing_marker(section=section_id)
 
 if orphans:
     final += "\n## Legacy Notes\n\n"
@@ -847,8 +1011,10 @@ The next step after onboard is always `/forge:clarify`.
    `verified-commit` (fast-skip) → if HEAD unchanged, CLEAN; else compare
    `body-signature` → dirty detection. Rewrite dirty sections only.
 4. **Stage 3 incremental:** for each context file, scan only dimensions
-   not yet matching current HEAD's `verified-commit`. Apply smart merge
-   (R14). Batch-resolve any new conflicts.
+   not yet matching current HEAD's `verified-commit`. Run pre-redesign
+   detection first; if old templates are detected, halt and require
+   `--regenerate`. Otherwise apply smart merge (R14). Batch-resolve any
+   new conflicts.
 5. Preserve blocks carried forward verbatim (R5)
 6. JOURNAL entry with `mode: incremental`
 
@@ -966,6 +1132,22 @@ Options:
   4. Exit to investigate
 
 Which do you prefer?
+```
+
+### Pre-redesign artifacts detected
+
+```text
+[forge:onboard] Pre-redesign artifacts detected
+
+Some existing .forge/context sections use templates superseded by the
+evidence-first redesign. Incremental update is not safe across this
+structural change.
+
+Preserve blocks will be retained automatically.
+
+Please re-run with:
+
+  /forge:onboard --regenerate
 ```
 
 ### Batch conflict resolution (Stage 3.2)

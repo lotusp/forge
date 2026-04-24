@@ -15,7 +15,7 @@ confidence-signals:
   - explicit directory layout (controllers/ services/ repositories/)
   - DDD-style bounded contexts
   - import-direction consistency across modules
-token-budget: 1000
+token-budget: 1200
 ---
 
 # Dimension: Architecture Layers
@@ -23,32 +23,58 @@ token-budget: 1000
 ## Scan Patterns
 
 **For web-backend / monorepo:**
-- Enumerate subdirectories under `src/`: look for `controllers/ services/
-  repositories/ domain/ application/ infrastructure/` patterns
-- Grep import directions to detect layering violations
-- Read 3–5 representative service files to infer where business logic sits
+
+- Enumerate subdirectories under `src/`: look for `controllers/`, `services/`,
+  `repositories/`, `domain/`, `application/`, `infrastructure/`
+- Grep import directions to detect layering rules with real enforcement evidence
+- Read representative classes only when needed to locate business logic
 
 **For plugin:**
+
 - Enumerate `skills/` subdirectories (each = one skill module)
 - Enumerate `agents/*.md` (sub-agent layer)
 - Enumerate `plugins/*/skills/<name>/{reference,scripts,profiles}/`
   sub-layers per skill
 - Read `.claude-plugin/plugin.json` for plugin-level structure
-- For marketplace-with-plugins layout: `plugins/<name>/` is one plugin
+- Read relevant SKILL.md / agent IRON RULE sections when they are the source of
+  an enforced rule
 
 **For monorepo (workspace-level):**
+
 - Read workspace manifest for package enumeration
-- Grep cross-package imports (`"workspace:*"`, `"path"` references)
+- Grep cross-package imports (`"workspace:*"`, path references)
 - Detect public vs internal packages (published vs not)
 
 ## Extraction Rules
 
-1. Identify the **layering model** in use (traditional 3-tier / DDD /
-   skill-agent-artifact / workspace packages)
-2. Record **import direction rules** — which layer may depend on which
-3. List **modules in each layer** (top 5–10, skip generated)
-4. For plugin: document skill ↔ agent ↔ script boundaries
-5. For monorepo: document package dependency direction + forbidden cycles
+1. Identify the layering model in use.
+2. Separate **observed structure** from **enforced rules** and from
+   **recommended direction**.
+3. A rule belongs in `### Enforced Rules` only if backed by compile/test/
+   static-check/framework/IRON-RULE evidence.
+4. Directory layout alone is never enough for `### Enforced Rules`.
+5. Guidance formerly written as "What to avoid" belongs in
+   `### Recommended Direction`.
+
+## Claim Classification Annotations
+
+Each fact extracted by this dimension MUST be classified before render. The
+table maps extracted fact types to claim category, target artifact/section,
+and minimum confidence.
+
+| Extracted fact type | Claim category | Target artifact | Target section | Min confidence |
+|---------------------|----------------|-----------------|----------------|----------------|
+| Directory layout observation | `fact` | `architecture.md` | `### Observed Structure` | `[medium]` |
+| Module/package inventory | `fact` | `architecture.md` | `### Observed Structure` | `[medium]` |
+| Import-direction rule backed by compile/test/static-check | `enforced-rule` | `architecture.md` | `### Enforced Rules` | `[high]` |
+| Rule backed by framework constraint or explicit IRON RULE | `enforced-rule` | `architecture.md` | `### Enforced Rules` | `[high]` |
+| Soft guidance inferred from dominant layout/pattern | `recommended-pattern` | `architecture.md` | `### Recommended Direction` | `[medium]` |
+| "What to avoid" guidance | `recommended-pattern` | `architecture.md` | `### Recommended Direction` | `[medium]` |
+
+**Forbidden routes:**
+
+- Directory-layout observation → NOT `### Enforced Rules`
+- `[inferred]` → NOT this dimension's output
 
 ## Output Template
 
@@ -57,22 +83,24 @@ token-budget: 1000
 ```markdown
 ## Architecture Layers
 
-**Model:** <3-tier MVC / DDD / Hexagonal / custom>
+### Observed Structure
 
-**Layers (top → bottom):**
-- `<controllers/>` — <role>; allowed to import <...>  [high] [code]
-- `<services/>` — <role>; allowed to import <...>     [high] [code]
-- `<repositories/>` — <role>; allowed to import <...> [high] [code]
+**Model:** <3-tier MVC / DDD / Hexagonal / custom> [medium] [code]
 
-**Import direction rules:**
-- `controllers → services → repositories`; no backward imports [high] [code]
-- `repositories → ORM / DB driver`; never touch controllers [high] [code]
-- Cross-layer utilities in `shared/` / `platform/` only  [high] [code]
+- `<controllers/>` — inbound HTTP/adapters layer [medium] [code]
+- `<services/>` — application/business orchestration layer [medium] [code]
+- `<repositories/>` — persistence/data access layer [medium] [code]
 
-**What to avoid:**
-- Business logic inside `controllers/` — always delegate to `services/`
-- Direct DB calls in `services/` — use repository pattern
-- Circular imports between service modules
+### Enforced Rules
+
+- <rule backed by compile/test/static-check/framework/IRON RULE> [high] [code]
+
+### Recommended Direction
+
+- Business logic should stay out of controllers and inside service/application
+  layers where feasible [medium] [code]
+- Prefer repository/adapter seams over direct infrastructure coupling in
+  business logic [medium] [code]
 ```
 
 ### Output Template — plugin
@@ -80,28 +108,28 @@ token-budget: 1000
 ```markdown
 ## Architecture Layers
 
-**Model:** Skill / Agent / Script / Artifact 四层
+### Observed Structure
 
-**Layers:**
-- `skills/<name>/SKILL.md` — skill layer (instructions for main agent)
-  [high] [code]
-- `agents/<name>.md` — sub-agent layer (specialized, tools limited)
-  [high] [code]
-- `skills/<name>/scripts/*.mjs` — script layer (deterministic helpers,
-  no LLM) [medium] [code]
-- `.forge/<path>.md` — artifact layer (persistent structured context)
-  [high] [code]
+**Model:** Skill / Agent / Script / Artifact [high] [code]
 
-**Composition rules:**
-- Skill may spawn agents (declared via Agent tool) [high] [code]
-- Skill may invoke scripts via Bash [high] [code]
-- Skill reads/writes artifacts per its declared contract [high] [code]
-- Agent does NOT write artifacts; it returns report text to skill [high] [code]
+- `skills/<name>/SKILL.md` — main skill layer [high] [code]
+- `agents/<name>.md` — specialized sub-agent layer [high] [code]
+- `skills/<name>/scripts/*.mjs` — deterministic helper script layer [medium] [code]
+- `.forge/<path>.md` — persistent artifact layer [high] [code]
 
-**What to avoid:**
-- Agent directly writing to `.forge/` (violates agent-skill boundary)
-- Skills bypassing status.mjs (the routing authority for orchestrator)
-- Cross-skill imports (each skill is self-contained prompt)
+### Enforced Rules
+
+- Agent files and skill IRON RULES define artifact-writing boundaries when
+  explicitly stated [high] [code]
+- Section-marker / artifact-shape rules declared in SKILL.md are enforced by
+  the skill contract [high] [code]
+
+### Recommended Direction
+
+- Keep orchestration logic in the owning skill instead of pushing it upward
+  into the top-level router [medium] [code]
+- Avoid cross-skill coupling when a shared artifact contract can carry the
+  context instead [medium] [code]
 ```
 
 ### Output Template — web-frontend
@@ -109,71 +137,56 @@ token-budget: 1000
 ```markdown
 ## Architecture Layers
 
-**Model:** <Page/Route → Component → Hook/Store → API Client>
+### Observed Structure
 
-**Layers (top → bottom):**
-- `<pages/ | routes/ | app/>` — page / route components, 1-to-1 with URL
-  [high] [code]
-- `<components/>` — reusable UI pieces; presentational + container
-  distinction if applicable [high] [code]
-- `<hooks/>` — React hooks / Vue composables; encapsulate stateful logic
-  reusable across components [high] [code]
-- `<stores/ | state/>` — global state containers (Redux / Zustand /
-  Pinia / Vuex / Recoil) [medium] [code]
-- `<services/ | api/>` — API client wrappers, HTTP interceptors, error
-  transformers [high] [code]
+**Model:** <Page/Route → Component → Hook/Store → API Client> [medium] [code]
 
-**Import direction rules:**
-- `pages → components → hooks → services`; no backward imports
-  [high] [code]
-- `stores` can be read from anywhere but writes centralized in action
-  files or store setters [high] [code]
-- `services` never import from `pages` or `components` [high] [code]
+- `<pages/ | routes/ | app/>` — page/route layer [medium] [code]
+- `<components/>` — reusable UI layer [medium] [code]
+- `<hooks/>` — reusable stateful logic [medium] [code]
+- `<stores/ | state/>` — global state layer if present [medium] [code]
+- `<services/ | api/>` — API client layer [medium] [code]
 
-**Routing:** <React Router | Vue Router | Next.js App Router | file-based>
-[high] [code]
+### Enforced Rules
 
-**State management:** <Redux Toolkit | Zustand | Pinia | Context+useReducer
-| none> [high] [code]
+- <frontend rule backed by lint/config/framework constraint> [high] [code]
 
-**Styling:** <CSS Modules | Tailwind | styled-components | emotion |
-vanilla-extract> [high] [code]
+### Recommended Direction
 
-**What to avoid:**
-- Direct DOM manipulation (document.querySelector) bypassing the framework
-- Business logic in components (push to hooks or stores)
-- API calls inside components (always via services layer)
-- Global CSS leak (use Modules or CSS-in-JS scoping)
+- Keep API calls and side effects out of presentational components when
+  possible [medium] [code]
+- Prefer hook/store extraction over embedding business logic directly in page
+  components [medium] [code]
 ```
 
 ### Output Template — monorepo
 
 ```markdown
-## Architecture Layers (Workspace-Level)
+## Architecture Layers
 
-**Model:** <pnpm workspace | Turborepo | Nx | Gradle multi-module | ...>
+### Observed Structure
 
-**Package layers:**
-- `apps/*` — deployable services [high] [build]
-- `libs/*` — shared libraries (published or internal) [high] [build]
-- `tools/*` — build / codegen utilities [medium] [build]
+**Model:** <workspace packages / apps-libs-tools / Gradle multi-module / ...>
+  [medium] [build]
 
-**Dependency direction rules:**
-- `apps → libs` allowed; `libs → apps` forbidden [high] [code]
-- `libs/<X> → libs/<Y>` allowed only if X's domain is broader than Y
-  [medium] [code]
-- `tools → anything` allowed (scripts run over everything) [high] [build]
+- `apps/*` or equivalent — deployable units [medium] [build]
+- `libs/*` or equivalent — shared libraries [medium] [build]
+- `tools/*` or equivalent — tooling/utilities [medium] [build]
 
-**What to avoid:**
-- Cross-app imports (apps are independent deployables)
-- Circular library dependencies (enforce with `dependency-cruiser` or
-  Nx's `enforce-module-boundaries`)
+### Enforced Rules
+
+- <dependency rule backed by workspace/static-check tooling> [high] [code]
+
+### Recommended Direction
+
+- Prefer `apps -> libs` over cross-app dependencies [medium] [code]
+- Avoid circular library dependencies even when the workspace tooling does not
+  yet enforce them [medium] [code]
 ```
 
 ## Confidence Tags
 
-- `[high]` — layering rule visible in directory layout AND import pattern
-- `[medium]` — directory layout suggests rule but imports don't fully comply
-- `[low]` — rule inferred from a single file or READ path
-- `[inferred]` — rule is best-guess from framework conventions (e.g.
-  assuming Spring's default MVC layout without verifying)
+- `[high]` — rule is backed by compile/test/static-check/framework/IRON RULE
+- `[medium]` — structure/pattern is well evidenced but not enforced
+- `[low]` — weak structure signal; should usually be omitted
+- `[inferred]` — not allowed in this dimension's output
