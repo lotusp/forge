@@ -479,3 +479,36 @@
 - Fixture 项目规范（tests/fixtures/<kind-id>/）
 - Ship-checklist 9 条
 - Smoke-test 自动化建议（scripts/validate-kinds.mjs 预留接口，未来工程化）
+
+## 2026-04-24 — /forge:clarify onboard-evidence-first
+- 产出：.forge/features/onboard-evidence-first/clarify.md + 7 个 design-inputs entries（.forge/features/onboard-evidence-first/design-inputs.md）
+- 输入简报：docs/onboard-redesign-input.md（intentional input brief，非 .forge/ 产物）
+- Q 分类：5 [WHAT] + 7 [HOW]（前者 Q&A，后者 design-inputs.md 自动路由）
+- Q&A 决议：1-B（MVP=priorities 1-3）/ 2-B（Change Nav Map 后续 feature 只对 backend+monorepo 必需）/ 3-A（local-dev profile 直接移除）/ 4-B（首次升级必须 --regenerate）/ 5-A（inferred 仅允许进 constraints.md § Current Business Caveats 且软化措辞）
+- Self-review：1 轮，0 major / 1 minor（SC-5 措辞 inline 收紧为可观察条件），final=pass
+- Open Questions：0（全部 [WHAT] 已解）
+- 本 feature 范围：priorities 1-3（evidence 规则收紧 / claim classification 强制 / execution-layer 内容减量）；priorities 4-5 延到候选 slug `onboard-change-navigation`
+- 下一步：/forge:design onboard-evidence-first
+
+## 2026-04-24 — /forge:design onboard-evidence-first
+- 产出：.forge/features/onboard-evidence-first/design.md + plan.md
+- 方案：Option A — Distributed Annotations（全局策略在 SKILL.md R15；每 dim/profile 内嵌 Claim Classification Annotations 表）；拒绝 Option B（central reference file）因 DI-2 长 prompt 稳定性风险
+- 风险：Medium（onboard skill 核心改动 + wire-format 变更 + 要求 --regenerate 迁移）
+- Scenario Walkthrough：3 场景全部 ✅（Happy: fresh --regenerate / Edge: 无 flag incremental 触发 pre-redesign halt / Edge: IRON RULE-backed claim 与推断型 pattern 正确分流）
+- Wire Protocol Examples：5 种格式字面化（architecture.md 三段 / constraints.md 三段 / conventions.md § Delivery Conventions / Claim Classification Annotations schema / pre-redesign halt message）
+- Embedded spec-review：PASS — 9/9 SC + 9/9 Gap 全覆盖，0 orphan
+- Key Decisions：12 条（K-1 classification 机制 / K-2 Iron Rule 拆 3 条 R15/R16/R17 / K-3 local-dev deprecation / K-4 deployment 收窄 / K-5 arch 三段 / K-6 constraints 三段 / K-7 delivery 并入 conventions / K-8 anchor-based pre-redesign detection / K-9 inferred 软路由 / K-10 sample-size→confidence floor / K-11 IRON RULE=enforced-rule / K-12 commit-format vs delivery-conventions 范围拆分）
+- Convention Deviations：无
+- Tasks: 12 个（T032–T043），高风险 3 个（T032 SKILL.md 重写 / T040 pre-redesign detection / T042 verification）；5 波执行，Wave 2 八 task 可并行
+- 遗留决策：0 deferred
+- 下一步：/forge:code T032
+
+## 2026-04-24 — /forge:code T032–T041 [onboard-evidence-first]
+- 变更：plugins/forge/skills/onboard/SKILL.md, plugins/forge/skills/onboard/reference/incremental-mode.md, plugins/forge/skills/onboard/profiles/kinds/{plugin,web-backend,web-frontend,monorepo}.md, plugins/forge/skills/onboard/profiles/core/local-dev.md, plugins/forge/skills/onboard/profiles/structural/deployment.md, plugins/forge/skills/onboard/profiles/context/dimensions/{architecture-layers,hard-constraints,anti-patterns,commit-format,testing-strategy,delivery-conventions}.md, plugins/forge/skills/onboard/profiles/context/kinds/{plugin,web-backend,web-frontend,monorepo}.md, .forge/features/onboard-evidence-first/tasks/T032-summary.md–T041-summary.md
+- 假设：无
+- 下一步：/forge:code T042
+
+## 2026-04-24 — /forge:code T042 [onboard-evidence-first]
+- 变更：.forge/features/onboard-evidence-first/verification.md, .forge/features/onboard-evidence-first/tasks/T042-summary.md
+- 假设：无
+- 下一步：在支持 skill tool 的会话中执行 `/forge:onboard --regenerate`，更新 verification.md 后再进入 T043
