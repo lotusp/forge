@@ -16,7 +16,8 @@ profiles/context/
 ├── README.md              # 本文件
 ├── kinds/                 # 每个 kind 的 context 维度索引
 │   ├── web-backend.md
-│   ├── claude-code-plugin.md
+│   ├── web-frontend.md
+│   ├── plugin.md
 │   └── monorepo.md
 └── dimensions/            # 每个维度的扫描 + 产出模板（16 个）
     ├── naming.md          # 通用
@@ -32,9 +33,9 @@ profiles/context/
     ├── database-access.md      # web-backend / monorepo
     ├── messaging.md            # web-backend / monorepo
     ├── authentication.md       # web-backend / monorepo
-    ├── skill-format.md         # claude-code-plugin
-    ├── artifact-writing.md     # claude-code-plugin
-    └── markdown-conventions.md # claude-code-plugin
+    ├── skill-format.md         # plugin
+    ├── artifact-writing.md     # plugin
+    └── markdown-conventions.md # plugin
 ```
 
 ---
@@ -47,7 +48,7 @@ profiles/context/
 
 ```yaml
 ---
-kind-id: <unique-id>                # web-backend / claude-code-plugin / monorepo
+kind-id: <unique-id>                # web-backend / plugin / monorepo
 display-name: <human-readable>
 output-files:                       # 本 kind 产出的 context 文件子集
   - conventions.md
@@ -79,7 +80,7 @@ excluded-dimensions:                # 明示本 kind 不适用的维度
 
 - **When this kind applies** —— 本 kind 的识别特征（与 `../kinds/<id>.md` 保持一致）
 - **Context file strategy** —— 本 kind 产出 context 文件的思路（例：
-  claude-code-plugin 的 testing.md 内容以"self-bootstrap 为验证"为核心，而非传统单测）
+  plugin 的 testing.md 内容以"self-bootstrap 为验证"为核心，而非传统单测）
 - **Excluded rationale** —— 被排除的维度为什么不适用（简短说明）
 
 ---
@@ -118,7 +119,7 @@ token-budget: <number>              # 建议产出内容 token 上限
 对 kind 分支的 dimension（如 `testing-strategy.md`），Output Template
 分为 kind-branch 子小节：
 ```markdown
-### Output Template — claude-code-plugin
+### Output Template — plugin
 {模板 A}
 
 ### Output Template — web-backend / monorepo

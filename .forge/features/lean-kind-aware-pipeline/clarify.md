@@ -30,7 +30,7 @@ v0.5.0:  onboard                → clarify → design                 → code 
 
 1. **新 onboard**（吸收 calibrate 职责）
    - 产出 `.forge/context/onboard.md` + `conventions.md` + `testing.md` + `architecture.md` + `constraints.md`（5 文件）
-   - 所有产物 kind-aware（web-backend / claude-code-plugin / monorepo 三 kind，与 v0.4.0 一致）
+   - 所有产物 kind-aware（web-backend / plugin / monorepo 三 kind，与 v0.4.0 一致）
    - 扫描阶段**非交互**；发现约定冲突后**批量一次性交互**裁决（不再逐个询问）
    - 增量模式与 preserve 块机制沿用 v0.4.0
    - 对老项目已有 4 个 context 文件：**智能合并**（保留 preserve 块，吸收旧内容到新 kind-aware 模板对应位置）
@@ -101,7 +101,7 @@ v0.5.0:  onboard                → clarify → design                 → code 
 - 修正我初始 Recommend（C "保留标题 + NA 解释 + 等价替代"）
 - 用户明确选择 A：文档更短、更专注、减轻读者认知负担
 - 理由："实用价值 不增添额外知识负担"——与 forge 的核心理念契合
-- 代价：读者看不到"这个章节考虑过但 NA"这个信号；但新 onboard 会在元数据头部列出"本 kind 已排除的章节"作为补偿（例如 claude-code-plugin onboard.md 头部会列 "Excluded sections: Logging, Database Access, Deployment"）
+- 代价：读者看不到"这个章节考虑过但 NA"这个信号；但新 onboard 会在元数据头部列出"本 kind 已排除的章节"作为补偿（例如 plugin onboard.md 头部会列 "Excluded sections: Logging, Database Access, Deployment"）
 
 ### Q5 — design 内嵌 spec-review 失败行为 [WHAT]
 

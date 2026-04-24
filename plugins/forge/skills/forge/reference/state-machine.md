@@ -39,7 +39,7 @@ is the canonical record that a stage is complete.
 | `.forge/features/{slug}/test.md` | test for {slug} |
 
 **Important:** some context files may not exist for certain kinds
-(claude-code-plugin kind excludes `logging`, `api-design`, etc. — if
+(plugin kind excludes `logging`, `api-design`, etc. — if
 no dimension in a context file applies to the kind, the file is simply
 not created). Check `.forge/context/onboard.md` header's
 `Excluded-dimensions:` line to understand which were deliberately

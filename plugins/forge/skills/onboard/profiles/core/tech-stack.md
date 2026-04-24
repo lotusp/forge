@@ -3,7 +3,8 @@ name: tech-stack
 section: Tech Stack
 applies-to:
   - web-backend
-  - claude-code-plugin
+  - web-frontend
+  - plugin
   - monorepo
 confidence-signals:
   - language config files present (package.json / pom.xml / go.mod / Cargo.toml / pyproject.toml)

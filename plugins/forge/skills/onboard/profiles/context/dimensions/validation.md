@@ -3,6 +3,7 @@ name: validation
 output-file: conventions.md
 applies-to:
   - web-backend
+  - web-frontend
   - monorepo
 scan-sources:
   - glob: "src/**/*.{ts,js,java,go,py}"

@@ -3,7 +3,8 @@ name: testing-strategy
 output-file: testing.md
 applies-to:
   - web-backend
-  - claude-code-plugin
+  - web-frontend
+  - plugin
   - monorepo
 scan-sources:
   - glob: "**/*.test.{ts,js}"
@@ -47,7 +48,7 @@ token-budget: 1200
 - `unittest.mock.patch` → Python
 - Absence of mocks + presence of `testcontainers` → integration-heavy
 
-**For claude-code-plugin kind:**
+**For plugin kind:**
 - No traditional tests expected; look instead for:
   - `.forge/features/*/verification.md` files → self-bootstrap verification records
   - Test scenarios scripted in markdown
@@ -66,7 +67,7 @@ token-budget: 1200
 
 ## Output Template
 
-### Output Template — claude-code-plugin
+### Output Template — plugin
 
 ```markdown
 ## Testing Strategy
@@ -100,6 +101,53 @@ or a representative sample project and observing the produced artifacts.
 - Trusting human walkthrough as sufficient proof (only LLM execution
   matches real LLM misinterpretation patterns — lesson from
   onboard-kind-profiles T012/T012a/T012b evolution)
+```
+
+### Output Template — web-frontend
+
+```markdown
+## Testing Strategy
+
+**Test tiers:** Component / Integration / E2E (three-tier pyramid)
+
+**Primary frameworks:**
+- Unit + component: <Vitest | Jest> + <React Testing Library | Vue Test
+  Utils | @testing-library/svelte> [high] [build]
+- E2E: <Playwright | Cypress> [medium] [build]
+
+### Component tests
+
+- Co-located `*.test.tsx` / `*.spec.ts` next to component [high] [code]
+- Render with Testing Library; query by role / label (accessibility-
+  aligned) [high] [code]
+- Mock API calls with <MSW | mock service worker | vi.mock()> [high] [code]
+- Do NOT test implementation details (internal state); test behaviour
+  observable to the user [high] [readme]
+
+### Integration tests
+
+- Router-level or feature-level tests mounting multiple components [medium]
+  [code]
+- Real routes, mocked API via MSW or fetch interceptor [medium] [code]
+
+### E2E tests
+
+- Live browser against dev server or deployed preview [medium] [build]
+- Critical user journeys only (login / primary purchase flow); not
+  exhaustive [medium] [readme]
+
+### Coverage
+
+- Tooling: <c8 | istanbul via Jest / Vitest> [high] [build]
+- Threshold: <N%> (component-level; E2E usually excluded from coverage)
+  [medium] [build]
+
+### What to avoid
+
+- Snapshot-everything without intent (snapshots decay without review)
+- Testing framework internals (useState / useEffect directly)
+- Flaky E2E due to timing races (use proper waitFor / retry primitives)
+- Full-page E2E for logic that can be tested at component tier
 ```
 
 ### Output Template — web-backend / monorepo

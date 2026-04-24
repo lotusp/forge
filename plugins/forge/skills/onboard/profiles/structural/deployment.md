@@ -3,6 +3,7 @@ name: deployment
 section: Deployment
 applies-to:
   - web-backend
+  - web-frontend
   - monorepo
 confidence-signals:
   - Dockerfile present

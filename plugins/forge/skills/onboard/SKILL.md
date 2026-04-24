@@ -3,7 +3,7 @@ name: onboard
 description: |
   Generates a complete project context for AI developers and humans working
   on an existing codebase. Adapts its output to the project's kind
-  (web-backend / claude-code-plugin / monorepo / ...) by composing profile
+  (web-backend / web-frontend / plugin / monorepo / ...) by composing profile
   files from ./profiles/. Produces .forge/context/onboard.md AND the
   kind-applicable subset of conventions.md / testing.md / architecture.md /
   constraints.md.
@@ -916,7 +916,7 @@ Which do you prefer?
 
 Available kinds:
   - web-backend         — long-running HTTP service with persistence
-  - claude-code-plugin  — Claude Code skill / agent / command package
+  - plugin  — Claude Code skill / agent / command package
   - monorepo            — workspace coordinating multiple sub-packages
 
 Options:

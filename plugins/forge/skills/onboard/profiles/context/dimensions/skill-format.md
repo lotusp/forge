@@ -2,7 +2,7 @@
 name: skill-format
 output-file: conventions.md
 applies-to:
-  - claude-code-plugin
+  - plugin
 scan-sources:
   - glob: "plugins/*/skills/*/SKILL.md"
   - glob: "skills/*/SKILL.md"

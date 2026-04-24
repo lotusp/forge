@@ -3,7 +3,7 @@
 > 日期：2026-04-22
 > 被测版本：forge 0.3.2-dev（commit `d3db26a`）
 > 验证对象：`/forge:onboard` 新实现（T012 SKILL.md + T013 incremental-mode + T006–T011 profiles）
-> 自举对象：forge 仓库本身（识别为 `claude-code-plugin` kind）
+> 自举对象：forge 仓库本身（识别为 `plugin` kind）
 
 ---
 
@@ -14,7 +14,7 @@
 | 项 | 值 |
 |----|----|
 | 触发方式 | 删除 `.forge/context/onboard.md` → invoke `/forge:onboard` |
-| 识别 kind | `claude-code-plugin` |
+| 识别 kind | `plugin` |
 | 置信度 | **0.90** |
 | 加载 profile 数 | 6（均为 core/*，完全符合 K-12 Decision） |
 | 生成 section 数 | 7（What This Is + 6 profile sections） |
@@ -65,7 +65,7 @@
 
 | 编号 | 标准 | 结果 |
 |------|------|------|
-| SC-1 | Kind 识别 `claude-code-plugin`，置信度 ≥ 0.6 | ✅ 0.90 |
+| SC-1 | Kind 识别 `plugin`，置信度 ≥ 0.6 | ✅ 0.90 |
 | SC-2 | Section 顺序 = kind 的 `output-sections` | ✅ 7/7 一致 |
 | SC-3 | Section marker 含 `profile=` 属性 | ⚠ `profile=` **缺失**（可从 kind 文件回退推导，非 blocker）|
 | SC-4 | Confidence tag 合规 | ⚠ 扩展了 `[code]/[conflict]/[build]/[readme]`；需要规范决策 |

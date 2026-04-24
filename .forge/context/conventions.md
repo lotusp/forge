@@ -1,6 +1,6 @@
 # Conventions: forge
 
-> Kind:      claude-code-plugin
+> Kind:      plugin
 > Generated: 2026-04-23
 > Commit:    9dbca95
 > Generator: /forge:onboard (v0.5.0-dev)

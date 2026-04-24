@@ -50,7 +50,7 @@
 
 - 实现方式：design 生成 plan.md 时**必须**在末尾插入 T{last} 类型为 `docs` 的任务
 - 任务描述 kind-driven：
-  - claude-code-plugin kind → README.md + CLAUDE.md
+  - plugin kind → README.md + CLAUDE.md
   - web-backend kind → OpenAPI spec / docs / CHANGELOG
   - monorepo kind → 根 README + 涉及子包的 README
 - 该 task 由 `/forge:code T{last}` 正常执行，跟其他 task 同级
@@ -66,7 +66,7 @@
 
 草拟形式（design 阶段字面化）：
 ```
-<!-- forge:onboard header kind=claude-code-plugin excluded-sections="logging,database,deployment" ... -->
+<!-- forge:onboard header kind=plugin excluded-sections="logging,database,deployment" ... -->
 ```
 
 若 design 阶段判断此补偿机制本身"增添额外知识负担"，可去掉；留给 design 决策。

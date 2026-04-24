@@ -15,7 +15,7 @@ profiles/
 ├── entry-points/  # HTTP API / 事件消费者剖面（2 个）
 ├── integration/   # 第三方 API / 鉴权 / 消息队列剖面（3 个）
 ├── monorepo/      # monorepo 专用剖面（1 个）
-└── kinds/         # kind 定义文件（web-backend / claude-code-plugin / monorepo）
+└── kinds/         # kind 定义文件（web-backend / web-frontend / plugin / monorepo）
 ```
 
 ---
@@ -33,7 +33,7 @@ name: <profile-id>              # 全局唯一，如 tech-stack / http-api
 section: <section-title>        # 产出时在 onboard.md 中的章节标题
 applies-to:                     # 哪些 kind 会加载此 profile
   - web-backend
-  - claude-code-plugin
+  - plugin
 confidence-signals:             # 置信度提升信号（供 kind detection 复用）
   - <signal-description>
 token-budget: <number>          # 建议该 profile 提取的内容 token 上限
@@ -60,7 +60,7 @@ token-budget: <number>          # 建议该 profile 提取的内容 token 上限
 
 ```yaml
 ---
-kind-id: <unique-id>            # web-backend / claude-code-plugin / monorepo
+kind-id: <unique-id>            # web-backend / plugin / monorepo
 display-name: <human-readable>  # 用于交互消息
 detection-signals:
   positive:                     # 正向信号（存在即加分）

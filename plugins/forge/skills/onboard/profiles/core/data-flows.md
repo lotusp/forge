@@ -3,7 +3,8 @@ name: data-flows
 section: Key Data Flows
 applies-to:
   - web-backend
-  - claude-code-plugin
+  - web-frontend
+  - plugin
   - monorepo
 confidence-signals:
   - at least one entry point identified (prerequisite)
@@ -39,7 +40,7 @@ Data flows are **synthesized**, not directly scanned. This profile depends on ou
 4. **Start with the trigger** — HTTP verb + path / CLI command / event topic.
 5. **If the project is too small to have non-trivial flows** (e.g. utility library),
    state "This project has no multi-step flows" and omit the flow list.
-6. **For claude-code-plugin kind** — flows are skill-to-skill artifact dependencies
+6. **For plugin kind** — flows are skill-to-skill artifact dependencies
    (e.g. `onboard → calibrate → clarify → design → tasking → code`).
 
 ## Section Template
@@ -57,7 +58,7 @@ Data flows are **synthesized**, not directly scanned. This profile depends on ou
    call payment provider → update order status → publish `order.settled` [medium]
 ```
 
-For **claude-code-plugin** kind, use this form instead:
+For **plugin** kind, use this form instead:
 
 ```markdown
 ## Key Data Flows

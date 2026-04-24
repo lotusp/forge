@@ -1,6 +1,6 @@
 # Project Onboard: forge
 
-> Kind:                 claude-code-plugin
+> Kind:                 plugin
 > Confidence:           1.00
 > Generated:            2026-04-23
 > Commit:               9dbca95

@@ -139,7 +139,7 @@ Stage 4 — Task decomposition → plan.md           (absorbs tasking)
 **Stage 4 Task Decomposition：**
 - 产出 `plan.md`（独立文件，DI-1）
 - Task 类型枚举扩展：`infra / model / migration / logic / api / ui / test / docs / skill / agent / profile / kind-def`
-  （后 4 个为 claude-code-plugin kind 新增）
+  （后 4 个为 plugin kind 新增）
 - **强制 T{last}** 类型为 `docs` 的任务（DI-4 / K-11），描述 kind-driven
 
 **IRON RULES 增量：**
@@ -207,7 +207,7 @@ plugins/forge/skills/onboard/profiles/context/                  # NEW
 ├── README.md                                  # 规范文档
 ├── kinds/                                     # 每个 kind 的 context dimension 索引
 │   ├── web-backend.md
-│   ├── claude-code-plugin.md
+│   ├── plugin.md
 │   └── monorepo.md
 └── dimensions/                                # 每个维度的扫描 + 模板
     ├── naming.md                              # 通用
@@ -219,9 +219,9 @@ plugins/forge/skills/onboard/profiles/context/                  # NEW
     ├── database-access.md                     # web-backend
     ├── messaging.md                           # web-backend
     ├── authentication.md                      # web-backend
-    ├── skill-format.md                        # claude-code-plugin
-    ├── artifact-writing.md                    # claude-code-plugin
-    ├── markdown-conventions.md                # claude-code-plugin
+    ├── skill-format.md                        # plugin
+    ├── artifact-writing.md                    # plugin
+    ├── markdown-conventions.md                # plugin
     ├── commit-format.md                       # 通用
     ├── architecture-layers.md                 # 通用（内容因 kind 不同）
     ├── hard-constraints.md                    # 通用
@@ -259,7 +259,7 @@ CLAUDE.md                                     # skill 列表 + 目录树
 ```markdown
 # Project Onboard: forge
 
-> Kind:             claude-code-plugin
+> Kind:             plugin
 > Confidence:       0.95
 > Generated:        2026-04-24
 > Commit:           a3f2c1d4
@@ -337,7 +337,7 @@ Please answer: "1A 2A 3B" or provide per-item explanation.
 
 **kind-aware scope**（design 阶段从 onboard.md 读取当前 kind 确定）：
 
-- `claude-code-plugin` 项目 →
+- `plugin` 项目 →
   - [ ] README.md 版本 badge / onboard 表格 / 安装说明（若接口变化）
   - [ ] CLAUDE.md 目录树 / skill 流程 / 规范引用（若结构变化）
 - `web-backend` 项目 →
@@ -447,13 +447,13 @@ Decision: HARD BLOCK — 2 uncovered items require design revision
 
 **Walkthrough 结论：** ✅ 流程无断点；conventions 引导下游；T{last} 文档任务自然落地。
 
-### Scenario 2 — forge self-bootstrap（claude-code-plugin kind）
+### Scenario 2 — forge self-bootstrap（plugin kind）
 
 **Setup：** 当前 forge 仓库，已有旧的 4 个 context 文件（v0.3/v0.4 格式）
 
 **Flow：**
 1. `/forge:onboard`
-   - Stage 1: kind = `claude-code-plugin` @ 0.95
+   - Stage 1: kind = `plugin` @ 0.95
    - Stage 2: 生成 onboard.md（沿用 v0.4.0 行为）
    - Stage 3.1 扫描：识别 skill-format / artifact-writing / commit-format 等维度证据
    - Stage 3.3 交互：若与旧 conventions.md 有 drift，批量呈现；用户选择

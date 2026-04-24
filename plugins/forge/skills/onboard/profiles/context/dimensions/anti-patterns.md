@@ -3,7 +3,8 @@ name: anti-patterns
 output-file: constraints.md
 applies-to:
   - web-backend
-  - claude-code-plugin
+  - web-frontend
+  - plugin
   - monorepo
 scan-sources:
   - glob: "src/**/*.{ts,js,java,go,py,rs}"
@@ -27,7 +28,7 @@ token-budget: 900
 - Hardcoded secrets: grep `password = "` / `apiKey = "` literals
 - Shared mutable state: module-level `let counter = 0` without synchronization
 
-**For claude-code-plugin:**
+**For plugin:**
 - Skill directly writing to target project's source: grep Write to
   non-`.forge/` paths inside SKILL.md
 - Hardcoded skill names in cross-reference: `/forge:<old-name>` after rename

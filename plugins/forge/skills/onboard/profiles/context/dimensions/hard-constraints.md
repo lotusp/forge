@@ -3,7 +3,8 @@ name: hard-constraints
 output-file: constraints.md
 applies-to:
   - web-backend
-  - claude-code-plugin
+  - web-frontend
+  - plugin
   - monorepo
 scan-sources:
   - glob: "**/*.{md,ts,js,java,go,py}"
@@ -84,7 +85,7 @@ These rules have zero exceptions. Violations are `must-fix` severity.
 
 ---
 
-### Content Hygiene (if applicable — claude-code-plugin kind)
+### Content Hygiene (if applicable — plugin kind)
 
 ### C<N> — No external project identifiers in artifacts
 

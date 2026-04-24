@@ -3,7 +3,8 @@ name: commit-format
 output-file: conventions.md
 applies-to:
   - web-backend
-  - claude-code-plugin
+  - web-frontend
+  - plugin
   - monorepo
 scan-sources:
   - cli: "git log --pretty=%s -n 100"

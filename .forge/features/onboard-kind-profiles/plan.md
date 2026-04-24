@@ -13,7 +13,7 @@
 - **Kind detection**（Step 1）：扫描项目产出执行计划（kind、profile 列表、跳过项、置信度）
 - **Read-do-discard**（Step 2）：按计划逐个加载 profile → 提取信息 → 写入 section → 清理上下文
 
-本计划涵盖 3 个 MVP kinds（`web-backend`、`claude-code-plugin`、`monorepo`）、
+本计划涵盖 3 个 MVP kinds（`web-backend`、`plugin`、`monorepo`）、
 17 个 profile 文件、SKILL.md 改写、incremental-mode.md 更新、自举验证。
 
 ---
@@ -146,14 +146,14 @@ kind file 结构。
 
 **范围：**
 - `profiles/kinds/web-backend.md`
-- `profiles/kinds/claude-code-plugin.md`
+- `profiles/kinds/plugin.md`
 - `profiles/kinds/monorepo.md`
 
 **验收标准：**
 - [ ] 3 个 kind 文件均包含 frontmatter：`kind-id`、`display-name`、`detection-signals`、`profiles`（按顺序）、`output-sections`
 - [ ] 每个 kind 的 `profiles` 列表所引用的路径都存在（T007–T010 产物）
 - [ ] `detection-signals` 结构化（正向信号 + 负向信号 + 每项权重/置信度贡献）
-- [ ] `claude-code-plugin.md` 的 detection-signals 能唯一识别 forge 自身（自举要求）
+- [ ] `plugin.md` 的 detection-signals 能唯一识别 forge 自身（自举要求）
 
 **规模预估：** medium
 
@@ -183,7 +183,7 @@ kind file 结构。
 - [ ] K-11 (0.6 threshold) 和 K-13 (unknown kind) 都在 IRON RULES 中出现
 - [ ] frontmatter `allowed-tools` 包含 `Write`（不含 `agent: Explore`）
 - [ ] 文档开头声明 version 与 plugin.json 一致
-- [ ] **人工走读：** 模拟 web-backend / claude-code-plugin / monorepo 三种 kind 各跑一遍 Process，无歧义分支
+- [ ] **人工走读：** 模拟 web-backend / plugin / monorepo 三种 kind 各跑一遍 Process，无歧义分支
 - [ ] 示例遵守 C8
 
 **规模预估：** large
@@ -252,7 +252,7 @@ kind file 结构。
 - 产出验证报告 `.forge/features/onboard-kind-profiles/verification.md`
 
 **验收标准：**
-- [ ] First-run：kind 正确识别为 `claude-code-plugin`，置信度 ≥ 0.6
+- [ ] First-run：kind 正确识别为 `plugin`，置信度 ≥ 0.6
 - [ ] First-run：生成的 onboard.md 包含所有 kind 声明的 section，顺序正确
 - [ ] First-run：所有 section marker 格式合法（含 verified hash）
 - [ ] First-run：confidence tag 覆盖率符合 scan-patterns.md 要求
