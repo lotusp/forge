@@ -18,7 +18,8 @@ token-budget: 1000
 Covers **inbound** event consumption: topics / queues the system subscribes to,
 handler locations, retry / DLQ policy at a high level.
 
-Outbound publishing is covered under `integration/messaging` (if loaded).
+Outbound publishing is covered under `integration/messaging` (if loaded). Do
+not mix produced topics with consumed queues.
 
 ## Scan Patterns
 
@@ -47,16 +48,28 @@ Outbound publishing is covered under `integration/messaging` (if loaded).
 **Webhook receivers (inbound HTTP as events):**
 - `/webhooks/*` route group — cross-reference `http-api`
 
+**Internal application events:**
+- framework listener interfaces, decorators, observer registration, or event bus
+  subscriptions
+- transactional event listener annotations/hooks where present
+
 ## Extraction Rules
 
-1. **Transport summary** — which event systems are in play (one line per transport).
-2. **Topic / queue inventory** — grouped by transport. Extract name + handler file.
-3. **Retry / DLQ policy** — if configured (max attempts, DLQ destination). Say "default"
-   if using library defaults.
-4. **Idempotency notes** — if handlers document idempotency keys or dedup tables.
-5. **Skip transports with zero consumers** — producing-only falls under
+1. **Direction first.** Include only inbound consumers here. If a topic/queue is
+   only produced by this service, route it to `integration/messaging`.
+2. **Transport summary** — which event systems are in play (one line per
+   transport).
+3. **Consumer inventory** — grouped by transport/mechanism. Extract name,
+   handler file, and annotation/registration mechanism from code.
+4. **Retry / DLQ policy** — include only if configured in current repo. Do not
+   write library defaults as project facts unless the default was verified.
+5. **Idempotency notes** — include if handlers document idempotency keys,
+   dedup tables, unique constraints, or explicit guard logic.
+6. **Internal application events** — list framework/internal listeners separately
+   from external messaging consumers.
+7. **Skip transports with zero consumers** — producing-only falls under
    `integration/messaging`.
-6. **Skip if no event consumption exists.**
+8. **Skip if no event consumption exists.**
 
 ## Section Template
 
@@ -85,6 +98,12 @@ Outbound publishing is covered under `integration/messaging` (if loaded).
 See `/webhooks` route group in HTTP API Surface. All webhooks are HMAC-signed; signature
 verified by `verifyWebhookSignature` middleware. [high]
 
+### Internal Application Events
+
+| Event / Signal | Listener | Mechanism |
+|----------------|----------|-----------|
+| `ProductCreatedEvent` | `ProductCreatedListener` | framework listener interface [high] |
+
 ### Idempotency
 
 - Order event handlers dedupe via `processed_events` table with unique `event_id` [high]
@@ -93,7 +112,7 @@ verified by `verifyWebhookSignature` middleware. [high]
 
 ## Confidence Tags
 
-- `[high]` — listener annotation / subscribe call verified in code
-- `[medium]` — consumer group / retry config inferred from library defaults
+- `[high]` — listener annotation / subscribe call / registration verified in code
+- `[medium]` — consumer found but retry, group, or visibility partially verified
 - `[low]` — topic mentioned in docs only
 - `[inferred]` — avoid

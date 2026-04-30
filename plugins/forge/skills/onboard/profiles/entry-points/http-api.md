@@ -15,11 +15,14 @@ token-budget: 1200
 
 ## Relationship to `core/entry-points`
 
-`core/entry-points` gives a 3–5 example overview across all entry point kinds (HTTP / CLI
-/ Jobs / Events). This profile goes deeper **only for HTTP**: groups routes by resource,
-extracts API versioning, and characterizes response envelope.
+`core/entry-points` gives a 3–5 example overview across all entry point kinds
+(HTTP / CLI / Jobs / Events). This profile goes deeper **only for HTTP**:
+discovers route mechanisms, groups code-verified routes, and records response
+shape only when it is directly evidenced.
 
-Load this profile when the project's primary value is its HTTP API.
+Load this profile when the project exposes HTTP endpoints. Do not assume REST,
+resource naming, versioning, authentication, OpenAPI, or a global response
+envelope unless the current codebase proves it.
 
 ## Scan Patterns
 
@@ -54,50 +57,65 @@ Load this profile when the project's primary value is its HTTP API.
 **Supplementary:**
 - `openapi.yaml` / `swagger.json` — if present, prefer as authoritative source
 - `api/` directory with OpenAPI specs
+- global exception handlers, middleware, interceptors, serializers, or response
+  DTOs when characterizing response shapes
 
 ## Extraction Rules
 
-1. **Group by resource** — `/auth/*`, `/orders/*`, `/products/*` — one group per
-   top-level path segment.
-2. **Count routes per group** — "12 routes" rather than listing every one.
-3. **Call out public vs internal** — admin / internal / webhooks often live under
-   distinct prefixes.
-4. **Version scheme** — URL-based (`/v1/`, `/v2/`) / header-based / none.
-5. **Response envelope** — sample one success and one error shape if discoverable.
-6. **Authentication** — which middleware enforces it (brief mention; details in
-   `integration/auth`).
+1. **Discover the routing mechanism first.** Use framework annotations,
+   router registration calls, URL config, generated specs, or equivalent
+   current-repo sources. Do not infer routes from controller/entity/file names.
+2. **Join route prefixes correctly.** For frameworks with class/module/router
+   prefixes, compose the full route from both parent and child declarations.
+3. **Group by observed path prefixes** only after routes are discovered. Do not
+   force resource-style grouping if the project uses action, RPC, webhook, or
+   mixed routing.
+4. **Counts require reproducible evidence.** If the scan is sampled, say
+   "representative routes" and omit total counts.
+5. **Version scheme** — record URL/header/media-type/custom versioning only if
+   directly evidenced.
+6. **Response envelope** — read actual response types, middleware, serializers,
+   or exception handlers. Do not generalize from one helper class.
+7. **Authentication / authorization** — mention only the observed mechanism
+   or link to `integration/auth`; avoid claiming all routes are protected unless
+   the scan verified global enforcement.
+8. **OpenAPI / Swagger** — distinguish source specs, generated specs, and UI
+   routes. Do not infer UI paths from library defaults when config overrides
+   may exist.
 
 ## Section Template
 
 ```markdown
 ## HTTP API Surface
 
-- **Base URL:** `/api/v1` [high]
-- **Versioning:** URL-based (`/v1`, `/v2`); v1 is current, v2 in beta for orders [high]
-- **Total routes:** 87 across 9 resources [high]
-- **Response envelope:** `{ data: T }` success / `{ error: { code, message } }` error [high]
-- **Auth:** JWT bearer via `authMiddleware` (see `integration/auth`) [high]
+- **Routing mechanism:** <framework annotations / router registrations / URL
+  config / OpenAPI spec> [high] [code]
+- **Base prefixes:** `<observed-prefixes>` [medium] [code]
+- **Versioning:** <observed scheme, or omit if absent> [medium] [code]
+- **Route inventory:** <exact count with reproducible scan, or
+  "representative sample"> [medium] [code]
+- **Response shape:** <directly evidenced success/error shape, or omit>
+  [medium] [code]
+- **Auth:** <observed middleware/filter/guard/interceptor, or see
+  `integration/auth`> [medium] [code]
 
 ### Route Groups
 
 | Group | Routes | Visibility |
 |-------|--------|-----------|
-| `/auth` | 4 (login, refresh, logout, verify) | public [high] |
-| `/orders` | 18 (CRUD + state transitions) | authed [high] |
-| `/products` | 12 (search, detail, variants) | public + authed [high] |
-| `/customers` | 9 (profile, addresses) | authed [high] |
-| `/admin` | 22 (back-office operations) | admin-only [medium] |
-| `/webhooks` | 6 (inbound from payment / shipping providers) | signed [high] |
+| `/orders` | <exact or sampled routes discovered from code> | <observed or omit> [medium] |
+| `/customers` | <exact or sampled routes discovered from code> | <observed or omit> [medium] |
+| `/webhooks` | <exact or sampled routes discovered from code> | <observed or omit> [medium] |
 
 ### OpenAPI
 
-- Spec file: `docs/openapi.yaml` (generated from route decorators) [high]
-- Swagger UI served at `/api/docs` in non-prod [medium]
+- Spec file: `<path>` [high] [code]
+- Documentation UI: `<path from config or code>` [medium] [config]
 ```
 
 ## Confidence Tags
 
-- `[high]` — routes verified by grep against source; counts accurate
-- `[medium]` — group inferred from file layout without exhaustive count
-- `[low]` — routes mentioned in README but not matched in source
+- `[high]` — route/path/shape directly verified from source or authoritative spec with no conflict
+- `[medium]` — route group or response shape sampled or partially verified
+- `[low]` — route mentioned in docs but not matched in source
 - `[inferred]` — avoid

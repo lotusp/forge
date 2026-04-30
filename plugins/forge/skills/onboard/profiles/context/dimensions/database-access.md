@@ -12,7 +12,7 @@ scan-sources:
   - glob: "**/entities/**"
 confidence-signals:
   - ORM declared in dependencies
-  - Repository / DAO pattern used consistently
+  - Repository / DAO / query component pattern observed
   - migration tool + migration files present
 token-budget: 900
 ---
@@ -54,12 +54,16 @@ Grep "@Transactional" / "beginTransaction" / "WithContext.*Tx"
 
 ## Extraction Rules
 
-1. Identify **primary ORM / query tool**
-2. Detect **Repository / DAO pattern** usage
-3. Document **transaction boundary** (service layer is most common)
+1. Identify **primary ORM / query tool** if present.
+2. Detect actual **Repository / DAO / query component / raw SQL** usage.
+3. Document **transaction boundaries** as observed; do not assume they belong
+   to a service layer.
 4. Identify **migration tool** and where migrations live
 5. Detect **N+1 avoidance** patterns (`include:` / `join fetch` / `Preload`)
-6. Document **raw SQL policy** (allowed in repositories only? never?)
+   only when present.
+6. Document **raw SQL usage or policy** only when evidenced by code or docs.
+7. Do not emit "must not" rules for controller/service/repository boundaries
+   unless the current repo has enforcement evidence.
 
 ## Output Template
 
@@ -70,23 +74,27 @@ Grep "@Transactional" / "beginTransaction" / "WithContext.*Tx"
 [high] [build]
 
 **Pattern:** Repository / DAO — all DB access through `<XxxRepository>` classes
-[high] [code]
+[medium] [code]
 
 **Location of DB logic:**
-- Repository layer: `src/repositories/` (or equivalent) [high] [code]
-- Business logic / services MUST NOT call ORM directly [high] [code]
-- Controllers MUST NOT touch DB at all [high] [code]
+- `<path-or-component>` — <observed DB/query role> [medium] [code]
+- `<path-or-component>` — <observed direct ORM/raw SQL usage, if present>
+  [medium] [code]
+
+**Enforced DB boundaries:**
+- <rule backed by test/lint/build/runtime evidence, or omit this subsection>
+  [high] [code]
 
 **Transactions:**
-- Declared at service layer (`@Transactional` or equivalent) [high] [code]
-- Repository methods inherit service's transaction; do not open their own
-  [high] [code]
+- Declared at `<observed layer/component>` [medium] [code]
+- Transaction behavior not fully traced across all DB paths [medium] [code]
 
 **Migrations:**
 - Tool: <Prisma Migrate | Flyway | golang-migrate | ...> [high] [build]
 - Directory: `<path>` [high] [code]
 - Naming: <V<NNN>__<description>.sql | <YYYYMMDDHHMMSS>-<name>.sql> [high] [code]
-- **Never** edit applied migrations — always add a new one [high] [readme]
+- Applied migration policy: <local rule if documented/enforced, otherwise omit>
+  [medium] [readme]
 
 **N+1 avoidance:**
 - Use `<include: | join fetch | Preload | joinedload>` for parent-child
@@ -97,18 +105,15 @@ Grep "@Transactional" / "beginTransaction" / "WithContext.*Tx"
 - <Allowed in repositories only for complex aggregations | Forbidden — use
   ORM query builder always> [high] [code]
 
-### What to avoid
+### Observed Risks / Inconsistencies
 
-- ORM calls inside controllers or services
-- Lazy loading in hot paths without explicit fetch strategy
-- Modifying applied migrations in place
-- Transaction boundaries opened in repositories
-- Raw SQL string concatenation (SQL injection risk)
+- <direct DB access, mixed transaction style, migration inconsistency, or raw SQL
+  risk observed in the current repo> [medium] [code]
 ```
 
 ## Confidence Tags
 
-- `[high]` — ORM declared in deps AND ≥ 80% DB access via repository layer
-- `[medium]` — ORM used but pattern inconsistent (some direct access)
+- `[high]` — DB tool/pattern exhaustively verified with no conflicting evidence
+- `[medium]` — DB tool/pattern observed but sampled or inconsistent
 - `[low]` — ORM declared but mostly raw SQL observed
 - `[inferred]` — DB stack inferred from docker-compose without confirming code

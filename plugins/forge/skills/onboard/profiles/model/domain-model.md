@@ -1,21 +1,21 @@
 ---
 name: domain-model
-section: Domain Model
+section: Domain Concepts / Data Model
 applies-to:
   - web-backend
   - monorepo
 confidence-signals:
   - src/models/ or src/domain/ or src/entities/ directory
   - ORM entity decorators (@Entity / Prisma schema)
-  - DDD-style aggregate files
+  - database schema files, DTOs, messages, or external API models
 token-budget: 1000
 ---
 
-# Profile: Domain Model
+# Profile: Domain Concepts / Data Model
 
 ## Scan Patterns
 
-**Entity file locations:**
+**Model and concept locations:**
 
 - `src/models/**`, `src/entities/**`, `src/domain/**`
 - `**/*.entity.{ts,js}`, `**/*.model.{ts,js}`
@@ -24,57 +24,72 @@ token-budget: 1000
 - TypeORM: `@Entity()` decorator grep
 - Sequelize: `sequelize.define(` grep
 - Pydantic: `class <Name>(BaseModel):` grep
+- database migration/schema files
+- message/event DTOs and external API request/response models
 
-**Aggregate / bounded context signals:**
+**Domain-organization signals:**
 
-- DDD layout: `src/<context>/domain/`, `src/<context>/application/`,
-  `src/<context>/infrastructure/`
-- Folder names: `order/`, `customer/`, `catalog/`, `payment/`, `inventory/`
+- repeated concept names across packages/modules/files
+- state enum or workflow names
+- table names, document types, queue/message payload names, or API DTOs
 
 ## Extraction Rules
 
-1. **List core entities only** — the 5–10 most central domain objects (skip DTOs,
-   request/response types, pure value objects).
-2. **One-line purpose per entity** — business role, not field enumeration.
-3. **Note aggregate boundaries** — if DDD-style, group entities by aggregate root.
-4. **Relationships at a glance** — note 1–2 key relationships per aggregate ("Order has
-   many OrderItems, belongs to Customer").
-5. **Skip entity fields entirely** — field lists belong in `/forge:design`'s
+1. **Describe the current codebase's own domain/data shape.** It may be an ORM
+   entity model, schema-first model, DTO-heavy service, procedural module set,
+   external API model, or mixed legacy model.
+2. **List core concepts only** — the 5–10 most central concepts directly
+   evidenced by code/schema/config. Skip incidental DTOs unless DTOs are the
+   dominant model.
+3. **Do not invent aggregate boundaries.** Only use "aggregate", "bounded
+   context", "entity", or similar vocabulary when the codebase uses or strongly
+   evidences it.
+4. **Use actual file locations.** Do not move concepts into conventional
+   directories in the output if they are physically elsewhere.
+5. **Relationships at a glance** — note 1–2 key relationships only when traced
+   from fields, schema, ORM metadata, or repeated code usage.
+6. **Skip fields entirely** — field lists belong in `/forge:design`'s
    Component Changes section or code-level context, not onboard.
-6. **Generic domain only** — when example needed, use `Order`, `Customer`, `Product`,
-   `Payment` (e-commerce palette per C8).
+7. **Generic examples only** — when examples are needed in this profile, use
+   familiar placeholder concepts such as `Order`, `Customer`, `Product`, or
+   `Payment`. Never copy real project classes, packages, endpoints, queues, or
+   business terms into the profile itself.
 
 ## Section Template
 
 ```markdown
-## Domain Model
+## Domain Concepts / Data Model
 
-Core entities and their aggregate boundaries:
+### Observed Shape
 
-### Order aggregate
-- **`Order`** — lifecycle root; holds status, total, timestamps [high]
-- **`OrderItem`** — line item; child of Order [high]
-- **`Payment`** — one per Order, records settlement state [high]
+- <ORM entities / schema-first tables / DTO-heavy external API model / mixed
+  model / other observed shape> [medium] [code]
 
-### Customer aggregate
-- **`Customer`** — account holder; billing address [high]
-- **`Address`** — value object; embedded in Customer [medium]
+### Core Concepts
 
-### Catalog aggregate
-- **`Product`** — SKU-addressable catalog item [high]
-- **`Inventory`** — stock count per Product per warehouse [high]
+- **`Order`** — <business role confirmed from code/schema usage> [high] [code]
+- **`Customer`** — <business role confirmed from code/schema usage> [medium] [code]
+- **`Product`** — <business role confirmed from code/schema usage> [medium] [code]
 
-**Cross-aggregate relationships:**
-- `Order.customerId` → `Customer.id`
-- `OrderItem.productId` → `Product.id` (soft FK; no DB constraint) [medium]
+### Relationships / State
+
+- `<relationship or state transition traced from fields/schema/usage>`
+  [medium] [code]
+
+### Notes
+
+- <important inconsistency, mixed model, or untraced gap that helps future
+  developers understand the codebase> [medium] [code]
 ```
 
-If project has < 4 entities or no clear domain, state "Project has no structured domain
-model (utility library / tooling)" and omit the entity list.
+If the project has few domain concepts or no clear domain/data model, say what
+was actually found, for example "Project is mostly infrastructure/tooling code"
+or "No structured domain model was found in the scanned sources." Do not force
+an aggregate/entity vocabulary.
 
 ## Confidence Tags
 
-- `[high]` — entity file located and purpose confirmed from class-level comment or usage
-- `[medium]` — entity identified but purpose inferred from name
+- `[high]` — concept file/schema located and purpose confirmed from code usage
+- `[medium]` — concept identified from repeated code/schema evidence but not fully traced
 - `[low]` — entity mentioned in ORM config but file not inspected
 - `[inferred]` — avoid

@@ -125,6 +125,51 @@ Every fact in the artifact MUST be traceable to a file path, pattern match,
 or explicit user statement. When evidence is absent, omit the row/bullet.
 Never write "N/A", "unknown", "TBD" — omit the line entirely.
 
+### R7A — Codebase-first, no normalization
+
+Onboard reconstructs the working context of the current codebase. It MUST NOT
+normalize the project into an industry-standard architecture, a common framework
+shape, or a "best practice" model.
+
+- If the current codebase is mixed, legacy, inconsistent, or non-standard,
+  describe that shape as observed.
+- Do not invent missing layers, directories, entry points, response envelopes,
+  domain models, queues, jobs, tests, or conventions because they are common in
+  similar projects.
+- External guidance from parent docs, organization docs, README files, or user
+  statements is secondary evidence until it is verified against the current
+  repository. If it conflicts with code/build/config, surface the conflict
+  instead of silently choosing one source.
+- Industry practice may appear only as a non-binding reference under an
+  observed risk or note. It MUST NOT become a project fact, local convention,
+  hard constraint, or recommended pattern unless the current codebase provides
+  evidence for it.
+
+### R7B — Strong claims require direct verification
+
+Any claim using strong language or exact quantities MUST survive a direct
+verification pass before render.
+
+Strong language includes: `must`, `must not`, `never`, `only`, `forbidden`,
+`zero exceptions`, `enforced by`, `fails build`, `canonical`, and
+`current violations: none`.
+
+Exact quantities include route counts, controller counts, entity/model counts,
+listener counts, test counts, dependency counts, coverage thresholds, and
+similar numeric claims.
+
+Requirements:
+
+- Strong language requires a concrete enforcement source in the current repo
+  (compile failure, test assertion, lint/static-analysis rule, framework/runtime
+  invariant, or explicit project rule that applies to files in this repo).
+- Exact quantities require a reproducible grep/glob/script observation. If the
+  method cannot be reproduced, use qualitative wording or omit the number.
+- `current violations: none` may be written only after running the inverse
+  search implied by the rule.
+- If direct verification is not possible within budget, downgrade the claim to
+  a sampled observation, inference, or observed risk.
+
 ### R8 — No source files modified
 
 This skill is strictly read + write-to-.forge/. Do not edit project source
@@ -232,8 +277,9 @@ Every fact in a section body MUST carry exactly **one confidence tag** from:
 
 ```
 [high]       — source verified; fact directly observed
-[medium]     — pattern observed + partial cross-verification
-[low]        — single-source evidence; not cross-verified
+[medium]     — evidence exists but is sampled, partial, or conflicts with
+               another project source
+[low]        — single-source documentation/comment evidence; not cross-verified
 [inferred]   — derived from directory layout / file names without file body inspection
 ```
 
@@ -248,8 +294,8 @@ A fact MAY additionally carry **one source tag** from:
 ```
 
 A fact MAY additionally carry the **conflict flag** `[conflict]` to mark
-contradictions between two stated facts (e.g. version in `plugin.json` vs
-version in README badge).
+contradictions between two current-project sources (e.g. runtime config vs
+README, build manifest vs docs, generated spec vs code).
 
 **Tag order**: `<fact text> [confidence] [source?] [conflict?]`.
 No other bracketed values are permitted. Do not invent new tags mid-run.
@@ -344,6 +390,8 @@ Different claim categories require different confidence floors:
 - `recommended-pattern` MUST be at least `[medium]`
 - `process-rule` MUST be at least `[medium]`; `[high]` is allowed only when
   explicitly documented or repeatedly evidenced
+- `fact` MAY be `[high]` only when directly verified in code/build/config or
+  another authoritative current-repo source with no conflicting source
 - `[inferred]` is forbidden in `architecture.md` and forbidden in
   `constraints.md` except under `## Current Business Caveats`
 - Any `[inferred]` claim that is rendered MUST use softened language such as
@@ -414,6 +462,7 @@ Which do you prefer?
 │      read profile file                                       │
 │      execute Scan Patterns + Extraction Rules                │
 │      classify extracted claims (R15/R16/R17)                │
+│      verify strong claims and exact quantities (R7B)          │
 │      write section to onboard.md using Section Template      │
 │      discard profile from working context                    │
 │  → writes .forge/context/onboard.md                          │
@@ -425,6 +474,7 @@ Which do you prefer?
 │      for dim in Plan.context-dimensions:                     │
 │          read dim file; run Scan Patterns; collect evidence  │
 │          classify + pre-route claims                         │
+│          verify strong claims and exact quantities (R7B)      │
 │          detect conflicts → append to batch list             │
 │  3.2 batch conflict resolution (ONE interactive checkpoint)  │
 │      present all conflicts → user gives per-conflict answers │
@@ -598,7 +648,13 @@ loop over Plan.profiles:
       confidence_floors = R16,
       execution_policy = R17
   )
-  section_md = render(template, classified, tags_guide)
+  verified = verify_claims(
+      classified,
+      evidence,
+      codebase_first = R7A,
+      strong_claim_gate = R7B
+  )
+  section_md = render(template, verified, tags_guide)
 
   append_section(artifact_buffer, section_md)
 
@@ -631,6 +687,19 @@ facts — no row or bullet may appear without at least the confidence tag.
 - If no annotation matches, classify as `fact` to `onboard.md` unless that
   would violate R16 or R17
 
+**Codebase-first verification (R7A + R7B):**
+
+- Before render, re-check any strong claim, exact quantity, route, file path,
+  entry point, response shape, listener, model/entity location, or enforcement
+  statement against the current repository evidence.
+- If README/docs/user guidance conflicts with code, build, or config evidence,
+  mark the claim `[conflict]` or omit it; do not merge the sources into a
+  single high-confidence statement.
+- If a common framework or industry pattern is not present in the codebase,
+  do not add it as a project fact.
+- If the scan only sampled a category, say it is a representative sample and
+  avoid total counts.
+
 **Budget enforcement:**
 
 If the extracted content for a profile would exceed its declared
@@ -658,8 +727,14 @@ Emit the artifact header:
 
 **3.2 — "What This Is" section**
 
-Always the first section. Synthesize from README.md + CLAUDE.md + top-level
-directory observations. 1–2 paragraphs, non-technical audience.
+Always the first section. Synthesize from current-repo evidence first:
+top-level directory observations, build/config manifests, and directly
+verified README/CLAUDE statements. 1–2 paragraphs, non-technical audience.
+
+README.md, CLAUDE.md, organization docs, or parent-repo guidance are secondary
+evidence. If they are not corroborated by current-repo files, use softened
+language and avoid `[high]`. If they conflict with code/build/config, surface
+the conflict or omit the claim.
 
 **3.3 — Section markers**
 
@@ -771,12 +846,18 @@ for dim_path in unique(flatten(Plan.context-dimensions.values())):
     facts, detected_conflicts = extract(rules, observations)
 
     evidence_by_dim[dim_path] = facts
-    classified_routes[dim_path] = classify(
+    classified = classify(
         facts,
         annotations,
         default_routes = R15,
         confidence_floors = R16,
         execution_policy = R17
+    )
+    classified_routes[dim_path] = verify_claims(
+        classified,
+        observations,
+        codebase_first = R7A,
+        strong_claim_gate = R7B
     )
     conflicts.extend(detected_conflicts)
 
@@ -801,6 +882,13 @@ classified claim set where each claim already carries:
 - `source-tag`
 
 This pre-routing prevents later stages from inferring routing ad hoc.
+
+**Codebase-first verification (R7A + R7B):**
+
+Before the claim set is retained, verify strong language and exact quantities
+against current-repo evidence. If a dimension finds only external guidance,
+common framework assumptions, or sampled observations, it must preserve that
+limited evidence level in the rendered output.
 
 **Strictly non-interactive (R11):**
 

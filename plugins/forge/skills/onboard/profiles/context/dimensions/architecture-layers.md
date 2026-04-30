@@ -12,22 +12,25 @@ scan-sources:
   - glob: "plugins/*/agents/*.md"
   - glob: "packages/*/package.json"
 confidence-signals:
-  - explicit directory layout (controllers/ services/ repositories/)
-  - DDD-style bounded contexts
-  - import-direction consistency across modules
+  - explicit directory layout and module boundaries
+  - repeated local dependency directions
+  - enforcement evidence from tests, lint, build, or runtime framework rules
 token-budget: 1200
 ---
 
-# Dimension: Architecture Layers
+# Dimension: Architecture Shape
 
 ## Scan Patterns
 
 **For web-backend / monorepo:**
 
-- Enumerate subdirectories under `src/`: look for `controllers/`, `services/`,
-  `repositories/`, `domain/`, `application/`, `infrastructure/`
-- Grep import directions to detect layering rules with real enforcement evidence
-- Read representative classes only when needed to locate business logic
+- Enumerate actual source roots, modules, packages, and framework entry points.
+  Do not assume MVC, layered, DDD, hexagonal, or package-by-feature structure.
+- Grep import/dependency directions only to describe observed coupling. Treat
+  them as enforcement only when there is a matching build, test, lint, static
+  analysis, framework, or runtime rule.
+- Read representative classes only when needed to locate business logic and
+  record that the result is sampled unless the scan is exhaustive.
 
 **For plugin:**
 
@@ -47,14 +50,18 @@ token-budget: 1200
 
 ## Extraction Rules
 
-1. Identify the layering model in use.
-2. Separate **observed structure** from **enforced rules** and from
-   **recommended direction**.
+1. Identify the architecture shape actually present in the codebase, even when
+   it is mixed, legacy, sparse, or inconsistent.
+2. Separate **observed organization**, **local conventions**, **enforced
+   boundaries**, and **observed risks / inconsistencies**.
 3. A rule belongs in `### Enforced Rules` only if backed by compile/test/
    static-check/framework/IRON-RULE evidence.
-4. Directory layout alone is never enough for `### Enforced Rules`.
-5. Guidance formerly written as "What to avoid" belongs in
-   `### Recommended Direction`.
+4. Directory layout, framework convention, common industry practice, or a test
+   class name alone is never enough for `### Enforced Rules`.
+5. Do not map the project to a best-practice architecture. If the codebase is
+   only partially layered or uses multiple patterns, say so.
+6. Potential friction found while reading the codebase belongs in
+   `### Observed Risks / Inconsistencies`, not in hard constraints.
 
 ## Claim Classification Annotations
 
@@ -64,16 +71,18 @@ and minimum confidence.
 
 | Extracted fact type | Claim category | Target artifact | Target section | Min confidence |
 |---------------------|----------------|-----------------|----------------|----------------|
-| Directory layout observation | `fact` | `architecture.md` | `### Observed Structure` | `[medium]` |
-| Module/package inventory | `fact` | `architecture.md` | `### Observed Structure` | `[medium]` |
+| Directory layout observation | `fact` | `architecture.md` | `### Observed Organization` | `[medium]` |
+| Module/package inventory | `fact` | `architecture.md` | `### Observed Organization` | `[medium]` |
 | Import-direction rule backed by compile/test/static-check | `enforced-rule` | `architecture.md` | `### Enforced Rules` | `[high]` |
 | Rule backed by framework constraint or explicit IRON RULE | `enforced-rule` | `architecture.md` | `### Enforced Rules` | `[high]` |
-| Soft guidance inferred from dominant layout/pattern | `recommended-pattern` | `architecture.md` | `### Recommended Direction` | `[medium]` |
-| "What to avoid" guidance | `recommended-pattern` | `architecture.md` | `### Recommended Direction` | `[medium]` |
+| Repeated local pattern observed in current repo | `recommended-pattern` | `architecture.md` | `### Local Conventions` | `[medium]` |
+| Maintainer-facing friction or inconsistency | `current-caveat` | `architecture.md` | `### Observed Risks / Inconsistencies` | `[medium]` |
 
 **Forbidden routes:**
 
 - Directory-layout observation → NOT `### Enforced Rules`
+- Industry practice or framework convention → NOT `### Local Conventions`
+  unless the current repo repeats it or documents it
 - `[inferred]` → NOT this dimension's output
 
 ## Output Template
@@ -81,26 +90,31 @@ and minimum confidence.
 ### Output Template — web-backend
 
 ```markdown
-## Architecture Layers
+## Architecture Shape
 
-### Observed Structure
+### Observed Organization
 
-**Model:** <3-tier MVC / DDD / Hexagonal / custom> [medium] [code]
+**Shape:** <describe the actual organization found in this repository>
+  [medium] [code]
 
-- `<controllers/>` — inbound HTTP/adapters layer [medium] [code]
-- `<services/>` — application/business orchestration layer [medium] [code]
-- `<repositories/>` — persistence/data access layer [medium] [code]
+- `<source-root-or-module>/...` — <observed role from files read>
+  [medium] [code]
+- `<source-root-or-module>/...` — <observed role from files read>
+  [medium] [code]
 
 ### Enforced Rules
 
 - <rule backed by compile/test/static-check/framework/IRON RULE> [high] [code]
 
-### Recommended Direction
+### Local Conventions
 
-- Business logic should stay out of controllers and inside service/application
-  layers where feasible [medium] [code]
-- Prefer repository/adapter seams over direct infrastructure coupling in
-  business logic [medium] [code]
+- <pattern repeatedly observed in current repo, phrased as local convention>
+  [medium] [code]
+
+### Observed Risks / Inconsistencies
+
+- <inconsistency or maintenance risk observed in current repo; non-binding
+  reference only> [medium] [code]
 ```
 
 ### Output Template — plugin

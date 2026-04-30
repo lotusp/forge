@@ -1,6 +1,6 @@
 ---
 name: data-flows
-section: Key Data Flows
+section: Code Path Walkthroughs
 applies-to:
   - web-backend
   - web-frontend
@@ -13,11 +13,12 @@ confidence-signals:
 token-budget: 1000
 ---
 
-# Profile: Key Data Flows
+# Profile: Code Path Walkthroughs
 
 ## Scan Patterns
 
-Data flows are **synthesized**, not directly scanned. This profile depends on output from:
+Data flows are **evidence-bounded walkthroughs**, not business stories. This
+profile depends on output from:
 
 - `entry-points` profile (source of flow starts)
 - `module-map` profile (intermediate hops)
@@ -34,34 +35,50 @@ Data flows are **synthesized**, not directly scanned. This profile depends on ou
 1. **Pick 2–3 flows, not more** — the most representative user/system journeys.
    Criteria: touches multiple modules, has business significance, would be asked about
    during onboarding.
-2. **3–5 steps per flow** — this is a map, not a call graph. Detailed tracing belongs in
-   `/forge:clarify`, not onboard.
-3. **Format: `Entry → Step → Step → Outcome`** — arrow-separated.
-4. **Start with the trigger** — HTTP verb + path / CLI command / event topic.
-5. **If the project is too small to have non-trivial flows** (e.g. utility library),
+2. **Declare trace depth** for each flow:
+   - `traced` — every step was verified in code
+   - `sampled` — representative path followed, not exhaustive
+   - `doc-described` — described in docs/tests but not fully traced
+3. **3–5 steps per flow** — this is a navigation map, not a full call graph.
+   Detailed tracing belongs in `/forge:clarify`, not onboard.
+4. **Format as code navigation.** Use entry point, key calls/components, side
+   effects, and unverified gaps. Do not write downstream business effects unless
+   they were traced to concrete code or tests.
+5. **Start with the trigger** — HTTP route / CLI command / event/message /
+   scheduler / framework hook / user action, whichever is actually evidenced.
+6. **If the project is too small to have non-trivial flows** (e.g. utility library),
    state "This project has no multi-step flows" and omit the flow list.
-6. **For plugin kind** — flows are skill-to-skill artifact dependencies
+7. **For plugin kind** — flows are skill-to-skill artifact dependencies
    (e.g. `onboard → calibrate → clarify → design → tasking → code`).
 
 ## Section Template
 
 ```markdown
-## Key Data Flows
+## Code Path Walkthroughs
 
-1. **User login**: `POST /auth/login` → validate credentials against `users` table →
-   issue JWT → set HttpOnly cookie → return 200 [high]
+### Create Order
 
-2. **Order checkout**: `POST /orders` → validate cart → reserve inventory (redis lock)
-   → create `orders` row → publish `order.created` → return 201 with order ID [medium]
+Evidence level: traced [high] [code]
 
-3. **Payment reconciliation**: hourly cron → fetch unreconciled orders →
-   call payment provider → update order status → publish `order.settled` [medium]
+1. Entry: `POST /orders` in `OrderController` [high] [code]
+2. Calls: `OrderService.create(...)` [high] [code]
+3. Side effects: creates an order record and emits `OrderCreatedEvent` [high] [code]
+4. Unverified gaps: downstream listeners were not exhaustively traced [medium] [code]
+
+### Reconcile Payments
+
+Evidence level: sampled [medium] [code]
+
+1. Entry: scheduled job or message handler observed in code [medium] [code]
+2. Calls: payment integration component [medium] [code]
+3. Side effects: updates payment status [medium] [code]
+4. Unverified gaps: retry and idempotency behavior not fully traced [medium] [code]
 ```
 
 For **plugin** kind, use this form instead:
 
 ```markdown
-## Key Data Flows
+## Code Path Walkthroughs
 
 1. **First-run context bootstrap**: `/forge:onboard` (Stage 1) detects
    project kind → (Stage 2) produces `.forge/context/onboard.md` →
@@ -79,6 +96,6 @@ For **plugin** kind, use this form instead:
 ## Confidence Tags
 
 - `[high]` — all steps verified against entry-points + module-map outputs
-- `[medium]` — end-to-end logical flow, intermediate step inferred
+- `[medium]` — sampled flow or partially traced intermediate step
 - `[low]` — flow described in README but not verified in code
 - `[inferred]` — guessed; avoid in this profile's output

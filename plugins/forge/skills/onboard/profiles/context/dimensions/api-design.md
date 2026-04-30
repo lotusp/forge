@@ -23,15 +23,16 @@ token-budget: 1000
 **URL structure survey:**
 ```
 Enumerate registered routes (from core/entry-points profile if available):
-  - Base prefix: /api, /api/v1, / ?
-  - Resource collection pattern: /<resource>, /<resource>/<id>
-  - Sub-resource pattern: /<resource>/<id>/<sub>
+  - Base prefixes actually present
+  - Route shapes actually present
+  - Whether routing is resource-style, action-style, RPC-style, webhook-style,
+    generated from specs, or mixed
 ```
 
 **HTTP verb usage:**
 ```
-Count GET / POST / PUT / PATCH / DELETE per resource
-  → detect conventions (e.g. "always PATCH for partial updates, never PUT")
+Count GET / POST / PUT / PATCH / DELETE per observed route group
+  → detect local patterns only when repeated
 ```
 
 **Response envelope:**
@@ -60,14 +61,18 @@ Grep query param usage: ?page= / ?offset= / ?cursor=
 
 ## Extraction Rules
 
-1. Extract **base URL + versioning strategy**
-2. Document **HTTP verb semantics** per convention
-3. Capture **response envelope shape** with literal examples
-4. List **status code map** (success + common errors)
-5. Document **pagination strategy** (page / offset / cursor)
-6. Note any **HATEOAS / hypermedia** conventions if present
+1. Extract **base prefixes + versioning strategy** only when evidenced.
+2. Document **HTTP verb usage** as observed local patterns, not REST rules.
+3. Capture **response envelope shape** with literal examples only after reading
+   response types, middleware, serializers, exception handlers, or specs.
+4. List **status code patterns** only when directly observed.
+5. Document **pagination strategy** (page / offset / cursor / custom) only when
+   observed.
+6. Note any **HATEOAS / hypermedia** conventions if present.
 7. Detect conflicts (e.g. some endpoints return bare resource,
    others wrapped)
+8. Do not classify mixed API behavior as wrong unless the current repo has a
+   local rule forbidding it. Mixed behavior may be an observed risk.
 
 ## Output Template
 
@@ -76,26 +81,23 @@ Grep query param usage: ?page= / ?offset= / ?cursor=
 
 **Base URL:** `<e.g. /api/v1>` [high] [code]
 
-**Versioning:** <URL-based | Header-based | None> [high] [code]
+**Versioning:** <URL-based | Header-based | media-type | custom | none observed>
+[medium] [code]
 
 ### URL structure
 
 \`\`\`
-GET    /<resource>            — list (paginated)
-GET    /<resource>/<id>       — detail
-POST   /<resource>            — create
-PATCH  /<resource>/<id>       — partial update
-DELETE /<resource>/<id>       — delete
+GET    /orders                — observed handler purpose [medium] [code]
+POST   /orders/actions/cancel — observed handler purpose [medium] [code]
+POST   /webhooks/payments     — observed handler purpose [medium] [code]
 \`\`\`
 
-Sub-resources nested up to one level:
-`/<parent>/<id>/<child>` [high] [code]
+Observed route shape: <resource-style / action-style / webhook-style / mixed>
+[medium] [code]
 
-### Verb semantics
+### Verb Usage
 
-- `POST`: resource creation; returns 201 with body [high] [code]
-- `PATCH`: partial update; never `PUT` for partial [high] [code]
-- `DELETE`: returns 204 (no body) [high] [code]
+- `<verb>`: <local usage pattern observed across handlers> [medium] [code]
 
 ### Response envelope
 
@@ -103,8 +105,7 @@ Success:
 
 \`\`\`json
 {
-  "data": { /* resource or list */ },
-  "meta": { "page": 1, "pageSize": 20, "total": 137 }
+  "data": { /* observed payload shape */ }
 }
 \`\`\`
 
@@ -114,7 +115,7 @@ Error:
 {
   "error": {
     "code": "RESOURCE_NOT_FOUND",
-    "message": "Order abc-123 not found",
+    "message": "Order not found",
     "details": { /* optional */ }
   }
 }
@@ -122,22 +123,14 @@ Error:
 
 [high] [code]
 
-### Status codes
+### Status Code Patterns
 
-- `200` — successful GET / PATCH [high] [code]
-- `201` — successful POST (creation) [high] [code]
-- `204` — successful DELETE [high] [code]
-- `400` — malformed request [high] [code]
-- `401` — missing / invalid auth [high] [code]
-- `403` — authenticated but not authorized [high] [code]
-- `404` — resource not found [high] [code]
-- `409` — conflict (duplicate, version mismatch) [high] [code]
-- `422` — semantic validation failure [medium] [code]
-- `500` — unhandled server error [high] [code]
+- `<status>` — <observed use in handlers or exception mapping> [medium] [code]
 
 ### Pagination
 
-<Cursor-based | Offset-based | Page-based> [high] [code]
+<Cursor-based | Offset-based | Page-based | custom | none observed>
+[medium] [code]
 
 Example:
 \`\`\`
@@ -152,17 +145,15 @@ GET /orders?cursor=eyJpZCI6NzN9&limit=20
 - Serving: `<url path for Swagger UI, if any>` [medium] [code]
 - Generation: <auto from decorators | hand-written> [medium] [code]
 
-### What to avoid
+### Observed Risks / Inconsistencies
 
-- Mixing envelope shapes across endpoints (some wrapped, some bare)
-- Using 200 for everything (lose semantic HTTP status)
-- Embedding business errors in HTTP 200 with `{ success: false }`
-- Leaking DB column names directly as JSON field names without mapping
+- <mixed response/status/pagination behavior observed in current repo; reference
+  only unless a local rule enforces consistency> [medium] [code]
 ```
 
 ## Confidence Tags
 
-- `[high]` — OpenAPI spec present OR ≥ 5 endpoints demonstrate the same pattern
-- `[medium]` — pattern inferred from 3–4 endpoints without spec
-- `[low]` — pattern visible in 1–2 endpoints only
-- `[inferred]` — pattern not observed; framework default assumed
+- `[high]` — authoritative spec or exhaustive source scan verifies the pattern with no conflict
+- `[medium]` — pattern observed in sampled handlers or conflicts with another source
+- `[low]` — pattern visible in 1–2 handlers or docs only
+- `[inferred]` — framework default assumed; avoid in final output

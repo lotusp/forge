@@ -13,7 +13,7 @@ confidence-signals:
 token-budget: 900
 ---
 
-# Profile: Configuration
+# Profile: Configuration Sources and Conflicts
 
 ## Scan Patterns
 
@@ -46,34 +46,55 @@ token-budget: 900
 - `vault`, `aws-sdk-ssm`, `sops`, `doppler`, `1password` in deps
 - `.sops.yaml` / `secrets.enc.yaml`
 
+**Conflict sources:**
+
+- README / docs / parent guidance mentioning ports, profiles, config files, or
+  template-copy steps
+- build manifests and runtime config files that select profiles or load config
+- missing files referenced by docs
+
 ## Extraction Rules
 
-1. **List env var categories, not every variable** — group by concern (DB / cache /
-   external services / feature flags).
-2. **Count required vs optional** — a required env var has no default in `.env.example`.
-3. **Per-environment file count** — if `application-{dev,staging,prod}.yml` pattern
-   exists, note it.
-4. **Secret management** — state how secrets are injected (CI env / vault / bundled).
-5. **Do not leak real credential names** that match external system naming (follow C8).
+1. **Current-repo config files are primary evidence.** Build manifests and
+   runtime config files outrank README, parent docs, and external guidance.
+2. **List config categories, not every variable** — group by concern (database,
+   cache, external services, feature flags, logging, security).
+3. **Count only when reproducible.** Required vs optional counts must come from
+   schema validation, config examples, or direct default-value inspection.
+4. **Per-environment files** — record only files that exist.
+5. **Secret management** — state how secrets are injected only when directly
+   evidenced by dependencies/config/manifests.
+6. **Detect conflicts.** If docs mention files, ports, profiles, loaders, or
+   setup steps that differ from current config/build files, mark `[conflict]`
+   or move the doc-only item to notes.
+7. **Never emit setup commands or template-copy instructions** (R17). If a
+   referenced template file is absent, report it as a config-source conflict,
+   not as an instruction.
+8. **Do not leak real credential names** that match external system naming
+   (follow C8).
 
 ## Section Template
 
 ```markdown
-## Configuration
+## Configuration Sources and Conflicts
 
-- **Env variable catalogue:** `.env.example` defines ~24 variables grouped into:
-  DB (5), cache (2), external APIs (6), feature flags (8), logging (3) [high]
-- **Config loader:** `@nestjs/config` with Zod schema validation at startup [high]
-- **Per-environment config:** `config/{development,test,production}.ts`, selected by
-  `NODE_ENV` [high]
-- **Secret injection:** local via `.env` (gitignored); CI via GitHub Actions secrets;
-  prod via AWS SSM Parameter Store (path `/orders/prod/*`) [medium]
-- **Required at startup:** 7 variables (app fails fast if missing) [high]
+- **Primary config files:** `<path list observed in current repo>` [high] [config]
+- **Config loader:** `<loader/framework mechanism observed in dependencies/code>`
+  [medium] [build]
+- **Environment selection:** `<profile/env selection mechanism observed in current
+  repo>` [medium] [config]
+- **Secret injection:** `<observed secret source, or omit if not evidenced>`
+  [medium] [config]
+
+### Conflicts / Stale Guidance
+
+- `<doc source>` mentions `<config fact>`, but `<current config/build source>`
+  shows `<conflicting fact>` [medium] [readme] [conflict]
 ```
 
 ## Confidence Tags
 
-- `[high]` — config file read, variable list verified
-- `[medium]` — loader library identified but per-env split inferred
+- `[high]` — current-repo config/build file read and no conflicting source found
+- `[medium]` — source exists but is partial, sampled, or conflicts with another source
 - `[low]` — config pattern mentioned in README, no file inspection
 - `[inferred]` — avoid

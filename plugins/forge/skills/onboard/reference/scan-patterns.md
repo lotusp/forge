@@ -204,7 +204,9 @@ endpoints:
 
 ```
 rg '@(Get|Post)Mapping.*"(/[a-z]+/|/api/[a-z]+/)"' --type java
-# Common external integration paths: /ext/, /data/, /import/, /sales/, /dealer/
+# Common external integration paths use project-specific partner or system
+# slugs. Treat any examples in generated artifacts as evidence from the
+# current repo only, not as template vocabulary.
 ```
 
 ---

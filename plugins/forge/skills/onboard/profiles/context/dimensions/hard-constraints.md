@@ -12,7 +12,7 @@ scan-sources:
   - glob: "CLAUDE.md"
   - glob: "CONTRIBUTING.md"
 confidence-signals:
-  - explicit IRON RULES section in CLAUDE.md or SKILL.md
+  - explicit IRON RULES section that applies to files in the current repo
   - banned-list in CONTRIBUTING.md / style guide
   - CI checks enforcing constraints (security scanners, linters at error level)
 token-budget: 900
@@ -38,9 +38,17 @@ token-budget: 900
 
 1. Only extract claims that are both **stable** and **hard**.
 2. Each constraint must have a concrete enforcement source.
-3. Process expectations are routed to `delivery-conventions`, not this
+3. The enforcement source must be verified in the current repository and must
+   apply to files or artifacts this repository actually contains.
+4. External or parent documentation is secondary evidence. If it is not
+   corroborated by current-repo enforcement, route it to a softer destination
+   or omit it.
+5. Process expectations are routed to `delivery-conventions`, not this
    dimension.
-4. Current business exceptions and temporary caveats are routed elsewhere.
+6. Current business exceptions, inconsistencies, risks, and temporary caveats
+   are routed elsewhere.
+7. `Current known violations: none` may be written only after performing the
+   inverse search implied by the constraint.
 
 ## Claim Classification Annotations
 
@@ -54,6 +62,8 @@ token-budget: 900
 
 - `process-rule` → route to `delivery-conventions`
 - `current-caveat` → route to `anti-patterns`
+- External docs without current-repo enforcement → not a hard constraint
+- Repository does not contain affected files/artifacts → omit as out of scope
 - `[inferred]` → not allowed in this dimension's output
 
 ## Output Template
@@ -61,7 +71,9 @@ token-budget: 900
 ```markdown
 ## Hard Constraints
 
-These rules have zero exceptions. Violations are `must-fix` severity.
+Only rules with current-repo enforcement appear here. If a rule is merely a
+team preference, industry practice, parent-doc instruction, or observed risk,
+route it elsewhere.
 
 ### C1 — <imperative statement>
 
@@ -71,7 +83,8 @@ These rules have zero exceptions. Violations are `must-fix` severity.
 
 **Violation appearance:** <what non-compliance looks like in code>
 
-**Current known violations:** <path:line references, if any> [high] [code]
+**Current known violations:** <path references found by inverse search, or omit
+this line if no inverse search was performed> [high] [code]
 
 ---
 

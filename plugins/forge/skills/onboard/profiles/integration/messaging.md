@@ -17,8 +17,8 @@ token-budget: 900
 
 Covers **outbound** event publishing and **messaging infrastructure overview**:
 
-- Which message systems are in use
-- Topics / queues this system produces to
+- Which message systems are in use, as evidenced by dependencies/config/code
+- Topics / queues this system produces to, if producer call sites are found
 - Schema registry / contract governance (if any)
 - Ordering / partitioning strategy
 
@@ -49,12 +49,16 @@ when the system is event-driven.
 
 ## Extraction Rules
 
-1. **Transport summary** — one line: "Kafka for business events, SQS for async jobs,
-   internal NATS for pub-sub".
-2. **Produced topics** — inventory grouped by transport, with producer location.
-3. **Schema governance** — state how contracts are managed (registry / repo schemas /
-   ad-hoc JSON).
-4. **Reliability** — at-least-once / exactly-once / outbox / fire-and-forget.
+1. **Direction first.** Keep produced topics/queues separate from consumed
+   topics/queues. If direction is unclear, mark it as unclear instead of
+   choosing.
+2. **Transport summary** — one line per transport actually evidenced.
+3. **Produced topics** — inventory grouped by transport, with producer location.
+   Do not list a topic as produced unless a producer call/config is found.
+4. **Schema governance** — state how contracts are managed (registry / repo
+   schemas / ad-hoc JSON) only when evidenced.
+5. **Reliability** — at-least-once / exactly-once / outbox / fire-and-forget
+   only when code/config/docs support the claim.
 5. **Redact** broker URLs, schema registry hosts, auth credentials per C8.
 
 ## Section Template
@@ -62,32 +66,35 @@ when the system is event-driven.
 ```markdown
 ## Messaging & Events
 
-**Transports in use:** Kafka (primary domain events), SQS (async job dispatch)
+**Transports in use:** Kafka, SQS [medium] [build]
 
 ### Produced Topics
 
 | Transport | Topic | Producer | Semantics |
 |-----------|-------|----------|-----------|
-| Kafka | `orders.events` | `src/services/order.ts:44` | at-least-once, partitioned by orderId [high] |
-| Kafka | `payment.settled` | `src/services/payment.ts:89` | at-least-once, partitioned by orderId [high] |
-| SQS | `orders-async-jobs` | `src/services/order.ts:118` | FIFO, MessageGroupId = customerId [high] |
+| Kafka | `orders.events` | `src/services/order.ts:44` | semantics observed in producer/config [high] |
+| SQS | `orders-async-jobs` | `src/services/order.ts:118` | semantics observed in producer/config [medium] |
 
 ### Schema Governance
 
-- Kafka topics: JSON Schema files in `schemas/kafka/*.json`, version-bumped manually [high]
-- Schema registry: hosted (host redacted per C8); enforced in staging + prod [medium]
-- SQS payloads: Zod schema validation at producer boundary [high]
+- Kafka topics: JSON Schema files in `schemas/kafka/*.json` [high]
+- Schema registry: <observed registry integration, host redacted per C8> [medium]
+- SQS payloads: validation observed at producer boundary [medium]
 
 ### Reliability
 
 - Transactional outbox via `event_outbox` table; CDC to Kafka by Debezium [high]
-- SQS producer has no outbox — fire-and-forget with 3-retry wrapper [medium]
-- DLQ per topic: `<topic>.dlq` convention [medium]
+- SQS producer uses retry wrapper observed in code [medium]
+- DLQ convention: `<topic>.dlq` only if documented/configured [medium]
+
+### Direction Gaps
+
+- <topic/queue name found in config but direction not verified> [medium] [config]
 ```
 
 ## Confidence Tags
 
-- `[high]` — producer call + topic name verified in source
-- `[medium]` — producer inferred from library presence
+- `[high]` — producer call + topic name verified in source with no conflict
+- `[medium]` — transport/topic found but semantics or direction partially verified
 - `[low]` — mentioned in docs only
 - `[inferred]` — avoid
