@@ -61,6 +61,12 @@ value = `git rev-parse --short HEAD` at the moment the section was rendered
 - LLMs MUST NOT invent a different `verified-commit` value. Use literal
   git output.
 
+**`(no-commit)` sentinel:** When the workspace is not a git repository
+(`git rev-parse --short HEAD` fails), use the literal string `(no-commit)`
+(parentheses included). This is the ONLY permitted non-hex value. Mode B's
+commit-based fast-skip is unavailable in this case; runs always advance
+to body-signature comparison.
+
 ### I-R2b — `body-signature` is the SHA-256 of the canonicalized body
 
 The `body-signature="<hash>"` attribute detects **out-of-band edits** to
@@ -79,6 +85,14 @@ body-signature = first_16_hex_chars(SHA-256(canonicalized_body))
 3. Collapse consecutive blank lines to a single blank line
 4. Normalise line endings to `\n`
 5. No case normalisation (content case is meaningful)
+
+**Bash computation mandate:** The signature MUST be computed by piping the
+canonicalized body through Bash + `sha256sum` (Linux) or `shasum -a 256`
+(macOS). LLMs cannot compute SHA-256 internally; typed hex strings are R9
+violations. See SKILL.md Step 3.3 and `scripts/lib/hash.sh` (alpha) for
+the canonical computation path. The temporary placeholder `body-signature="(pending)"`
+is allowed during initial render; Step 6.5 Check 4 replaces all `(pending)`
+values with real hashes before Step 7.
 
 **Why exclude preserve blocks?** Users are expected to edit preserve blocks
 freely. If canonicalization included them, every human edit would mark the
