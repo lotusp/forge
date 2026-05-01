@@ -236,6 +236,29 @@ every section marker. They encode different signals:
 - `body-signature` = SHA-256 first 16 hex of canonicalized body — Mode B's
   tamper-detect trigger
 
+**`(no-commit)` sentinel:** When the workspace is not a git repository
+(`git rev-parse --short HEAD` fails), the value `(no-commit)` (parentheses
+included) is the only legal non-hex placeholder for `verified-commit`.
+
+**body-signature MUST be Bash-computed.** LLMs cannot compute SHA-256
+internally; placeholder hex sequences (`a1b2c3d4e5f60001`,
+`0001020304050607`, …) are R9 violations and will be auto-repaired by
+Step 6.5 Check 4 if encountered. The temporary literal `(pending)` is
+allowed during initial render only; Check 4 replaces every `(pending)`
+with a real hash before Check 1 enforces the strict 16-hex regex.
+
+The canonical computation pipeline is:
+
+```
+printf '%s' "$body" \
+  | scripts/lib/canonicalize.sh \
+  | scripts/lib/hash.sh -16
+```
+
+(`canonicalize.sh` strips preserve blocks + leading/trailing whitespace
++ collapses blank-line runs; `hash.sh` resolves to `sha256sum` on Linux
+or `shasum -a 256` on macOS — see `reference/incremental-mode.md`.)
+
 A marker carrying only one of them is **non-compliant** and will be
 flagged as structurally broken by `/forge:inspect`.
 
@@ -1088,26 +1111,88 @@ If a block's natural anchor (surrounding text) no longer exists after
 rewrite, append it to the section body's end with a comment marker
 `<!-- forge:preserve orphaned=true -->`; never delete.
 
-**Stage 3 terminates here.** Proceed to Step 7.
+**Stage 3 terminates here.** Proceed to Step 6.5.
+
+---
+
+### Step 6.5 — Self-validation pass
+
+After Stage 3.5 writes context files and BEFORE Step 7, invoke the
+validator. The validator is the authoritative implementation; LLMs MUST
+NOT inline its checks here.
+
+```bash
+SKILL_ROOT=$("$SKILL_ROOT_PATH/scripts/lib/skill-root.sh")
+"$SKILL_ROOT/scripts/validate-onboard-artifacts.sh" .forge/context
+```
+
+Where `$SKILL_ROOT_PATH` is the directory containing this `SKILL.md`,
+resolved by Claude Code's runtime (path varies by install). If the
+runtime does not inject it, `scripts/lib/skill-root.sh` walks up from
+its own location to find the SKILL.md ancestor.
+
+**Exit code semantics:**
+
+- `0` — clean. Proceed to Step 7.
+- `1` — warnings only. Auto-repairs (signature recompute, R17 redaction,
+  tag strips, etc.) ran successfully. Proceed to Step 7; the JOURNAL
+  summary line will record the counts.
+- `2` — hard halt. Either preflight failed (missing tool), or a check
+  reported an unrecoverable condition. Surface the validator stderr to
+  the user; do NOT proceed to Step 7.
+
+**Two-pass internal flow** (see `scripts/validate-onboard-artifacts.sh`):
+
+1. preflight — tool dependency check (jq / perl / git / sha256)
+2. Pass 1: check4 (resolve `(pending)` + initial sigs) → check1 (regex)
+3. Mutating checks (alpha: check3 R17 redaction; beta/final adds more)
+4. Pass 2: check4 (refresh sigs after mutations) → check1 (re-validate)
+
+Pass 2 closes the v6 E1 gap: any mutation in step 3 invalidates the
+signatures from step 2, so a final recompute is required to guarantee
+the on-disk artifact is internally consistent.
+
+**Validator does NOT write to JOURNAL.** It writes machine-readable
+summary to `.forge/context/.validation-stats.json`. Step 7 is the SOLE
+writer of `.forge/JOURNAL.md` and reads stats.json for its summary line.
 
 ---
 
 ### Step 7 — Append JOURNAL entry (final step — run ends here)
 
 This is the **only** correct place for the run to terminate. If you
-reach this step, Stages 1 + 2 + 3 have all completed. Append one entry
-to `.forge/JOURNAL.md`:
+reach this step, Stages 1 + 2 + 3 + Step 6.5 have all completed. Step 7
+is also the SOLE writer of `.forge/JOURNAL.md` (Step 6.5's validator
+must NEVER touch it).
+
+Append one entry to `.forge/JOURNAL.md`. Numeric counts MUST be derived
+from the artifact itself or from `.forge/context/.validation-stats.json`,
+NOT estimated by the LLM:
+
+```bash
+# Read validator output (authoritative for self-validation summary)
+source "$SKILL_ROOT/scripts/lib/stats.sh"
+SUMMARY_LINE=$(stats_summary_line .forge/context/.validation-stats.json)
+
+# Counts derived from artifact (not LLM-estimated)
+sections=$(grep -c '<!-- forge:onboard source-file=' .forge/context/onboard.md)
+preserved=$(grep -c '<!-- forge:preserve' .forge/context/onboard.md)
+context_files=$(ls .forge/context/*.md 2>/dev/null \
+  | grep -v onboard.md | xargs -n1 basename 2>/dev/null \
+  | tr '\n' ',' | sed 's/,$//')
+```
 
 ```markdown
 ## YYYY-MM-DD — /forge:onboard
 - Kind:              {kind-id} (confidence {score})
 - Mode:              {first-run | incremental | regenerate | single-section}
-- Commit:            {short-sha}
-- onboard.md:        {N} sections written / {M} preserved blocks / {K} skipped
-- context files:     {list of context files written, e.g. "conventions.md, testing.md, constraints.md"}
+- Commit:            {short-sha or (no-commit)}
+- onboard.md:        {sections} sections written / {preserved} preserved blocks / {K} skipped
+- context files:     {context_files}
 - conflicts resolved:{count} (or "(none)")
 - orphans migrated:  {count} (or "(none)")
 - excluded dims:     {count} (or "(none)") — see onboard.md header for list
+{SUMMARY_LINE}
 - Next:              /forge:clarify <your first feature>
 ```
 
@@ -1352,3 +1437,18 @@ to smart-merge + write context files ({list of files}).
   (R14).
 - Examples in any profile output must follow Content Hygiene (see
   `.forge/context/constraints.md` C8).
+- Step 6.5 self-validation pass MUST run before Step 7. Skipping it
+  produces non-compliant artifacts that `/forge:inspect` will reject.
+- The validator (`scripts/validate-onboard-artifacts.sh`) MUST NOT
+  write to `.forge/JOURNAL.md`. Step 7 is the sole writer; it reads
+  `.forge/context/.validation-stats.json` for the self-validation
+  summary line. (F3 — single-writer boundary.)
+- `body-signature` MUST be Bash-computed via `scripts/lib/hash.sh`.
+  LLM-typed hex strings are R9 violations. The literal `(pending)` is
+  the only legal placeholder during initial render; Step 6.5 Check 4
+  resolves all `(pending)` values before Check 1 enforces strict regex.
+- Number drift fixes MUST use evidence-id anchoring (HTML comment
+  `<!-- ev:id=… -->` referencing `.forge/context/.evidence/<section>.json`).
+  Full-file `sed`/regex replacement of numbers is forbidden — it can
+  silently corrupt unrelated digits. (Beta-only enforcement; alpha does
+  not yet emit evidence anchors.)
