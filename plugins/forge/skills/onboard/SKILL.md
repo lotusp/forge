@@ -729,6 +729,72 @@ loop over Plan.profiles:
   discard(profile_doc, evidence)                # clear from working context
 ```
 
+**Detector calls (v0.5.2-beta interim — Java/Spring stack only):**
+
+For kind `web-backend`, Stage 2 MUST invoke these detectors before
+rendering quantitative claims, and write each result to
+`.forge/context/.evidence/<section>.json`:
+
+| Detector script | Used by section |
+|-----------------|-----------------|
+| `scripts/detectors/spring_mappings.sh`       | http-api-surface (annotation count) |
+| `scripts/detectors/rest_controllers.sh`      | http-api-surface (controller class count) |
+| `scripts/detectors/jpa_entities.sh`          | domain-model (`@Entity` count) |
+| `scripts/detectors/feign_clients.sh`         | third-party-integrations (Feign client count) |
+| `scripts/detectors/ms_listeners.sh`          | event-consumers (inbound listener count) |
+| `scripts/detectors/application_listeners.sh` | event-consumers (internal event handler count) |
+| `scripts/detectors/flyway_migrations.sh`     | database-schema (migration file count) |
+| `scripts/detectors/slf4j_classes.sh`         | logging convention (size signal) |
+| `scripts/detectors/transactional_uses.sh`    | database-access (transaction boundary signal) |
+| `scripts/detectors/role_constants.sh`        | authentication (privilege bloat signal) |
+| `scripts/detectors/exception_classes.sh`     | error-handling (hierarchy size signal) |
+
+In the rendered Markdown, anchor each cited number with an HTML
+comment immediately preceding the number:
+
+```markdown
+- **Route inventory:** <!-- ev:id=routes_total --> 689 mapping annotations
+  across <!-- ev:id=controllers_count --> 75 `@RestController` files
+  [high] [cli] [counted]
+```
+
+Numbers without a sidecar entry / `<!-- ev:id=... -->` anchor MUST use
+qualitative wording instead (e.g. "a large API surface", "many Feign
+clients") — see check5b enforcement in Step 6.5.
+
+**Sidecar schema:** `.forge/context/.evidence/<section>.json`
+
+```json
+{
+  "section": "http-api-surface",
+  "source-file": "onboard.md",
+  "evidence": [
+    {
+      "id": "routes_total",
+      "detector": "spring_mappings",
+      "root": "src/main/java",
+      "result": 689,
+      "evidence_cmd": "grep -rE '@(Get|Post|...)Mapping' -- 'src/main/java' | wc -l"
+    },
+    {
+      "id": "controllers_count",
+      "detector": "rest_controllers",
+      "root": "src/main/java",
+      "result": 75,
+      "evidence_cmd": "grep -rlE '@RestController' -- 'src/main/java' | wc -l"
+    }
+  ]
+}
+```
+
+The `evidence_cmd` field is display-only; never re-executed (see
+detector contract in `scripts/detectors/README.md`). Numbers in
+Markdown are kept in sync with sidecar via Step 6.5 Check 5.
+
+This interim mechanism is replaced in v0.5.2-final when profile
+frontmatter declares `detectors[]` and `must-grep:` directly. Profile
+schema details: `profiles/README.md`.
+
 **Discard discipline (DG1 — save tokens, DG2 — long-context stability):**
 
 After each iteration, do not keep the profile file or its raw evidence in
