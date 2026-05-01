@@ -49,16 +49,59 @@ EOF
 }
 
 check_detector_registry() {
-  # alpha: registry.json doesn't exist yet; skip without error.
-  # beta: real implementation iterates registry entries and verifies each
-  # detector script is executable; also lints that every profile-referenced
-  # detector ID is registered.
   local registry="$SCRIPT_DIR/detectors/registry.json"
   if [ ! -f "$registry" ]; then
+    # No registry file means alpha-style install (detectors not yet
+    # introduced); skip without error.
     return 0
   fi
 
-  # Placeholder for beta: extend here when registry.json lands.
+  local fail=0
+
+  # 1. Every registered detector must have an executable script.
+  local missing_scripts=()
+  while read -r script; do
+    local path="$SCRIPT_DIR/detectors/$script"
+    if [ ! -x "$path" ]; then
+      missing_scripts+=("$script")
+    fi
+  done < <(jq -r '.detectors[]."detector-script"' "$registry")
+
+  if [ ${#missing_scripts[@]} -gt 0 ]; then
+    echo "ERROR: registered detectors missing or non-executable:" >&2
+    printf "  - %s\n" "${missing_scripts[@]}" >&2
+    fail=1
+  fi
+
+  # 2. Every detector-id referenced by a profile must be registered.
+  # Profiles use `detector-id: <id>` lines; we lint that the id exists
+  # in the registry.
+  local profile_dir="$SCRIPT_DIR/../profiles"
+  if [ -d "$profile_dir" ]; then
+    local registered_ids
+    registered_ids=$(jq -r '.detectors[]."detector-id"' "$registry" | sort -u)
+
+    local unregistered=()
+    while IFS= read -r ref_id; do
+      [ -z "$ref_id" ] && continue
+      if ! echo "$registered_ids" | grep -qx "$ref_id"; then
+        unregistered+=("$ref_id")
+      fi
+    done < <(
+      find "$profile_dir" -type f -name '*.md' -print0 \
+        | xargs -0 grep -hE '^[[:space:]]*-?[[:space:]]*detector-id:' 2>/dev/null \
+        | sed -E 's/.*detector-id:[[:space:]]*([a-z0-9_-]+).*/\1/' \
+        | sort -u
+    )
+
+    if [ ${#unregistered[@]} -gt 0 ]; then
+      echo "ERROR: profiles reference unregistered detectors:" >&2
+      printf "  - %s\n" "${unregistered[@]}" >&2
+      fail=1
+    fi
+  fi
+
+  [ "$fail" -eq 1 ] && return 2
   return 0
 }
 
