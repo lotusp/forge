@@ -199,7 +199,9 @@ defined in Step 3. Specifically:
 
 **Header** (Step 3.1) — markdown blockquote style only. Per R13, the
 `Excluded-dimensions:` line is REQUIRED (even when empty — write
-`Excluded-dimensions: (none)`):
+`Excluded-dimensions: (none)`). The `Tag legend:` line is also REQUIRED
+(R10 readability) so human readers can decode bracket annotations
+without needing to open SKILL.md:
 
 ```markdown
 # Project Onboard: {project-name}
@@ -210,6 +212,7 @@ defined in Step 3. Specifically:
 > Commit:               {short-sha}
 > Generator:            /forge:onboard (v{plugin-version})
 > Excluded-dimensions:  {comma-separated list from Stage-1 plan}
+> Tag legend:           `[high|medium|low|inferred]` = confidence; `[code|build|config|readme|cli]` = evidence source; `[conflict]` = sources disagree.
 ```
 
 Do NOT wrap the header in an HTML comment (`<!-- forge:onboard header ... -->`).
@@ -339,6 +342,11 @@ README, build manifest vs docs, generated spec vs code).
 
 **Tag order**: `<fact text> [confidence] [source?] [conflict?]`.
 No other bracketed values are permitted. Do not invent new tags mid-run.
+
+**Reader-facing legend**: every generated artifact (`onboard.md` and
+each context file) MUST include the `Tag legend:` line in its header
+(see Step 3.1) so a human reading the output can decode `[high] [build]`
+style annotations without consulting SKILL.md.
 
 ### R11 — Stage 3 scan is non-interactive; conflicts are batched
 
@@ -772,7 +780,9 @@ as a bullet in the `Notes` section (if loaded).
 
 **3.1 — Header**
 
-Emit the artifact header:
+Emit the artifact header. The `Tag legend` line is required so a human
+reader can decode `[high] [build]` style annotations without needing to
+open SKILL.md first:
 
 ```markdown
 # Project Onboard: {project-name}
@@ -783,7 +793,12 @@ Emit the artifact header:
 > Commit:           {short-sha}
 > Generator:        /forge:onboard (v{plugin-version})
 > Excluded-dimensions:  {comma-separated list from Stage-1 plan or "(none)"}
+> Tag legend:       `[high|medium|low|inferred]` = confidence; `[code|build|config|readme|cli]` = evidence source; `[conflict]` = sources disagree.
 ```
+
+The same legend MUST be repeated at the top of every generated context
+file (`conventions.md`, `architecture.md`, `testing.md`, `constraints.md`)
+so each file is self-explanatory when read in isolation.
 
 **3.2 — "What This Is" section**
 
