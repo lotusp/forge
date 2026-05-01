@@ -1,0 +1,16 @@
+{
+  "schema-version": 1,
+  "detectors": [
+    { "detector-id": "spring_mappings",       "detector-script": "spring_mappings.sh",       "rendered-as": "count" },
+    { "detector-id": "rest_controllers",      "detector-script": "rest_controllers.sh",      "rendered-as": "count" },
+    { "detector-id": "jpa_entities",          "detector-script": "jpa_entities.sh",          "rendered-as": "count" },
+    { "detector-id": "feign_clients",         "detector-script": "feign_clients.sh",         "rendered-as": "count" },
+    { "detector-id": "ms_listeners",          "detector-script": "ms_listeners.sh",          "rendered-as": "count" },
+    { "detector-id": "application_listeners", "detector-script": "application_listeners.sh", "rendered-as": "count" },
+    { "detector-id": "flyway_migrations",     "detector-script": "flyway_migrations.sh",     "rendered-as": "count" },
+    { "detector-id": "slf4j_classes",         "detector-script": "slf4j_classes.sh",         "rendered-as": "count" },
+    { "detector-id": "transactional_uses",    "detector-script": "transactional_uses.sh",    "rendered-as": "count" },
+    { "detector-id": "role_constants",        "detector-script": "role_constants.sh",        "rendered-as": "count" },
+    { "detector-id": "exception_classes",     "detector-script": "exception_classes.sh",     "rendered-as": "count" }
+  ]
+}
