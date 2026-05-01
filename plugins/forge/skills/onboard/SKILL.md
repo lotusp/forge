@@ -566,6 +566,26 @@ file). Extract:
 Close the file. Per R2, Stage 3 will load the individual dimension files
 but will not reopen the context kind file.
 
+**1.5b — Stack gate (v0.5.x)**
+
+If the selected kind file declares a `stage2-stack-gate` block, verify
+each `required-stack` signal before proceeding:
+
+- For each entry in `signals[]`, read the named file and grep for the
+  pattern. The gate **passes** when at least one signal matches.
+- On mismatch, follow `on-mismatch.action`:
+  - `halt` — stop the run, surface the configured message to the user,
+    and offer the documented override flag (e.g. `--override-stack-gate`)
+  - `warn` — log a warning, record the mismatch in the execution plan
+    (`stack-gate-status: degraded`), and continue
+- If `--override-stack-gate` was passed, skip the check entirely and
+  record `stack-gate-status: overridden` in the plan + JOURNAL.
+
+Rationale: kind detection is broad on purpose (multi-language signals),
+but Stage 2 patterns are stack-specific in v0.5.x. The gate prevents
+false-success runs on unsupported stacks. Removed once adapter model
+lands in v0.6.0.
+
 **1.6 — Emit Execution Plan**
 
 Produce the plan as a fenced text block. This is the handoff to both

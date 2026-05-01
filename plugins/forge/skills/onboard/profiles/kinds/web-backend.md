@@ -24,6 +24,26 @@ detection-signals:
       weight: 0.25
     - pattern: "no source files outside docs/ or examples/"
       weight: 0.30
+# v0.5.x stack gate — Stage 1 must verify required-stack signals before
+# proceeding to Stage 2. Non-Java projects pass kind detection but produce
+# low-quality output, so we halt explicitly. Removed once adapter model
+# lands in v0.6.0.
+stage2-stack-gate:
+  required-stack: java-spring
+  signals:
+    - file: build.gradle
+      grep: "spring-boot-starter-web|spring-boot-starter-webflux"
+    - file: build.gradle.kts
+      grep: "spring-boot-starter-web|spring-boot-starter-webflux"
+    - file: pom.xml
+      grep: "<artifactId>spring-boot-starter-web(flux)?</artifactId>"
+  on-mismatch:
+    action: halt
+    message: |
+      v0.5.x supports Java/Spring only.
+      Detected web-backend kind but no Spring Boot signal found.
+      To proceed anyway: re-run with --override-stack-gate
+      (output quality will be low — see Current Scope in SKILL.md).
 profiles:
   - core/tech-stack
   - core/module-map
