@@ -116,10 +116,13 @@ run_check check1_marker_structural.sh
 halt_if_needed
 
 # ─────────────────────── MUTATING CHECKS ──────────────────────
-# alpha includes only check3. beta/final will add check2a/check2b/
-# check5/check5b/check6a/check6b/check6c/check6d here.
+# beta adds: check2a (R10 strip extras), check5 (count drift).
+# final will add check6a/check6c (cross-stage downgrade / commit normalize).
 run_check check3_redaction.sh
 # (do not halt_if_needed — Tier A redaction is exit 1 by design)
+run_check check2a_tag_count.sh
+run_check check5_evidence_verify.sh
+halt_if_needed     # check5 may exit 2 if a referenced detector is missing
 
 # ─────────────────────────── PASS 2 ───────────────────────────
 # Mutations above may have changed body content; re-derive signatures
@@ -127,6 +130,14 @@ run_check check3_redaction.sh
 run_check check4_signature_recompute.sh
 halt_if_needed
 run_check check1_marker_structural.sh
+halt_if_needed
+
+# ─────────────────────────── WARNINGS ─────────────────────────
+# Heuristic / warning-only checks run after the artifact is structurally
+# stable. check5b can hard-halt if it finds precise numbers inside the
+# What This Is narrative section (Step 3.2 forbids those).
+run_check check2b_missing_tag.sh
+run_check check5b_unanchored_numbers.sh
 halt_if_needed
 
 emit_summary_and_exit

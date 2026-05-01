@@ -95,8 +95,13 @@ echo "  exit=$status2, mutations=$mutations2"
 echo ""
 fail=0
 
-if [ "$status2" -ne 0 ]; then
-  echo "FAIL [exit code]: second run returned $status2 (expected 0)"
+# Hard halt is always a failure; warnings (exit 1) are tolerated on the
+# second run iff no mutations were recorded and file content didn't change.
+# Some checks are heuristic-only (e.g. check2b missing-tag, check5b
+# unanchored numbers): they emit warnings every run without mutating
+# anything, which is the correct behavior — not an idempotency violation.
+if [ "$status2" -eq 2 ]; then
+  echo "FAIL [exit code]: second run hard-halted (status=2)"
   fail=1
 fi
 
