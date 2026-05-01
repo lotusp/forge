@@ -35,10 +35,13 @@ stats_increment() {
   local file="$1" field="$2" delta="${3:-1}"
   local tmp
   tmp=$(mktemp)
-  trap 'rm -f "$tmp"' RETURN
-  jq --arg f "$field" --argjson d "$delta" \
-     '.[$f] = ((.[$f] // 0) + $d)' "$file" > "$tmp" \
-     && mv "$tmp" "$file"
+  if jq --arg f "$field" --argjson d "$delta" \
+        '.[$f] = ((.[$f] // 0) + $d)' "$file" > "$tmp"; then
+    mv "$tmp" "$file"
+  else
+    rm -f "$tmp"
+    return 1
+  fi
 }
 
 # Append a mutation record (before/after diff) to the audit trail.
@@ -47,16 +50,19 @@ stats_record_mutation() {
   local file="$1" check="$2" target="$3" before="$4" after="$5"
   local tmp
   tmp=$(mktemp)
-  trap 'rm -f "$tmp"' RETURN
-  jq --arg c "$check" --arg t "$target" --arg b "$before" --arg a "$after" \
-     '.mutations += [{
-        "check": $c,
-        "file": $t,
-        "before": $b,
-        "after": $a,
-        "ts": now
-      }]' "$file" > "$tmp" \
-     && mv "$tmp" "$file"
+  if jq --arg c "$check" --arg t "$target" --arg b "$before" --arg a "$after" \
+        '.mutations += [{
+           "check": $c,
+           "file": $t,
+           "before": $b,
+           "after": $a,
+           "ts": now
+         }]' "$file" > "$tmp"; then
+    mv "$tmp" "$file"
+  else
+    rm -f "$tmp"
+    return 1
+  fi
 }
 
 # Render the one-line summary that Step 7 appends to JOURNAL.
