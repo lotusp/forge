@@ -189,6 +189,60 @@ onboard.md 的 `Document Confidence` 汇总表也按 source 分类。
 
 ---
 
+## must-grep ↔ reference/scan-patterns.md 同步契约 (v0.5.2-beta)
+
+`reference/scan-patterns.md` 是**模式库**——按语言/框架组织的 grep 规则
+合集，例如 Java/Spring 的 `@MessageListener`、`@KafkaListener`、
+`@EventListener`、`@TransactionalEventListener` 等。
+
+profile 的 `must-grep:` frontmatter 字段（v0.5.2-beta 新增）必须从
+`reference/scan-patterns.md` 同步：
+
+- 当 reference 新增框架 patterns（例如某个新 messaging 注解被加入），
+  使用该框架的 profile 必须同步把对应 regex 加进 `must-grep:`。
+- profile 不得引用 reference 不存在的 patterns。
+- preflight 阶段会 lint 双向一致性（v0.5.2-final 实施）。
+
+**为何重要：** v0.5.1 实测中 `reference/scan-patterns.md` 已含
+`@MessageListener` 等 Java messaging 注解，但 `entry-points/event-consumers.md`
+profile 没引用，结果所有 SVC 项目的 Azure Service Bus inbound consumer
+全部被漏识别。同步契约消除这类数据漂移。
+
+### Frontmatter 扩展示例
+
+```yaml
+---
+name: event-consumers
+section: Event Consumers
+applies-to: [web-backend, monorepo]
+must-grep:                         # v0.5.2-beta NEW
+  - '@(KafkaListener|RabbitListener|JmsListener|SqsListener|StreamListener|MessageListener|ServiceBusListener|EventHubConsumer|Consumer)'
+  - 'implements ApplicationListener'
+  - '@EventListener\b'
+  - '@TransactionalEventListener\b'
+must-cross-check:                  # v0.5.2-beta NEW (可选)
+  - if-zero: '@Scheduled'
+    and-config-has: '*_cron|cron:'
+    then-emit: 'No @Scheduled but cron configs exist — likely external scheduler trigger'
+detectors:                         # v0.5.2-beta NEW (可选；与 detector registry 联动)
+  - detector-id: ms_listeners
+    detector-script: ms_listeners.sh
+    rendered-as: count
+---
+```
+
+`must-grep` 的语义是**强制执行**：Stage 2 加载该 profile 时**必须**逐条
+跑 grep；任何 >0 命中都必须在产出中体现，或显式 omit 并附理由。
+
+`must-cross-check` 用于跨证据交叉推断（例如 `@Scheduled`=0 但配置含
+cron 字段时，可推断由外部 scheduler 触发）。
+
+`detectors` 把数字声明委派给白名单脚本（见 `scripts/detectors/`），结
+果写入 `.forge/context/.evidence/<section>.json` sidecar；正文用
+`<!-- ev:id=<id> -->` 锚定具体数字。
+
+---
+
 ## Adding a New Profile
 
 1. 选定分类目录（core / structural / model / ...）
