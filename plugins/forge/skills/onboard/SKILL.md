@@ -31,6 +31,23 @@ model: sonnet
 effort: high
 ---
 
+## Current Scope (v0.5.x)
+
+**Supported stack:** Java / Spring Boot only.
+
+`profiles/kinds/web-backend.md` detection signals accept multiple languages
+(Python/Go/.NET/Node), but Stage 2 extraction patterns and the optional
+v0.5.2-beta detectors are Java/Spring specific. Running on a non-Java
+project will produce low-quality output (mostly empty sections, false
+negatives on inventory counts, missed business-line listeners).
+
+**Stack-aware adapter model is planned for v0.6.0+.**
+
+If kind detection chooses `web-backend` on a non-Java project, Stage 1
+halts via the `stage2-stack-gate` defined in `profiles/kinds/web-backend.md`.
+Force-override is allowed via `--kind=web-backend --override-stack-gate`
+but emits a loud warning, and the JOURNAL entry records the override.
+
 ## Runtime snapshot
 
 - Current commit: !`git rev-parse --short HEAD 2>/dev/null || echo "(not a git repo)"`
