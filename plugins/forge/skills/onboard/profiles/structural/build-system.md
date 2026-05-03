@@ -65,15 +65,22 @@ token-budget: 800
    | `name` ↔ `description` | `package.json` | Sanity |
    | `bootJar.archiveBaseName` ↔ `bootJar.archiveFileName` | `build.gradle` | Artifact naming |
 
-   Normalize SonarQube `:` ↔ `-` punctuation before comparing
-   (`<group>:<artifact>` vs `<group>-<artifact>` may be an intended
-   spelling convention, not a typo — distinguish carefully).
+   **Mandatory detector for the Sonar pair (Java/Spring stack only).**
+   The `sonar_field_pair` detector parses both values, normalizes
+   `:` ↔ `-`, and returns `match: true|false`. Invoke it before
+   writing the build-system section:
 
-7. **Duplicate property detection.** Run
-   `grep -c "sonar\.projectKey" build.gradle`; if > 1, surface
-   "Duplicate `sonar.projectKey` declaration (N occurrences)" — a
-   prior review found the same property declared twice on adjacent
-   lines.
+   ```bash
+   scripts/detectors/sonar_field_pair.sh "$TARGET" \
+     | tee .forge/_session/sonar.json
+   ```
+
+   When `match: false`, surface a `[conflict]` row in `Notes` quoting
+   both values verbatim — the detector also returns
+   `duplicate_keys` / `duplicate_names` (>1 = duplicate declaration).
+   Eyeballing the comparison is forbidden; a prior real-world review
+   missed a one-letter typo because the LLM read both lines as "the
+   same thing" without character-level diff.
 
 8. **Coverage-exclusion transparency.** When a
    `jacocoTestCoverageVerification` (or similar) block declares an

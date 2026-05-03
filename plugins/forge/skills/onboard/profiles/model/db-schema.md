@@ -48,6 +48,13 @@ Detailed schema analysis lives in onboard Stage 3's `architecture.md`
    possible). Cap at ~20 tables; group if more.
 2. **One-line role per table** — what it persists, not columns.
 3. **Migration tool + count** — e.g. "Prisma Migrate, 47 migrations applied".
+
+   **Mandatory detector invocation (Flyway / Java/Spring stack only).**
+   Before writing the migration count, invoke
+   `scripts/detectors/flyway_migrations.sh "$RESOURCES_ROOT"` and use
+   `result` verbatim. Anchor with `<!-- ev:id=migrations-N -->`.
+   Eyeballed counts of `V*.sql` files (especially when copies also
+   exist under `build/` or `bin/`) are a known LLM trap.
 4. **Multi-tenancy note** — if `tenant_id` / `workspace_id` appears in most tables,
    state "multi-tenant by row".
 5. **Soft-delete note** — if `deleted_at` / `is_deleted` is widespread.
