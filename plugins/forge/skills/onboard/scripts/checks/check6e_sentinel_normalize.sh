@@ -71,6 +71,20 @@ main() {
   local resolved="(no-commit)"
   [ -n "$current_head" ] && resolved="$current_head"
 
+  # Plugin version for Generator-line normalization. Same provenance as
+  # header-context.sh: read .claude-plugin/plugin.json adjacent to the
+  # SKILL.md ancestor of this script. Falls back to "(unknown)".
+  local plugin_version=""
+  local skill_root_dir
+  skill_root_dir=$(cd "$SCRIPT_DIR/../.." 2>/dev/null && pwd) || skill_root_dir=""
+  if [ -n "$skill_root_dir" ]; then
+    local plugin_manifest="$skill_root_dir/../../.claude-plugin/plugin.json"
+    if [ -f "$plugin_manifest" ]; then
+      plugin_version=$(jq -r '.version // empty' "$plugin_manifest" 2>/dev/null || true)
+    fi
+  fi
+  [ -z "$plugin_version" ] && plugin_version="(unknown)"
+
   local file
   for file in "$CTX"/*.md; do
     [ -f "$file" ] || continue
@@ -117,6 +131,33 @@ main() {
       if [ -f "$STATS" ]; then
         stats_record_mutation "$STATS" check6e "$file" \
           "header-commit=$header_value" "header-commit=$resolved"
+      fi
+    fi
+
+    # ------------------------------------------------------------
+    # 3. Generator line: > Generator: /forge:onboard (vX.Y.Z)
+    # ------------------------------------------------------------
+    # Field testing showed LLMs frequently fill the version from
+    # prose hints ('a prior review found ...') instead of reading
+    # plugin.json. Override unconditionally — the plugin manifest is
+    # the single source of truth.
+    if grep -qE '^> Generator:[[:space:]]+/forge:onboard' "$file" 2>/dev/null; then
+      local current_gen
+      current_gen=$(grep -E '^> Generator:[[:space:]]+/forge:onboard' "$file" \
+                    | head -1 | sed -E 's/^> Generator:[[:space:]]+//' \
+                    | sed -E 's/[[:space:]]+$//')
+      local desired_gen="/forge:onboard (v${plugin_version})"
+      if [ "$current_gen" != "$desired_gen" ]; then
+        DESIRED="$desired_gen" perl -i -pe '
+          my $d = $ENV{DESIRED};
+          s|^(> Generator:[[:space:]]+).*$|$1$d|;
+        ' "$file"
+        NORMALIZED=$((NORMALIZED + 1))
+        echo "NORMALIZED $file: > Generator: '$current_gen' → '$desired_gen'" >&2
+        if [ -f "$STATS" ]; then
+          stats_record_mutation "$STATS" check6e "$file" \
+            "generator=$current_gen" "generator=$desired_gen"
+        fi
       fi
     fi
   done
