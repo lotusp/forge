@@ -22,5 +22,5 @@ N=$( { grep -rlE --include='*.java' "${EXCLUDES[@]}" '@Slf4j\b' -- "$ROOT" 2>/de
 EVIDENCE_CMD="grep -rlE --include='*.java' "${EXCLUDES[@]}" '@Slf4j\b' -- '$ROOT' | wc -l"
 
 jq -n --arg detector "slf4j_classes" --arg root "$ROOT" \
-      --argjson result "$N" --arg cmd "$EVIDENCE_CMD" \
-      '{detector: $detector, root: $root, result: $result, evidence_cmd: $cmd}'
+      --argjson result "$N" --arg cmd "$EVIDENCE_CMD" --arg unit "files" \
+      '{detector: $detector, root: $root, result: $result, unit: $unit, evidence_cmd: $cmd}'

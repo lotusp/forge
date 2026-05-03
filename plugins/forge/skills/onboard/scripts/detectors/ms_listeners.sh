@@ -30,5 +30,5 @@ N=$( { grep -rE --include='*.java' "${EXCLUDES[@]}" "$PATTERN" -- "$ROOT" 2>/dev
 EVIDENCE_CMD="grep -rE --include='*.java' "${EXCLUDES[@]}" '$PATTERN' -- '$ROOT' | wc -l"
 
 jq -n --arg detector "ms_listeners" --arg root "$ROOT" \
-      --argjson result "$N" --arg cmd "$EVIDENCE_CMD" \
-      '{detector: $detector, root: $root, result: $result, evidence_cmd: $cmd}'
+      --argjson result "$N" --arg cmd "$EVIDENCE_CMD" --arg unit "occurrences" \
+      '{detector: $detector, root: $root, result: $result, unit: $unit, evidence_cmd: $cmd}'

@@ -12,6 +12,7 @@
     { "detector-id": "transactional_uses",    "detector-script": "transactional_uses.sh",    "rendered-as": "count" },
     { "detector-id": "role_constants",        "detector-script": "role_constants.sh",        "rendered-as": "count" },
     { "detector-id": "exception_classes",     "detector-script": "exception_classes.sh",     "rendered-as": "count" },
-    { "detector-id": "sonar_field_pair",      "detector-script": "sonar_field_pair.sh",      "rendered-as": "object" }
+    { "detector-id": "sonar_field_pair",      "detector-script": "sonar_field_pair.sh",      "rendered-as": "object" },
+    { "detector-id": "test_files",            "detector-script": "test_files.sh",            "rendered-as": "object" }
   ]
 }

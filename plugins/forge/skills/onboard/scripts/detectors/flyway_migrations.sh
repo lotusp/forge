@@ -29,5 +29,5 @@ N=$( { eval "find \"\$ROOT\" $EXCL -type f -name 'V*.sql' -print" 2>/dev/null ||
 EVIDENCE_CMD="find '$ROOT' [excl-build-outputs] -type f -name 'V*.sql' | wc -l"
 
 jq -n --arg detector "flyway_migrations" --arg root "$ROOT" \
-      --argjson result "$N" --arg cmd "$EVIDENCE_CMD" \
-      '{detector: $detector, root: $root, result: $result, evidence_cmd: $cmd}'
+      --argjson result "$N" --arg cmd "$EVIDENCE_CMD" --arg unit "files" \
+      '{detector: $detector, root: $root, result: $result, unit: $unit, evidence_cmd: $cmd}'

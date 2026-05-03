@@ -21,5 +21,5 @@ N=$( { grep -rlE --include='*.java' "${EXCLUDES[@]}" '@FeignClient' -- "$ROOT" 2
 EVIDENCE_CMD="grep -rlE --include='*.java' "${EXCLUDES[@]}" '@FeignClient' -- '$ROOT' | wc -l"
 
 jq -n --arg detector "feign_clients" --arg root "$ROOT" \
-      --argjson result "$N" --arg cmd "$EVIDENCE_CMD" \
-      '{detector: $detector, root: $root, result: $result, evidence_cmd: $cmd}'
+      --argjson result "$N" --arg cmd "$EVIDENCE_CMD" --arg unit "files" \
+      '{detector: $detector, root: $root, result: $result, unit: $unit, evidence_cmd: $cmd}'

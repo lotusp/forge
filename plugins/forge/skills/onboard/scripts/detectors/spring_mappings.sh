@@ -39,5 +39,5 @@ EVIDENCE_CMD="grep -rE --include='*.java' [excl-build-outputs] '@(Get|Post|Put|D
 jq -n --arg detector "spring_mappings" \
       --arg root "$ROOT" \
       --argjson result "$N" \
-      --arg cmd "$EVIDENCE_CMD" \
-      '{detector: $detector, root: $root, result: $result, evidence_cmd: $cmd}'
+      --arg cmd "$EVIDENCE_CMD" --arg unit "occurrences" \
+      '{detector: $detector, root: $root, result: $result, unit: $unit, evidence_cmd: $cmd}'

@@ -31,7 +31,7 @@ ROOT="${1:-.}"
 
 if [ ! -d "$ROOT" ]; then
   jq -n --arg detector "sonar_field_pair" --arg root "$ROOT" \
-        '{detector: $detector, root: $root, error: "root not found"}'
+        '{detector: $detector, root: $root, unit: "object", error: "root not found"}'
   exit 0
 fi
 
@@ -49,7 +49,7 @@ fi
 
 if [ -z "$BUILD_FILE" ]; then
   jq -n --arg detector "sonar_field_pair" --arg root "$ROOT" \
-        '{detector: $detector, root: $root, error: "no build file found"}'
+        '{detector: $detector, root: $root, unit: "object", error: "no build file found"}'
   exit 0
 fi
 
@@ -106,12 +106,13 @@ jq -n \
   --arg normalized_name "$NORM_NAME" \
   --arg normalized_key "$NORM_KEY" \
   --argjson match "$MATCH" \
-  --argjson duplicate_keys "${DUP_KEY:-0}" \
-  --argjson duplicate_names "${DUP_NAME:-0}" \
+  --argjson key_declaration_count "${DUP_KEY:-0}" \
+  --argjson name_declaration_count "${DUP_NAME:-0}" \
   --arg cmd "$EVIDENCE_CMD" \
-  '{detector: $detector, root: $root, build_file: $build_file,
+  '{detector: $detector, root: $root, unit: "object", build_file: $build_file,
     project_name: $project_name, project_key: $project_key,
     normalized_name: $normalized_name, normalized_key: $normalized_key,
     match: $match,
-    duplicate_keys: $duplicate_keys, duplicate_names: $duplicate_names,
+    key_declaration_count: $key_declaration_count,
+    name_declaration_count: $name_declaration_count,
     evidence_cmd: $cmd}'
