@@ -96,10 +96,10 @@ The expected reader can decode bracket annotations elsewhere via the
 
 ## Common Errors (LLM trap log)
 
-- **Marker `profile="core/tech-stack"`** — observed in v0.5.1 outputs;
+- **Marker `profile="core/tech-stack"`** — observed in earlier outputs;
   the marker MUST use `profile="core/what-this-is"` (this profile).
-- **No marker at all** — observed in v0.5.1 biz-svc-b output;
+- **No marker at all** — observed in a prior real-world output;
   Step 6.5 Check 1 will hard-halt this on the next regenerate.
-- **Inventory numbers leaked in** — `645+ mapped endpoints`-style
+- **Inventory numbers leaked in** — `N+ mapped endpoints`-style
   phrasing is hard-halted by check5b. Replace with qualitative wording
   before re-running.

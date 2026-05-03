@@ -9,7 +9,7 @@ confidence-signals:
   - auth library in deps (passport / jsonwebtoken / nextauth / spring-security / auth-starter)
   - middleware / filter files with "auth" in name
   - /auth/* routes in HTTP API
-  - X-User-Auth or similar gateway-injected header references
+  - gateway-injected header references (e.g. `X-User-*`, `X-Auth-*`, custom names)
 must-grep:
   - 'request\.getHeader\("[^"]+"\)|@RequestHeader\("[^"]+"\)'
   - '@PreAuthorize|@Secured|@RolesAllowed'
@@ -48,7 +48,7 @@ token-budget: 1100
 - cookies (name extracted from `cookieName:` / `cookie.name`)
 - redis session store (grep `connect-redis` / `redis-store`)
 - DB-backed sessions (`sessions` table)
-- gateway-injected headers (e.g. `X-User-Auth`, `X-User-Token`)
+- gateway-injected headers (e.g. `X-User-Id`, `X-User-Token`, or any custom header injected by the upstream gateway — extract the literal name from source)
 
 **Async context propagation (Java/Spring specific):**
 
@@ -70,13 +70,13 @@ token-budget: 1100
    - Spring: `request.getHeader("...")` / `@RequestHeader("...")`
    - Express: `req.headers["..."]` / `req.get("...")`
 
-   ✅ Correct: "JWT via custom `X-User-Auth` header (gateway-decoded)"
+   ✅ Correct: "JWT via custom `<literal-header-name>` header (gateway-decoded)"
    ❌ Wrong:   "JWT bearer token" — implies `Authorization: Bearer`
               when the actual transport is a custom header.
 
-   This rule exists because v0.5.1 review of three SVC services found
-   the auth section claiming "JWT bearer tokens" while the real
-   transport was a `X-User-Auth` custom header injected by the upstream
+   This rule exists because a prior review of multiple real-world
+   services found the auth section claiming "JWT bearer tokens" while
+   the real transport was a custom header injected by the upstream
    gateway. Grepping the codebase prevents this misleading paraphrase.
 
 3. **Do not leak identity-provider hostnames.** R17 redactor will catch
@@ -114,21 +114,21 @@ token-budget: 1100
 
 ### Inbound caller auth
 
-- **Method:** <one-line description; e.g. JWT via custom X-User-Auth header (gateway-decoded), or "no inbound auth filter — trust delegated to upstream"> [high] [code]
+- **Method:** <one-line description; e.g. JWT via custom gateway-injected header (gateway-decoded), or "no inbound auth filter — trust delegated to upstream"> [high] [code]
 - **Filter / middleware:** <class name + path> [high] [code]
-- **Public routes:** <list of permitted prefixes; e.g. `/api/sales-website/**`, `/actuator/**`> [high] [code]
+- **Public routes:** <list of permitted prefixes; e.g. `/api/public/**`, `/actuator/**`> [high] [code]
 
 ### Outbound service auth
 
 - **Per downstream:** <list each downstream + its token mechanism>
-  - `account-management` — Feign + JWT propagation [high] [code]
-  - `peer-svc-a` — OAuth2 password-grant; token cached in-memory [high] [code]
+  - `<peer-service-A>` — Feign + JWT propagation [high] [code]
+  - `<peer-service-B>` — OAuth2 password-grant; token cached in-memory [high] [code]
 
 ### Gateway-trusted headers
 
-- **Header name:** `X-User-Auth` (literal) [high] [code]
+- **Header name:** `<literal header name as it appears in source>` [high] [code]
 - **Validation in this service:** <none — gateway is trusted | header signature verified> [high] [code]
-- **Risk note (if applicable):** "/api/sales-website/** is permitted in the BFF security config; the BFF imposes no auth gate on that prefix" [high] [code]
+- **Risk note (if applicable):** "<prefix> is permitted in the security config; the service imposes no auth gate on that prefix" [high] [code]
 
 ### Token refresh mechanics (only if applicable)
 

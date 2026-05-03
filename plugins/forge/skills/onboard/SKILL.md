@@ -478,11 +478,11 @@ Forbidden as enforcement source for Hard Constraints:
 in current-repo source code; team policy and CI external rules not
 scanned."
 
-This rule exists because v0.5.1 review found peer-svc-a
-elevating the `pre-push` git hook to a Hard Constraint and
-web-bff-svc treating "adding JPA would violate the BFF role" as one —
-neither has automated enforcement, so both belong in softer
-categories.
+This rule exists because prior reviews of real-world projects found
+cases such as elevating a `pre-push` git hook to a Hard Constraint, or
+treating an architectural-role statement (e.g. "adding JPA would
+violate the BFF role") as one — neither has automated enforcement, so
+both belong in softer categories.
 
 ### R17 — Execution-layer content is excluded from onboard output
 
@@ -681,12 +681,11 @@ otherwise:
     run the profile; do NOT skip on heuristic / "looks like nothing".
 ```
 
-This rule exists because v0.5.1 review of web-bff-svc found the
-`messaging` profile silently skipped despite a real
-`producer.produce(SAMPLE_PRODUCER_CONST, ...)` call
-in `some/Service.java:1010`. The skip was
-never grep-evidenced, so the false-negative wasn't caught. Three-tier
-makes Tier 2 evidence mandatory in JOURNAL.
+This rule exists because a prior real-world review found the
+`messaging` profile silently skipped despite a real producer call
+present in source. The skip was never grep-evidenced, so the
+false-negative wasn't caught. Three-tier makes Tier 2 evidence
+mandatory in JOURNAL.
 
 **1.6 — Emit Execution Plan**
 

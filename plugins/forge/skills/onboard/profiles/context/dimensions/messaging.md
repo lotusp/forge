@@ -33,7 +33,7 @@ token-budget: 900
 | `nats` / `nats.go` | NATS |
 | `pulsar-client` | Pulsar |
 | `redis XADD` / `XREADGROUP` | Redis Streams |
-| `custom-mq-starter` / `com.microsoft.azure.servicebus` | Azure Service Bus |
+| `com.microsoft.azure.servicebus` / `azure-servicebus` | Azure Service Bus |
 | `azure-messaging-eventhubs` | Azure Event Hubs |
 
 **Consumer identification:**
@@ -42,7 +42,7 @@ Glob "**/consumers/**" / "**/listeners/**"
 Grep "@KafkaListener" / "@RabbitListener" / "@MessageListener" / "@ServiceBusListener" /
      "@JmsListener" / "@SqsListener" / "@StreamListener" / "consumer.subscribe"
 Grep "implements ApplicationListener" / "@EventListener" / "@TransactionalEventListener"
-     (three-track Spring internal events; v0.5.1 review of biz-svc-b
+     (three-track Spring internal events; a prior real-world review
      found the doc miscategorising @EventListener as ApplicationListener interface)
 ```
 

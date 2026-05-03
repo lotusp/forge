@@ -7,7 +7,7 @@
 # `onboard.md` (Stage 2) vs `conventions.md` / `architecture.md` /
 # `constraints.md` (Stage 3).
 #
-# Failure mode (v0.5.1 review of biz-svc-a):
+# Failure mode (observed in a prior real-world review):
 #   onboard.md:    `QueueTopics.ORDER` topic [high] [code]
 #   constraints.md: `QueueTopics.java` is empty (0 bytes)
 #

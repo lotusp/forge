@@ -9,7 +9,7 @@
 # permitted routes). When the two lists drift, the artifact reads
 # inconsistently.
 #
-# Failure mode (v0.5.1 review of web-bff-svc):
+# Failure mode (observed in a prior real-world review):
 #   §HTTP API Surface lists 5 public routes
 #   §Authentication & Authorization lists 10 public routes (incl. the 5)
 #   Reader cannot tell which list is canonical.
@@ -104,7 +104,7 @@ scan_file() {
   done < <(list_sections "$file")
 
   # Cross-class drift heuristic: flag when one section has at least 50%
-  # more path bullets than the other (catches the v0.5.1 web-bff-svc
+  # more path bullets than the other (catches the prior real-world
   # case of 5 vs 10 routes; tolerates minor noise like 4 vs 5).
   if [ "$auth_total" -gt 0 ] && [ "$api_total" -gt 0 ]; then
     local lo=$auth_total hi=$api_total

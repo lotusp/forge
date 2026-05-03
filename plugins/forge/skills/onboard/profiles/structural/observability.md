@@ -125,10 +125,10 @@ inventory. Kept under one page.
 
 ## Why This Profile Exists
 
-v0.5.1 review of `svc-web-bff-svc` found the doc claiming
-`/actuator/prometheus` was exposed when the actual config only listed
-`health, shutdown, prometheus` (it WAS — but for a different config
-key value than the doc reproduced). Earlier SVC reviews also caught
-projects asserting Prometheus availability based purely on dependency
-presence, with no exposure config to back it. Both failure modes are
-prevented by the "endpoint exposure is a fact, not an inference" rule.
+A prior real-world review found a doc claiming `/actuator/prometheus`
+was exposed when the actual config only listed `health, shutdown,
+prometheus` (it WAS — but for a different config key value than the
+doc reproduced). Earlier reviews also caught projects asserting
+Prometheus availability based purely on dependency presence, with no
+exposure config to back it. Both failure modes are prevented by the
+"endpoint exposure is a fact, not an inference" rule.

@@ -60,25 +60,25 @@ token-budget: 800
 
    | Pair | File | Note |
    |------|------|------|
-   | `sonar.projectName` ↔ `sonar.projectKey` | `build.gradle` / `pom.xml` | Spelling/typo detector — v0.5.1 review found `serice` vs `service` typo silently breaking SonarQube history matching |
+   | `sonar.projectName` ↔ `sonar.projectKey` | `build.gradle` / `pom.xml` | Spelling/typo detector — a prior review found a one-letter typo silently breaking SonarQube history matching |
    | `<artifactId>` ↔ `<name>` | `pom.xml` | Identity mirror |
    | `name` ↔ `description` | `package.json` | Sanity |
    | `bootJar.archiveBaseName` ↔ `bootJar.archiveFileName` | `build.gradle` | Artifact naming |
 
    Normalize SonarQube `:` ↔ `-` punctuation before comparing
-   (`svc:peer-svc-a` vs `svc-peer-svc-a` is the
-   intended spelling convention, not a typo).
+   (`<group>:<artifact>` vs `<group>-<artifact>` may be an intended
+   spelling convention, not a typo — distinguish carefully).
 
 7. **Duplicate property detection.** Run
    `grep -c "sonar\.projectKey" build.gradle`; if > 1, surface
-   "Duplicate `sonar.projectKey` declaration (N occurrences)" — v0.5.1
-   review of peer-svc-a found the same property declared
-   twice on adjacent lines.
+   "Duplicate `sonar.projectKey` declaration (N occurrences)" — a
+   prior review found the same property declared twice on adjacent
+   lines.
 
 8. **Coverage-exclusion transparency.** When a
    `jacocoTestCoverageVerification` (or similar) block declares an
    exclusion list, expand the globs with `find` and report the total
-   excluded file count next to the coverage threshold. v0.5.1 review
+   excluded file count next to the coverage threshold. A prior review
    found a project claiming "60% branch coverage" while the
    exclusion list silently dropped 30+ core classes from the
    denominator — readers MUST see this caveat next to the threshold.

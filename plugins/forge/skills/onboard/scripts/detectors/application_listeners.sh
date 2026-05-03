@@ -6,7 +6,7 @@
 #   - @EventListener                         (method annotation)
 #   - @TransactionalEventListener            (transaction-bound variant)
 #
-# Why three tracks: biz-svc-b v0.5.1 review found 0 ApplicationListener
+# Why three tracks: a prior real-world review found 0 ApplicationListener
 # implementations but 7 @EventListener methods; the old profile assumed
 # only the interface form existed and missed the entire family.
 set -euo pipefail

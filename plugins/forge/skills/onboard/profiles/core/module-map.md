@@ -41,11 +41,11 @@ token-budget: 1500
    (Handles / Manages / Exposes / Persists / Orchestrates).
 3. **No silent truncation.** Phrases like `(N more auxiliary modules)`,
    `(omitted for brevity)`, or `(other auxiliary adapters)` are
-   FORBIDDEN. v0.5.1 review of biz-svc-a found
-   `(4+ more auxiliary adapters: aftermarket, reports, lead, rtm)`
-   silently misplaced one of those packages and dropped five others.
-   When the package count exceeds ~15, group by responsibility but
-   list every name in the rendered output.
+   FORBIDDEN. A prior real-world review found a `(4+ more auxiliary
+   adapters: ...)` parenthetical that silently misplaced one of those
+   packages and dropped five others. When the package count exceeds
+   ~15, group by responsibility but list every name in the rendered
+   output.
 4. **Adapter / clients sub-package full enumeration.** For any package
    whose path matches `*/adapter/`, `*/adapters/`, `*/clients/`,
    `*/integration/`, `*/connectors/`, or `*/external/`:

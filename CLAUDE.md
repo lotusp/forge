@@ -106,6 +106,68 @@ When Forge is used in a target project, all persistent context lives in `.forge/
 └── _session/                   ← transient scratch (not committed)
 ```
 
+## Hard Rule — Project Neutrality (No Downstream Leakage)
+
+The forge codebase is a generic, project-agnostic toolchain. It is
+developed and tested against private real-world projects, but **no
+identifier from any downstream/private project may appear in committed
+content**.
+
+This is a hard rule — violations are treated as a code-leak incident.
+
+### What is forbidden
+
+In any committed file (source, docs, scripts, profiles, comments,
+commit messages, branch names, tag annotations):
+
+- Project names, abbreviations, codenames, or product names
+- Internal package names, group IDs, artifact IDs
+- Internal hostnames, domain names, URL paths that identify a system
+- Internal class / file / directory names that identify a system
+- Custom header names that identify a system
+- Any other token a reasonable reader would search for to find a
+  specific organisation or project
+
+### What is allowed
+
+- Standard vendor / open-source names (Spring, Hibernate, Azure
+  Service Bus, Kafka, Prometheus, ...)
+- Generic placeholders (`<peer-service-A>`, `<literal-header-name>`,
+  `<group>:<artifact>`)
+- Neutral pattern descriptions ("a prior real-world review found ...")
+
+### Enforcement
+
+1. **Per-developer keyword list:** every developer maintains a local
+   `.lint-keywords` file listing the project-specific tokens they use
+   forge against. This file is gitignored — its contents are
+   themselves sensitive and must NEVER be committed. Different
+   downstream projects produce different keyword lists.
+
+2. **Lint script:** `scripts/lint-no-project-leakage.sh` reads the
+   local keyword file and scans tracked content. The script itself
+   contains no keywords, so it can be committed safely.
+   - `scripts/lint-no-project-leakage.sh` — scan working tree
+   - `scripts/lint-no-project-leakage.sh --staged` — scan staged
+     changes (suitable for a pre-commit hook)
+   - `scripts/lint-no-project-leakage.sh --history` — scan all of
+     reachable git history (commit messages + every blob)
+
+3. **Pre-commit gate:** before every commit, run the lint with
+   `--staged` (or wire it into a `pre-commit` hook). A non-zero exit
+   blocks the commit.
+
+4. **Authoring discipline:** when writing a comment that explains
+   *why* a rule exists, never name the project the failure was
+   observed in. Use neutral phrasing such as "a prior real-world
+   review found ..." or "observed in earlier outputs".
+
+5. **History remediation:** if a leak is found in already-committed
+   content, the fix is **not** a follow-up commit (which leaves the
+   token in history). The history must be rewritten via
+   `git filter-repo` (or equivalent) and force-pushed; tags must be
+   re-cut.
+
 ## Core Design Principles to Uphold When Implementing Skills
 
 1. **Context files as collective source of truth** — `onboard` Stage 3 produces up to four files under `.forge/context/` (kind-applicable subset only). Every `code`, `inspect`, and `test` skill must read the relevant context files before acting.

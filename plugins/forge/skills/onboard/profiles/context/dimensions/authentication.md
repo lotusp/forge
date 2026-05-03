@@ -90,9 +90,10 @@ gateway-decoded JWT via custom header | ...>
 [high] [code]
 
 **Token transport (literal — no paraphrase):**
-- Access token: e.g. `Authorization: Bearer <jwt>` OR custom header
-  `X-User-Auth` (gateway-decoded). Extract verbatim; never substitute a
-  generic "Bearer token" phrasing when the actual transport differs.
+- Access token: e.g. `Authorization: Bearer <jwt>` OR a custom
+  gateway-injected header (extract the literal header name from
+  source). Extract verbatim; never substitute a generic "Bearer token"
+  phrasing when the actual transport differs.
   [high] [code]
 - Refresh token (when applicable): HttpOnly Secure cookie `<name>`
   (SameSite=Lax) [high] [code]

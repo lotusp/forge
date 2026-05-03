@@ -3,9 +3,9 @@
 # check6d_journal_consistency.sh — JOURNAL ↔ artifact reconciliation.
 #
 # `.forge/JOURNAL.md` records counts the LLM may have estimated wrong
-# (v0.5.1 review of biz-svc-b found "12 sections written" claimed
-# while the artifact actually contained 15 marker pairs). This check
-# compares JOURNAL claims against the real artifact state.
+# (a prior real-world review found "12 sections written" claimed while
+# the artifact actually contained 15 marker pairs). This check compares
+# JOURNAL claims against the real artifact state.
 #
 # Single-writer boundary (R7 / v6 G8): this check NEVER writes
 # `.forge/JOURNAL.md`. It only writes `journal_inconsistency` to the

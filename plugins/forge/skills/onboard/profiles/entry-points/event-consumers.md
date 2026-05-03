@@ -65,8 +65,8 @@ not mix produced topics with consumed queues.
 **Azure Service Bus (Microsoft + custom starters):**
 - `@ServiceBusListener("queue-name")` (`com.microsoft.azure.servicebus`)
 - `@MessageListener("queue.name")` / `@MessageListener(QUEUE_NAME)`
-  (custom starters such as the SVC `custom-mq-starter`;
-  also bare `@Consumer` annotation marking handler methods)
+  (custom in-house Service Bus starters; also bare `@Consumer`
+  annotation marking handler methods)
 - `@EventHubConsumer` (Azure Event Hubs)
 
 **Generic Spring messaging:**
@@ -83,8 +83,8 @@ not mix produced topics with consumed queues.
 - `@EventListener` on a method (annotation form)
 - `@TransactionalEventListener` on a method (transaction-bound variant)
 
-> v0.5.1 review of `biz-svc-b` found the doc claiming 7
-> `ApplicationListener<T>` implementations while the actual code has
+> A prior real-world review found a doc claiming 7
+> `ApplicationListener<T>` implementations while the actual code had
 > 0 of those and 7 `@EventListener` methods. Three-track grep prevents
 > this misclassification.
 
