@@ -6,10 +6,11 @@ applies-to:
   - monorepo
 scan-sources:
   - glob: "src/**/*.{ts,js,java,go,py}"
-  - grep: "(kafka|rabbitmq|amqp|sqs|sns|nats|pulsar|@KafkaListener|@RabbitListener)"
+  - grep: "(kafka|rabbitmq|amqp|sqs|sns|nats|pulsar|servicebus|@KafkaListener|@RabbitListener|@MessageListener|@ServiceBusListener|@EventListener|@TransactionalEventListener)"
   - glob: "**/consumers/**"
   - glob: "**/producers/**"
   - glob: "**/events/**"
+  - glob: "**/listeners/**"
 confidence-signals:
   - messaging client dep present
   - consumer / producer modules identifiable
@@ -32,11 +33,17 @@ token-budget: 900
 | `nats` / `nats.go` | NATS |
 | `pulsar-client` | Pulsar |
 | `redis XADD` / `XREADGROUP` | Redis Streams |
+| `custom-mq-starter` / `com.microsoft.azure.servicebus` | Azure Service Bus |
+| `azure-messaging-eventhubs` | Azure Event Hubs |
 
 **Consumer identification:**
 ```
 Glob "**/consumers/**" / "**/listeners/**"
-Grep "@KafkaListener" / "@RabbitListener" / "consumer.subscribe"
+Grep "@KafkaListener" / "@RabbitListener" / "@MessageListener" / "@ServiceBusListener" /
+     "@JmsListener" / "@SqsListener" / "@StreamListener" / "consumer.subscribe"
+Grep "implements ApplicationListener" / "@EventListener" / "@TransactionalEventListener"
+     (three-track Spring internal events; v0.5.1 review of biz-svc-b
+     found the doc miscategorising @EventListener as ApplicationListener interface)
 ```
 
 **Producer identification:**

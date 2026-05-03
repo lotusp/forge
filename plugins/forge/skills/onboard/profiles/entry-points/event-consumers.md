@@ -5,10 +5,27 @@ applies-to:
   - web-backend
   - monorepo
 confidence-signals:
-  - Kafka / RabbitMQ / SQS / NATS client dependencies
+  - Kafka / RabbitMQ / SQS / NATS / Azure Service Bus client deps
   - consumer registration files (src/consumers/ / src/listeners/)
-  - @KafkaListener / @RabbitListener annotations
-token-budget: 1000
+  - @KafkaListener / @RabbitListener / @MessageListener / @ServiceBusListener annotations
+  - cron expressions in application.yml without @Scheduled in code (external scheduler signal)
+must-grep:
+  - '@(KafkaListener|RabbitListener|JmsListener|SqsListener|StreamListener|MessageListener|ServiceBusListener|EventHubConsumer|Consumer)\b'
+  - 'implements ApplicationListener\b'
+  - '@EventListener\b'
+  - '@TransactionalEventListener\b'
+must-cross-check:
+  - if-zero: '@Scheduled\b'
+    and-config-has: '*_cron|cron:'
+    then-emit: 'No @Scheduled in code but cron configs exist — service likely triggered by an external scheduler via messaging queue (cross-reference Notes)'
+detectors:
+  - detector-id: ms_listeners
+    detector-script: ms_listeners.sh
+    rendered-as: count
+  - detector-id: application_listeners
+    detector-script: application_listeners.sh
+    rendered-as: count
+token-budget: 1100
 ---
 
 # Profile: Event Consumers
@@ -45,13 +62,31 @@ not mix produced topics with consumed queues.
 **Redis Streams:**
 - `XREADGROUP` calls / consumer group setup
 
+**Azure Service Bus (Microsoft + custom starters):**
+- `@ServiceBusListener("queue-name")` (`com.microsoft.azure.servicebus`)
+- `@MessageListener("queue.name")` / `@MessageListener(QUEUE_NAME)`
+  (custom starters such as the SVC `custom-mq-starter`;
+  also bare `@Consumer` annotation marking handler methods)
+- `@EventHubConsumer` (Azure Event Hubs)
+
+**Generic Spring messaging:**
+- `@JmsListener(destination = "...")` (Spring JMS)
+- `@StreamListener("input-channel")` (Spring Cloud Stream — deprecated
+  but still in many older services)
+- `@SqsListener(value = "...")` (`spring-cloud-aws`)
+
 **Webhook receivers (inbound HTTP as events):**
 - `/webhooks/*` route group — cross-reference `http-api`
 
-**Internal application events:**
-- framework listener interfaces, decorators, observer registration, or event bus
-  subscriptions
-- transactional event listener annotations/hooks where present
+**Internal Spring application events (THREE tracks — all three MUST be greped):**
+- `class Foo implements ApplicationListener<FooEvent>` (interface form)
+- `@EventListener` on a method (annotation form)
+- `@TransactionalEventListener` on a method (transaction-bound variant)
+
+> v0.5.1 review of `biz-svc-b` found the doc claiming 7
+> `ApplicationListener<T>` implementations while the actual code has
+> 0 of those and 7 `@EventListener` methods. Three-track grep prevents
+> this misclassification.
 
 ## Extraction Rules
 
@@ -65,11 +100,25 @@ not mix produced topics with consumed queues.
    write library defaults as project facts unless the default was verified.
 5. **Idempotency notes** — include if handlers document idempotency keys,
    dedup tables, unique constraints, or explicit guard logic.
-6. **Internal application events** — list framework/internal listeners separately
-   from external messaging consumers.
+6. **Internal application events — three-track classification.** When listing
+   internal listeners, the `Mechanism` column MUST report the actual
+   form found by grep (not "Spring ApplicationEvent" by default):
+   - "implements `ApplicationListener<T>`"
+   - "`@EventListener` method"
+   - "`@TransactionalEventListener` method"
+   Counting these via `application_listeners` detector is preferred over
+   eyeballing the code base.
 7. **Skip transports with zero consumers** — producing-only falls under
    `integration/messaging`.
-8. **Skip if no event consumption exists.**
+8. **External-scheduler inference (cross-check).** If `@Scheduled` grep
+   returns 0 but `application*.yml` contains cron-like keys
+   (`*_cron`, `cron:`), mention "no in-process scheduler; the cron
+   keys imply an external scheduler triggers this service via a
+   messaging queue" in Notes. Do NOT silently drop the cron config.
+9. **Skip if no event consumption exists** — but only after the
+   must-grep patterns above have all returned 0. Do not skip on
+   intuition; record the grep evidence in JOURNAL when the profile
+   is skipped (Step 1.3 Skip Tier 2).
 
 ## Section Template
 
@@ -98,11 +147,19 @@ not mix produced topics with consumed queues.
 See `/webhooks` route group in HTTP API Surface. All webhooks are HMAC-signed; signature
 verified by `verifyWebhookSignature` middleware. [high]
 
-### Internal Application Events
+### Azure Service Bus Inbound (NEW)
+
+| Queue / Topic | Handler | Mechanism |
+|---------------|---------|-----------|
+| `queue.example.scheduler_to_service` | `SchedulerMessageListener` | `@MessageListener` + `@Consumer` (custom starter) [high] |
+
+### Internal Application Events (three-track)
 
 | Event / Signal | Listener | Mechanism |
 |----------------|----------|-----------|
-| `ProductCreatedEvent` | `ProductCreatedListener` | framework listener interface [high] |
+| `ProductCreatedEvent` | `ProductCreatedListener` | `implements ApplicationListener<ProductCreatedEvent>` [high] |
+| `OrderInvoicedEvent` | `OrderInvoicedHandler.onInvoiced(...)` | `@EventListener` method [high] |
+| `PaymentCommittedEvent` | `PaymentEventBridge.onCommit(...)` | `@TransactionalEventListener` method [high] |
 
 ### Idempotency
 
