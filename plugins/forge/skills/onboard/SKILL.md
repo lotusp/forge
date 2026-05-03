@@ -932,18 +932,38 @@ as a bullet in the `Notes` section (if loaded).
 
 **3.1 — Header**
 
-Emit the artifact header. The `Tag legend` line is required so a human
-reader can decode `[high] [build]` style annotations without needing to
-open SKILL.md first:
+Four header values are produced by a deterministic script — the LLM
+MUST NOT invent them. The script reads `package.json` / `pom.xml` /
+`build.gradle` / dirname for the project name, runs `git -C $TARGET
+rev-parse --short HEAD` for the commit (with `(no-commit)` fallback),
+reads `plugin.json` for the version, and uses UTC for the date:
+
+```bash
+eval "$(scripts/header-context.sh "$TARGET")"
+# now $PROJECT_NAME, $GENERATED, $COMMIT, $PLUGIN_VERSION are bound
+```
+
+The values bound by the script are AUTHORITATIVE. Substitute them
+verbatim into the template. Inventing or paraphrasing any of these
+four (e.g. writing `v0.5.1` from memory when `plugin.json` says
+`0.5.2`, or writing `(not a git repo)` when the script says
+`(no-commit)`) is an R9 violation.
+
+`{kind-id}`, `{confidence}`, and `{Excluded-dimensions}` come from
+Stage 1 (the plan you produced before Stage 2 began) — those are LLM
+judgements, not file values, so the script does not compute them.
+
+The `Tag legend` line is required so a human reader can decode
+`[high] [build]` style annotations without opening SKILL.md first:
 
 ```markdown
-# Project Onboard: {project-name}
+# Project Onboard: {PROJECT_NAME}
 
 > Kind:             {kind-id}
 > Confidence:       {confidence}
-> Generated:        {YYYY-MM-DD}
-> Commit:           {short-sha}
-> Generator:        /forge:onboard (v{plugin-version})
+> Generated:        {GENERATED}
+> Commit:           {COMMIT}
+> Generator:        /forge:onboard (v{PLUGIN_VERSION})
 > Excluded-dimensions:  {comma-separated list from Stage-1 plan or "(none)"}
 > Tag legend:       `[high|medium|low|inferred]` = confidence; `[code|build|config|readme|cli]` = evidence source; `[conflict]` = sources disagree.
 ```
@@ -970,6 +990,18 @@ the exact format — 6 attributes total (`source-file`, `section`,
 `profile`, `verified-commit`, `body-signature`, `generated`).
 `verified-commit` and `body-signature` are **two separate, independently
 required attributes** (not alternatives).
+
+**Filling the values:**
+- `verified-commit` — reuse `$COMMIT` from Step 3.1's `header-context.sh`
+  invocation. Do NOT re-derive per marker; one commit value applies to
+  the entire artifact.
+- `generated` — reuse `$GENERATED` from the same invocation.
+- `body-signature` — write the literal placeholder `(pending)`. Step 6.5
+  Check 4 computes the real SHA-256 via Bash and replaces every
+  `(pending)` before R9 is enforced. **Do not type a hex string here**;
+  any LLM-typed hex placeholder (`a1b2c3d4e5f60001`,
+  `0001020304050607`, …) is an R9 violation.
+
 Use this literal shape (substitute values, keep attribute order and quotes):
 
 ```markdown
