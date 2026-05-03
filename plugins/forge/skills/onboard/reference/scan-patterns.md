@@ -13,25 +13,29 @@ a confidence tag to apply to each finding.
 
 ### Build / version files
 
-| Pattern | Target | Tag |
-|---------|--------|-----|
-| `package.json` — `"engines"`, `"dependencies"`, `"scripts"` | Tech stack, commands | `[build]` |
-| `gradle.properties` — `javaVersion`, `*Version` constants | Tech stack | `[build]` |
+
+| Pattern                                                                          | Target                   | Tag       |
+| -------------------------------------------------------------------------------- | ------------------------ | --------- |
+| `package.json` — `"engines"`, `"dependencies"`, `"scripts"`                      | Tech stack, commands     | `[build]` |
+| `gradle.properties` — `javaVersion`, `*Version` constants                        | Tech stack               | `[build]` |
 | `build.gradle` root + subprojects — `ext { }`, `dependencies { }`, `plugins { }` | Tech stack, side effects | `[build]` |
-| `pom.xml` — `<parent>`, `<properties>`, `<dependencies>` | Tech stack | `[build]` |
-| `go.mod` — `go`, `require` | Tech stack | `[build]` |
-| `Cargo.toml` — `[package]`, `[dependencies]` | Tech stack | `[build]` |
-| `pyproject.toml` / `requirements.txt` | Tech stack | `[build]` |
+| `pom.xml` — `<parent>`, `<properties>`, `<dependencies>`                         | Tech stack               | `[build]` |
+| `go.mod` — `go`, `require`                                                       | Tech stack               | `[build]` |
+| `Cargo.toml` — `[package]`, `[dependencies]`                                     | Tech stack               | `[build]` |
+| `pyproject.toml` / `requirements.txt`                                            | Tech stack               | `[build]` |
+
 
 ### Runtime config
 
-| Pattern | Target | Tag |
-|---------|--------|-----|
-| `application*.yml` / `application*.properties` | Tech stack, config keys | `[config]` |
-| `bootstrap.yml` / `bootstrap.properties` | Default profile, port | `[config]` |
-| `docker-compose*.yml` — `services:` | Infra dependencies | `[config]` |
-| `Dockerfile` — `FROM`, `EXPOSE` | Runtime base image, ports | `[config]` |
-| `.env.example` / `.env.sample` | Required env vars | `[config]` |
+
+| Pattern                                        | Target                    | Tag        |
+| ---------------------------------------------- | ------------------------- | ---------- |
+| `application*.yml` / `application*.properties` | Tech stack, config keys   | `[config]` |
+| `bootstrap.yml` / `bootstrap.properties`       | Default profile, port     | `[config]` |
+| `docker-compose*.yml` — `services:`            | Infra dependencies        | `[config]` |
+| `Dockerfile` — `FROM`, `EXPOSE`                | Runtime base image, ports | `[config]` |
+| `.env.example` / `.env.sample`                 | Required env vars         | `[config]` |
+
 
 ### Side-effect surfacing (easy to miss)
 
@@ -337,3 +341,4 @@ Special cases:
 - Two sources disagree → [conflict] + keep both
 - Can't access source in this run → [needs-verification]
 ```
+
