@@ -25,6 +25,7 @@ stats_init() {
   "drift_warnings": 0,
   "journal_inconsistency": 0,
   "sentinel_normalizations": 0,
+  "inventory_corrections": 0,
   "mutations": []
 }
 EOF
@@ -78,6 +79,7 @@ stats_summary_line() {
     (.sig_repairs|tostring)          + " sig / " +
     (.count_drifts|tostring)         + " drift / " +
     (.consistency_repairs|tostring)  + " consistency / " +
-    (.sentinel_normalizations|tostring) + " sentinel-norm"
+    (.sentinel_normalizations|tostring) + " sentinel-norm / " +
+    (.inventory_corrections|tostring) + " inventory-fix"
   ' "$file"
 }

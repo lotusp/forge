@@ -132,6 +132,12 @@ run_check check5_evidence_verify.sh
 halt_if_needed     # check5 may exit 2 if a referenced detector is missing
 run_check check6a_cross_stage.sh
 run_check check6c_header_marker.sh
+# v0.5.4: inject-facts (truth registry) + check7 (auto-correct
+# inventory numbers using the registry). inject-facts is a producer
+# script, not a check, so it doesn't go through run_check.
+"$SCRIPT_DIR/inject-facts.sh" "$CTX/.." 2>&1 \
+  | sed 's/^/  [inject-facts] /' >&2 || true
+run_check check7_inventory_truth.sh
 
 # ─────────────────────────── PASS 2 ───────────────────────────
 # Mutations above may have changed body content; re-derive signatures
