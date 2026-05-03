@@ -54,6 +54,7 @@ profiles:
   - structural/build-system
   - structural/config-management
   - structural/deployment
+  - structural/observability
   - model/domain-model
   - model/db-schema
   - entry-points/http-api
@@ -76,6 +77,7 @@ output-sections:
   - Build System
   - Configuration
   - Deployment
+  - Observability
   - Key Data Flows
   - Notes
 ---
