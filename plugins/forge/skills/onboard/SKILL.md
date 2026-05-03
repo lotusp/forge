@@ -450,6 +450,40 @@ If a claim does not meet the minimum confidence floor for its category and
 target section, either downgrade its category to an allowed destination or
 omit it.
 
+**Hard-constraint enforcement source closed set (v7 R1):**
+
+A claim qualifies as `enforced-rule` (and may therefore enter
+`constraints.md` `## Hard Constraints`) ONLY if its enforcement source
+matches one of the following five categories:
+
+| Allowed enforcement source | Example |
+|----------------------------|---------|
+| `archunit-rule` | `ControllerArchitectureTest.java` ArchUnit assertion |
+| `compile-failure` | Missing required annotation breaks `javac` |
+| `test-assertion` | JUnit / contract test that fails on violation |
+| `lint-rule` (ERROR severity) | PMD / checkstyle / eslint rule at error level |
+| `framework-runtime-invariant` | JPA `@Id` required; Spring `@Component` scan rejects |
+
+Forbidden as enforcement source for Hard Constraints:
+
+| Forbidden | Reason | Where the rule belongs instead |
+|-----------|--------|--------------------------------|
+| git-hook (`pre-push`, `pre-commit`) | Bypassable via `--no-verify` | `Process / Quality Gates` (`delivery-conventions`) |
+| Team convention / "we always do X" | No automated check | `Recommended Direction` (`architecture-layers`) |
+| Documentation `should` / `must` wording | Wording, not enforcement | `Recommended Direction` |
+| Architectural intent / "avoid this pattern" | Design wish | `Recommended Direction` |
+
+**"None found" claims:** A `Hard Constraints` section MAY say
+"none found" only with explicit scope, e.g. "No hard constraints found
+in current-repo source code; team policy and CI external rules not
+scanned."
+
+This rule exists because v0.5.1 review found peer-svc-a
+elevating the `pre-push` git hook to a Hard Constraint and
+web-bff-svc treating "adding JPA would violate the BFF role" as one —
+neither has automated enforcement, so both belong in softer
+categories.
+
 ### R17 — Execution-layer content is excluded from onboard output
 
 `/forge:onboard` is not a runbook. The following content types MUST NOT
@@ -616,6 +650,43 @@ Rationale: kind detection is broad on purpose (multi-language signals),
 but Stage 2 patterns are stack-specific in v0.5.x. The gate prevents
 false-success runs on unsupported stacks. Removed once adapter model
 lands in v0.6.0.
+
+**1.5c — Profile skip rule (three-tier)**
+
+Each profile is evaluated against three tiers. Skips MUST land in
+exactly one tier with the corresponding evidence in the Execution Plan
+(and JOURNAL):
+
+**Tier 1 — applies-to mismatch:**
+```
+if current_kind ∉ profile.applies-to:
+    skip immediately, no grep evidence required
+    JOURNAL: skip-reason="applies-to mismatch"
+```
+
+**Tier 2 — applicable but no signal (grep-zero proof required):**
+```
+if current_kind ∈ profile.applies-to AND
+   ALL profile.confidence-signals return 0 matches AND
+   ALL profile.must-grep return 0 matches:
+    skip with full evidence:
+      - each grep cmd
+      - 0-match result
+    JOURNAL: skip-reason="grep-zero", with cmd:result for each grep
+```
+
+**Tier 3 — applicable with signals: MUST run (no skip):**
+```
+otherwise:
+    run the profile; do NOT skip on heuristic / "looks like nothing".
+```
+
+This rule exists because v0.5.1 review of web-bff-svc found the
+`messaging` profile silently skipped despite a real
+`producer.produce(SAMPLE_PRODUCER_CONST, ...)` call
+in `some/Service.java:1010`. The skip was
+never grep-evidenced, so the false-negative wasn't caught. Three-tier
+makes Tier 2 evidence mandatory in JOURNAL.
 
 **1.6 — Emit Execution Plan**
 

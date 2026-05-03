@@ -37,18 +37,45 @@ token-budget: 900
 ## Extraction Rules
 
 1. Only extract claims that are both **stable** and **hard**.
-2. Each constraint must have a concrete enforcement source.
+2. Each constraint must have a concrete enforcement source from the
+   **closed five-category set** (mirrors SKILL.md R16 v7 R1):
+   - `archunit-rule` (e.g. `*ArchitectureTest.java` ArchUnit assertion)
+   - `compile-failure` (missing required annotation breaks `javac`)
+   - `test-assertion` (JUnit / contract test that fails on violation)
+   - `lint-rule` at ERROR severity (PMD / checkstyle / eslint hard rule)
+   - `framework-runtime-invariant` (JPA `@Id` required; bean scan rejects)
 3. The enforcement source must be verified in the current repository and must
    apply to files or artifacts this repository actually contains.
 4. External or parent documentation is secondary evidence. If it is not
    corroborated by current-repo enforcement, route it to a softer destination
    or omit it.
-5. Process expectations are routed to `delivery-conventions`, not this
+5. **Forbidden as enforcement source for Hard Constraints** (route to softer
+   sections instead):
+   - git-hook (`pre-push`, `pre-commit`) — bypassable via `--no-verify`,
+     belongs in `delivery-conventions` Process / Quality Gates
+   - team convention / "we always do X" — no automated check, belongs in
+     `architecture-layers` Recommended Direction
+   - documentation `should` / `must` wording — wording, not enforcement
+   - architectural intent / "avoid this pattern" — design wish, belongs in
+     `architecture-layers` Recommended Direction
+6. Process expectations are routed to `delivery-conventions`, not this
    dimension.
-6. Current business exceptions, inconsistencies, risks, and temporary caveats
+7. Current business exceptions, inconsistencies, risks, and temporary caveats
    are routed elsewhere.
-7. `Current known violations: none` may be written only after performing the
-   inverse search implied by the constraint.
+8. `Current known violations: none` may be written only after performing the
+   inverse search implied by the constraint, AND the search command must
+   appear next to the claim (e.g. inline `[cli]` source tag).
+9. **Scope qualifier on "none found".** A `Hard Constraints` section
+   that says "none found" MUST add an explicit scope qualifier:
+   "No hard constraints found in current-repo source code; team policy
+   and CI external rules not scanned." Otherwise readers may
+   misinterpret silence as confirmation.
+
+> **Stage-2 ↔ Stage-3 sync note (v7 R1):** The five-category closed
+> set above mirrors SKILL.md R16. Whenever R16 is amended, this
+> dimension MUST be updated in the same commit so the Hard Constraints
+> rendered into `constraints.md` cannot drift from the rule LLM uses
+> when classifying claims.
 
 ## Claim Classification Annotations
 
