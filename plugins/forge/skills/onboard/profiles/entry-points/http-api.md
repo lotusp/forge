@@ -72,6 +72,26 @@ envelope unless the current codebase proves it.
    mixed routing.
 4. **Counts require reproducible evidence.** If the scan is sampled, say
    "representative routes" and omit total counts.
+
+   **Mandatory detector invocation (Java/Spring stack only).** Before
+   writing any controller-count or route-count number, you MUST invoke
+   the `rest_controllers` and `spring_mappings` detectors and use their
+   `result` fields verbatim:
+
+   ```bash
+   ROOT=$(find "$TARGET" -maxdepth 4 -type d -name java | head -1)
+   CONTROLLERS=$(scripts/detectors/rest_controllers.sh "$ROOT" | jq .result)
+   MAPPINGS=$(scripts/detectors/spring_mappings.sh "$ROOT" | jq .result)
+   ```
+
+   Then anchor each number with an `<!-- ev:id=routes-N -->` evidence
+   comment per Step 6.0 (so check5 can verify it). Eyeballed estimates
+   like "approximately N controllers" or "371 mappings" without
+   detector evidence are now treated as unanchored claims by check5b
+   (warning) and as fact-mismatches by future fact-check passes
+   (hard halt). A prior real-world review found a project claiming
+   `371` mappings when the detector reports `3957` (≈10× off) — that
+   is exactly the failure this rule prevents.
 5. **Version scheme** — record URL/header/media-type/custom versioning only if
    directly evidenced.
 6. **Response envelope** — read actual response types, middleware, serializers,
