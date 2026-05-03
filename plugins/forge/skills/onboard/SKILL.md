@@ -1355,6 +1355,29 @@ the on-disk artifact is internally consistent.
 summary to `.forge/context/.validation-stats.json`. Step 7 is the SOLE
 writer of `.forge/JOURNAL.md` and reads stats.json for its summary line.
 
+**Idempotency hard-gate (Step 6.5b).** Immediately after the validator
+reports exit 0 or 1, run the idempotency test:
+
+```bash
+"$SKILL_ROOT/tests/idempotency.sh" .forge/context
+```
+
+The test runs the validator a second time and asserts three axes:
+  1. exit code stable (0 stays 0; 1 stays 1)
+  2. zero new mutations on the second pass
+  3. md5 of every artifact file unchanged
+
+A failing idempotency test means the validator made changes on the
+second pass that it failed to make on the first — i.e. the artifact
+is not yet a fixed point. **Do NOT proceed to Step 7** until idempotency
+holds. Surface the test stderr; remediation is to run the validator
+once more (which usually settles a transient pending->resolved cycle)
+or to inspect the specific axis that failed.
+
+A prior real-world v0.5.2 release shipped without this gate; 4/4
+field-test projects passed Step 6.5 but failed idempotency on the
+next run, leaving artifacts in an unstable state.
+
 ---
 
 ### Step 7 — Append JOURNAL entry (final step — run ends here)
