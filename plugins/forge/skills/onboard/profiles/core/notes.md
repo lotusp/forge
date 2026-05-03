@@ -47,6 +47,31 @@ This profile captures **non-obvious context** that a new team member would want 
 6. **If no notable context exists** — omit the section entirely (do not output an empty
    "Notes" heading).
 
+## Forensic Sweep (mandatory checks before render)
+
+Before composing the Notes section, run a fixed checklist of "what
+should be here but isn't" inspections. Any positive finding becomes a
+bullet — do NOT silently swallow these. v0.5.1 review found multiple
+projects that failed every one of these checks without any of them
+being mentioned in Notes.
+
+| Check (Bash one-liner approximation) | If true, surface as |
+|--------------------------------------|----------------------|
+| `[ -f README.md ] && [ $(wc -c < README.md) -lt 200 ]` | "README is essentially empty (size: {N} bytes); no project guidance from this source — new maintainers should not rely on it" `[high] [readme]` |
+| `[ -f Dockerfile ] && [ $(wc -c < Dockerfile) -eq 0 ]` | "Dockerfile is 0 bytes — container build NOT verifiable from this repo alone" `[medium] [build]` |
+| Spring `actuator` dep present AND `application*.yml` `management.endpoints.web.exposure.include` does NOT list a key referenced elsewhere | "actuator/<endpoint> dep is on classpath but exposure config does NOT list it — endpoint is NOT available in this build" `[medium] [config]` |
+| `sonar.projectKey` ↔ `sonar.projectName` differ after normalising `:` ↔ `-` | "Sonar projectKey/projectName mismatch — likely typo (`{actual-key}` vs `{actual-name}`); silently breaks SonarQube history matching" `[high] [build] [conflict]` |
+| MySQL Connector/J major version ≠ `application*.yml` `driver-class-name` style (e.g. connector 8.x but `com.mysql.jdbc.Driver` legacy class) | "Connector v{X} but runtime driver-class is legacy ({Y}) — version mismatch between dep and config" `[medium] [conflict]` |
+| `0 @Entity` AND Spring Data JPA in deps AND no `exclude = {DataSourceAutoConfiguration.class}` | "Spring Data JPA in deps but no `@Entity` found — JPA may be unintentionally enabled with empty schema" `[medium] [code]` |
+| `0 @MessageListener` AND Service Bus / Kafka / RabbitMQ starter in deps | "Messaging starter in deps but no inbound consumer detected — outbound only? Verify intent" `[medium] [build]` |
+| `application*.yml` has `*_cron` / `cron:` keys AND `0 @Scheduled` annotations | "Cron config exists but no `@Scheduled` in code — service is likely triggered by an external scheduler via messaging queue" `[medium] [config]` |
+| Test coverage threshold declared (`branchCoverage = 0.6` / similar) AND coverage exclusion list expands to >10 files | "Coverage threshold 60% applies to a denominator that excludes {N} core classes; effective coverage signal is weaker than the headline number" `[high] [build]` |
+
+Implementation note: the v0.5.2-final mechanism for these checks lives
+in profile prose (Stage 2 LLM grep). v0.5.3 will move them under
+`scripts/detectors/forensic/` with executable scripts and a JSON output
+contract.
+
 ## Section Template
 
 ```markdown
