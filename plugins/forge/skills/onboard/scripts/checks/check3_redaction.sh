@@ -47,51 +47,50 @@ redact_file() {
 
     my $allow = qr/(localhost|127\.0\.0\.1|0\.0\.0\.0|github\.com|npmjs\.com|maven\.apache\.org|spring\.io|apache\.org|docker\.io|hub\.docker\.com|nodejs\.org|python\.org|crates\.io|rubygems\.org)/;
 
+    # Order matters: the loop applies rules sequentially, so a longer
+    # pattern that contains a shorter one (e.g. db-url-with-creds vs the
+    # host portion inside it) MUST come first — otherwise the inner
+    # match consumes the host and leaves the credentials visible.
     my @tier_a = (
-      # Cloud registries / API gateways
+      # === Composite secrets first (longest enclosing match) ===========
+      # DB connection strings carrying inline credentials.
+      # Format: <scheme>://<user>:<pass>@<host>...
+      # Single-quote intentionally omitted from char classes to keep
+      # the regex valid inside the bash single-quoted heredoc.
+      [ qr/\b(?:jdbc:)?(?:postgresql|postgres|mysql|mongodb(?:\+srv)?|mariadb|redis|amqp|amqps)\:\/\/[^\s\/:@"]+:[^\s\/:@"]+@[^\s"<>]+/i,
+        "<redacted: db-url-with-creds>" ],
+
+      # === High-value short tokens =====================================
+      [ qr/\bAKIA[0-9A-Z]{16}\b/,                                    "<redacted: aws-access-key>"   ],
+      [ qr/\bASIA[0-9A-Z]{16}\b/,                                    "<redacted: aws-temp-key>"     ],
+      [ qr/\bgh[ps]_[A-Za-z0-9]{36,}\b/,                             "<redacted: github-token>"     ],
+      [ qr/\bglpat-[A-Za-z0-9_-]{20,}\b/,                            "<redacted: gitlab-token>"     ],
+
+      # === Cloud-specific hosts ========================================
       [ qr/\b[a-z0-9-]+\.azurecr\.cn(?::\d+)?\b/,                    "<redacted: azure-acr>"        ],
       [ qr/\b[a-z0-9-]+\.azurecr\.io(?::\d+)?\b/,                    "<redacted: azure-acr>"        ],
       [ qr/\b[a-z0-9-]+\.aliyuncs\.com(?::\d+)?\b/,                  "<redacted: aliyun-host>"      ],
       [ qr/\b[a-z0-9-]+\.execute-api\.[a-z0-9-]+\.amazonaws\.com\b/, "<redacted: aws-apigw>"        ],
       [ qr/\b\d{12}\.dkr\.ecr\.[a-z0-9-]+\.amazonaws\.com\b/,        "<redacted: aws-ecr>"          ],
 
-      # Internal CI / corp hosts. Order matters — keep specific before generic.
+      # === Internal corporate hosts ====================================
       [ qr/\bci\.[a-z0-9.-]+\.com(?:\.[a-z]+)?(?::\d+)?\b/,          "<redacted: internal-ci-host>" ],
-      # *.internal / *.corp / *.lan / *.intranet — common internal-only
-      # TLDs at the END of a hostname. Allow a single label
-      # ('jenkins.internal') as well as multi-label
-      # ('jenkins.team.internal').
+      # *.internal / *.corp / *.lan / *.intranet at TLD position.
+      # Allow single label ('jenkins.internal') and multi-label.
       [ qr/\b[a-z0-9][a-z0-9-]*(?:\.[a-z0-9][a-z0-9-]*)*\.(?:internal|corp|lan|intranet)\b(?::\d+)?/i,
         "<redacted: internal-host>" ],
-      # `corp` / `internal` / `intranet` as a mid-domain label, e.g.
-      # build.corp.example.com — strong signal of internal even when
-      # there is a public-suffix TLD on the right.
+      # corp/internal/intranet as mid-domain label, e.g. build.corp.example.com
       [ qr/\b[a-z0-9][a-z0-9-]*\.(?:corp|internal|intranet)\.[a-z0-9][a-z0-9.-]+\b(?::\d+)?/i,
         "<redacted: internal-host>" ],
-      # `*.local` is special — it is also used for mDNS and config
-      # filenames like `application.local`. Require it to look like a
-      # host (3+ dot-separated labels) and NOT preceded by `.yml/.yaml/
-      # .properties/.conf` extensions.
+      # *.local — require hostname-shape (3+ labels) and NOT a config
+      # file name like application.local.yml.
       [ qr/(?<![a-zA-Z0-9])(?!.*\.(?:yml|yaml|properties|conf|json|xml)$)[a-z0-9][a-z0-9-]*(?:\.[a-z0-9][a-z0-9-]*){2,}\.local\b(?::\d+)?/i,
         "<redacted: internal-host>" ],
 
-      # Private RFC1918 IP addresses with optional port
+      # === Private RFC1918 IP addresses ================================
       [ qr/\b10\.\d{1,3}\.\d{1,3}\.\d{1,3}(?::\d+)?\b/,              "<redacted: private-ip>"       ],
       [ qr/\b172\.(?:1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}(?::\d+)?\b/,"<redacted: private-ip>"       ],
       [ qr/\b192\.168\.\d{1,3}\.\d{1,3}(?::\d+)?\b/,                 "<redacted: private-ip>"       ],
-
-      # DB connection strings carrying inline credentials.
-      # Format: <scheme>://<user>:<pass>@<host>...
-      # (Single-quote intentionally omitted from char classes to keep
-      # the regex valid inside the bash single-quoted heredoc.)
-      [ qr/\b(?:jdbc:)?(?:postgresql|postgres|mysql|mongodb(?:\+srv)?|mariadb|redis|amqp|amqps)\:\/\/[^\s\/:@"]+:[^\s\/:@"]+@[^\s"<>]+/i,
-        "<redacted: db-url-with-creds>" ],
-
-      # Cloud access keys — well-defined formats
-      [ qr/\bAKIA[0-9A-Z]{16}\b/,                                    "<redacted: aws-access-key>"   ],
-      [ qr/\bASIA[0-9A-Z]{16}\b/,                                    "<redacted: aws-temp-key>"     ],
-      [ qr/\bgh[ps]_[A-Za-z0-9]{36,}\b/,                             "<redacted: github-token>"     ],
-      [ qr/\bglpat-[A-Za-z0-9_-]{20,}\b/,                            "<redacted: gitlab-token>"     ],
     );
 
     # Tier B: explicit secret-shape only. We intentionally do NOT include
