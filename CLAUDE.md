@@ -153,9 +153,14 @@ commit messages, branch names, tag annotations):
    - `scripts/lint-no-project-leakage.sh --history` — scan all of
      reachable git history (commit messages + every blob)
 
-3. **Pre-commit gate:** before every commit, run the lint with
-   `--staged` (or wire it into a `pre-commit` hook). A non-zero exit
-   blocks the commit.
+3. **Pre-commit gate:** every clone must install the hook once via
+   `scripts/install-hooks.sh`. The hook calls the lint with `--staged`
+   on every commit and blocks any commit that introduces a keyword.
+   To bypass in an emergency: `git commit --no-verify` — strongly
+   discouraged, since the leak then persists in history and requires
+   `git filter-repo` + force-push to remove. After any `--no-verify`
+   commit, run `scripts/lint-no-project-leakage.sh --history` to
+   confirm.
 
 4. **Authoring discipline:** when writing a comment that explains
    *why* a rule exists, never name the project the failure was

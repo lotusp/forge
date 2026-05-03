@@ -93,18 +93,23 @@ scan_history() {
 
 scan_staged() {
   cd "$REPO_ROOT"
-  local file
+  local file added matches n
   while IFS= read -r file; do
     [ -f "$file" ] || continue
     case "$file" in
       .lint-keywords|scripts/lint-no-project-leakage.sh) continue ;;
     esac
-    git diff --cached -- "$file" \
-      | grep -E '^\+' \
-      | grep -niE "$PATTERN" \
-      | sed "s|^|$file:|" >&2 \
-      && HITS=$((HITS + 1)) || true
-  done < <(git diff --cached --name-only)
+    # Inspect only added/changed lines from the staged diff.
+    added=$(git diff --cached --no-color -U0 -- "$file" 2>/dev/null \
+              | grep -E '^\+[^+]' || true)
+    [ -z "$added" ] && continue
+    matches=$(printf '%s\n' "$added" | grep -niE "$PATTERN" || true)
+    if [ -n "$matches" ]; then
+      n=$(printf '%s\n' "$matches" | wc -l | tr -d ' ')
+      printf '%s\n' "$matches" | sed "s|^|$file:|" >&2
+      HITS=$((HITS + n))
+    fi
+  done < <(git diff --cached --name-only --diff-filter=ACMR)
 }
 
 case "$MODE" in
