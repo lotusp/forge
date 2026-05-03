@@ -3,6 +3,10 @@
 # Counts @Transactional occurrences (class-level + method-level).
 # Useful as a transaction-boundary scale signal.
 set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=lib/excludes.sh
+source "$SCRIPT_DIR/lib/excludes.sh"
 ROOT="${1:-src/main/java}"
 
 if [ ! -d "$ROOT" ]; then
@@ -11,8 +15,10 @@ if [ ! -d "$ROOT" ]; then
   exit 0
 fi
 
-N=$( { grep -rE '@Transactional\b' -- "$ROOT" 2>/dev/null || true; } | wc -l | tr -d ' ')
-EVIDENCE_CMD="grep -rE '@Transactional\b' -- '$ROOT' | wc -l"
+mapfile -t EXCLUDES < <(detector_grep_excludes)
+
+N=$( { grep -rE --include='*.java' "${EXCLUDES[@]}" '@Transactional\b' -- "$ROOT" 2>/dev/null || true; } | wc -l | tr -d ' ')
+EVIDENCE_CMD="grep -rE --include='*.java' "${EXCLUDES[@]}" '@Transactional\b' -- '$ROOT' | wc -l"
 
 jq -n --arg detector "transactional_uses" --arg root "$ROOT" \
       --argjson result "$N" --arg cmd "$EVIDENCE_CMD" \

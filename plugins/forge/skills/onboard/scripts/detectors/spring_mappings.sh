@@ -7,8 +7,17 @@
 #
 # Output: JSON with .result = total annotation count.
 # Read-only. No eval. Safe against arbitrary ROOT inputs.
+#
+# Build outputs (build/ bin/ target/ .gradle/ etc.) are skipped via
+# the shared exclude list in lib/excludes.sh — without this, pointing
+# the detector at the project root inflates the count by ~6%
+# (compiled-class duplicates).
 
 set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=lib/excludes.sh
+source "$SCRIPT_DIR/lib/excludes.sh"
 
 ROOT="${1:-src/main/java}"
 
@@ -19,18 +28,13 @@ if [ ! -d "$ROOT" ]; then
   exit 0
 fi
 
-# Direct safe execution. ROOT is passed as -- "$ROOT" so no shell expansion
-# of malicious input is possible.
-#
-# `grep` returns 1 when there are zero matches; combined with set -euo
-# pipefail this would abort the script. Wrap with `|| true` so empty
-# results are reported as result=0 rather than a silent exit 1.
-N=$( { grep -rE '@(Get|Post|Put|Delete|Patch|Request)Mapping' -- "$ROOT" 2>/dev/null || true; } \
+mapfile -t EXCLUDES < <(detector_grep_excludes)
+
+N=$( { grep -rE --include='*.java' "${EXCLUDES[@]}" '@(Get|Post|Put|Delete|Patch|Request)Mapping' -- "$ROOT" 2>/dev/null || true; } \
     | wc -l \
     | tr -d ' ')
 
-# Evidence cmd is display-only (NEVER re-executed). Quoted ROOT for human reproducibility.
-EVIDENCE_CMD="grep -rE '@(Get|Post|Put|Delete|Patch|Request)Mapping' -- '$ROOT' | wc -l"
+EVIDENCE_CMD="grep -rE --include='*.java' [excl-build-outputs] '@(Get|Post|Put|Delete|Patch|Request)Mapping' -- '$ROOT' | wc -l"
 
 jq -n --arg detector "spring_mappings" \
       --arg root "$ROOT" \

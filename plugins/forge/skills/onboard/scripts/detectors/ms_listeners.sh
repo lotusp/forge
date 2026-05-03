@@ -11,6 +11,10 @@
 # missed entirely. This detector closes the data-drift gap between
 # reference/scan-patterns.md and event-consumers.md.
 set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=lib/excludes.sh
+source "$SCRIPT_DIR/lib/excludes.sh"
 ROOT="${1:-src/main/java}"
 
 if [ ! -d "$ROOT" ]; then
@@ -20,8 +24,10 @@ if [ ! -d "$ROOT" ]; then
 fi
 
 PATTERN='@(KafkaListener|RabbitListener|JmsListener|SqsListener|StreamListener|MessageListener|ServiceBusListener|EventHubConsumer|Consumer)\b'
-N=$( { grep -rE "$PATTERN" -- "$ROOT" 2>/dev/null || true; } | wc -l | tr -d ' ')
-EVIDENCE_CMD="grep -rE '$PATTERN' -- '$ROOT' | wc -l"
+mapfile -t EXCLUDES < <(detector_grep_excludes)
+
+N=$( { grep -rE --include='*.java' "${EXCLUDES[@]}" "$PATTERN" -- "$ROOT" 2>/dev/null || true; } | wc -l | tr -d ' ')
+EVIDENCE_CMD="grep -rE --include='*.java' "${EXCLUDES[@]}" '$PATTERN' -- '$ROOT' | wc -l"
 
 jq -n --arg detector "ms_listeners" --arg root "$ROOT" \
       --argjson result "$N" --arg cmd "$EVIDENCE_CMD" \

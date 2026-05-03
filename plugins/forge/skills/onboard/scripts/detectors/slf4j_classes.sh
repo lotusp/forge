@@ -4,6 +4,10 @@
 # emit logs"). Use as a rough size signal; not authoritative for
 # logging coverage.
 set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=lib/excludes.sh
+source "$SCRIPT_DIR/lib/excludes.sh"
 ROOT="${1:-src/main/java}"
 
 if [ ! -d "$ROOT" ]; then
@@ -12,8 +16,10 @@ if [ ! -d "$ROOT" ]; then
   exit 0
 fi
 
-N=$( { grep -rlE '@Slf4j\b' -- "$ROOT" 2>/dev/null || true; } | wc -l | tr -d ' ')
-EVIDENCE_CMD="grep -rlE '@Slf4j\b' -- '$ROOT' | wc -l"
+mapfile -t EXCLUDES < <(detector_grep_excludes)
+
+N=$( { grep -rlE --include='*.java' "${EXCLUDES[@]}" '@Slf4j\b' -- "$ROOT" 2>/dev/null || true; } | wc -l | tr -d ' ')
+EVIDENCE_CMD="grep -rlE --include='*.java' "${EXCLUDES[@]}" '@Slf4j\b' -- '$ROOT' | wc -l"
 
 jq -n --arg detector "slf4j_classes" --arg root "$ROOT" \
       --argjson result "$N" --arg cmd "$EVIDENCE_CMD" \
