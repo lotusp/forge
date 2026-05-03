@@ -108,10 +108,16 @@ fi
 stats_init "$STATS"
 
 # ─────────────────────────── PASS 1 ───────────────────────────
-# check4 first: resolves "(pending)" placeholders + initial signatures.
-# check1 next:  strict regex (no "(pending)" exception by design).
+# check4 first:  resolves "(pending)" placeholders + initial signatures.
+# check6e next:  coerce non-spec verified-commit / Header sentinels
+#                ("(none)" / "no-git" / "no-git-000" / ...) into the
+#                canonical form so check1's strict regex doesn't halt
+#                on what is essentially an LLM placeholder.
+# check1 last:   strict regex (no "(pending)" exception by design).
 run_check check4_signature_recompute.sh
 halt_if_needed
+run_check check6e_sentinel_normalize.sh
+# (no halt_if_needed: check6e is a normalizer; warning-class by design)
 run_check check1_marker_structural.sh
 halt_if_needed
 
