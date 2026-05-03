@@ -53,6 +53,35 @@ token-budget: 800
 4. **Skip dev-only hot-reload tooling** unless it is the primary build path.
 5. **If project has no build step** (pure-source library), state that and omit artifact
    rows.
+6. **Field-pair consistency check.** When a build manifest contains a
+   pair of fields that should mirror each other, extract both and
+   compare verbatim. Mismatches surface under `Notes` (or
+   `constraints.md` Current Business Caveats) tagged `[conflict]`:
+
+   | Pair | File | Note |
+   |------|------|------|
+   | `sonar.projectName` ↔ `sonar.projectKey` | `build.gradle` / `pom.xml` | Spelling/typo detector — v0.5.1 review found `serice` vs `service` typo silently breaking SonarQube history matching |
+   | `<artifactId>` ↔ `<name>` | `pom.xml` | Identity mirror |
+   | `name` ↔ `description` | `package.json` | Sanity |
+   | `bootJar.archiveBaseName` ↔ `bootJar.archiveFileName` | `build.gradle` | Artifact naming |
+
+   Normalize SonarQube `:` ↔ `-` punctuation before comparing
+   (`svc:peer-svc-a` vs `svc-peer-svc-a` is the
+   intended spelling convention, not a typo).
+
+7. **Duplicate property detection.** Run
+   `grep -c "sonar\.projectKey" build.gradle`; if > 1, surface
+   "Duplicate `sonar.projectKey` declaration (N occurrences)" — v0.5.1
+   review of peer-svc-a found the same property declared
+   twice on adjacent lines.
+
+8. **Coverage-exclusion transparency.** When a
+   `jacocoTestCoverageVerification` (or similar) block declares an
+   exclusion list, expand the globs with `find` and report the total
+   excluded file count next to the coverage threshold. v0.5.1 review
+   found a project claiming "60% branch coverage" while the
+   exclusion list silently dropped 30+ core classes from the
+   denominator — readers MUST see this caveat next to the threshold.
 
 ## Section Template
 
