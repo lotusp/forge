@@ -116,13 +116,16 @@ run_check check1_marker_structural.sh
 halt_if_needed
 
 # ─────────────────────── MUTATING CHECKS ──────────────────────
-# beta adds: check2a (R10 strip extras), check5 (count drift).
-# final will add check6a/check6c (cross-stage downgrade / commit normalize).
+# Beta: check2a (strip), check5 (drift).
+# Final: check6a (cross-stage downgrade), check6c (commit normalize).
+# All can mutate; Pass 2 below re-stamps the body-signature.
 run_check check3_redaction.sh
 # (do not halt_if_needed — Tier A redaction is exit 1 by design)
 run_check check2a_tag_count.sh
 run_check check5_evidence_verify.sh
 halt_if_needed     # check5 may exit 2 if a referenced detector is missing
+run_check check6a_cross_stage.sh
+run_check check6c_header_marker.sh
 
 # ─────────────────────────── PASS 2 ───────────────────────────
 # Mutations above may have changed body content; re-derive signatures
@@ -139,5 +142,7 @@ halt_if_needed
 run_check check2b_missing_tag.sh
 run_check check5b_unanchored_numbers.sh
 halt_if_needed
+run_check check6b_intra_file.sh
+run_check check6d_journal_consistency.sh
 
 emit_summary_and_exit
