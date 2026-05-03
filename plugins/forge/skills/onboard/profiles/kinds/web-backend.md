@@ -45,6 +45,7 @@ stage2-stack-gate:
       To proceed anyway: re-run with --override-stack-gate
       (output quality will be low — see Current Scope in SKILL.md).
 profiles:
+  - core/what-this-is        # MUST stay first — produces the opening section
   - core/tech-stack
   - core/module-map
   - core/entry-points
