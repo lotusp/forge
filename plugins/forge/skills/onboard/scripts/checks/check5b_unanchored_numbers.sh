@@ -49,6 +49,7 @@ STATS="${2:-$CTX/.validation-stats.json}"
 
 UNANCHORED=0
 WHATTHISIS_VIOLATIONS=0
+WHATTHISIS_REWRITES=0
 
 INVENTORY_KW='controllers|files|classes|entities|migrations|listeners|routes|endpoints|handlers|tables|annotations|repositories|mappings|consumers|producers'
 
@@ -90,6 +91,26 @@ scan_file() {
 
     # Inside what-this-is section?
     if in_range "$lineno" "$wti_start" "$wti_end"; then
+      # v0.5.4: auto-rewrite "<N>+ <noun>" forms (e.g. "60+ tables")
+      # to qualitative phrasing. The N+ form is the LLM's most common
+      # WTI shape and trivially mechanically recoverable. Anything
+      # without a `+` (a hard count like "60 tables") is still a
+      # FORBIDDEN halt — the author needs to re-think the prose.
+      if [[ "$line" =~ ([0-9]+)\+[[:space:]]+($INVENTORY_KW) ]]; then
+        local nplus="${BASH_REMATCH[1]}+"
+        # In-place rewrite of just this line. "60+ tables" → "many tables".
+        LINENO="$lineno" NPLUS="$nplus" perl -i -pe '
+          if ($. == $ENV{LINENO}) {
+            my $np = $ENV{NPLUS};
+            s/\Q$np\E\s+/many /;
+          }
+        ' "$file"
+        echo "REWROTE $file:$lineno: precise WTI '$nplus' → 'many' (qualitative)" >&2
+        # Rewrites are warning-class (auto-repaired); only HARD COUNTS
+        # without a `+` qualifier escalate to FORBIDDEN/halt below.
+        WHATTHISIS_REWRITES=$((WHATTHISIS_REWRITES + 1))
+        continue
+      fi
       echo "FORBIDDEN $file:$lineno: precise inventory number in What This Is — replace with qualitative wording" >&2
       echo "  > ${line:0:120}" >&2
       WHATTHISIS_VIOLATIONS=$((WHATTHISIS_VIOLATIONS + 1))
@@ -121,8 +142,9 @@ main() {
     if [ "$UNANCHORED" -gt 0 ]; then
       stats_increment "$STATS" count_drifts "$UNANCHORED"
     fi
-    if [ "$WHATTHISIS_VIOLATIONS" -gt 0 ]; then
-      stats_increment "$STATS" r9_violations "$WHATTHISIS_VIOLATIONS"
+    local total_wti=$(( WHATTHISIS_VIOLATIONS + WHATTHISIS_REWRITES ))
+    if [ "$total_wti" -gt 0 ]; then
+      stats_increment "$STATS" r9_violations "$total_wti"
     fi
   fi
 

@@ -135,7 +135,13 @@ run_check check6c_header_marker.sh
 # v0.5.4: inject-facts (truth registry) + check7 (auto-correct
 # inventory numbers using the registry). inject-facts is a producer
 # script, not a check, so it doesn't go through run_check.
-"$SCRIPT_DIR/inject-facts.sh" "$CTX/.." 2>&1 \
+#
+# CTX is "<project>/.forge/context" — to get the project root we must
+# go up TWO levels (../.. not ..). Earlier versions of this wiring
+# used "$CTX/.." which produced a doubled .forge/.forge/_session path
+# under the .forge directory; check7 then could not find facts.json
+# and silently no-op'd.
+"$SCRIPT_DIR/inject-facts.sh" "$CTX/../.." 2>&1 \
   | sed 's/^/  [inject-facts] /' >&2 || true
 run_check check7_inventory_truth.sh
 run_check check8_sonar_attestation.sh

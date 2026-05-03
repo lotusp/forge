@@ -9,18 +9,21 @@
 # reported this — sonar_field_pair detector existed but the LLM
 # rarely invoked it.
 #
-# Strategy: read .forge/_session/facts.json (produced by inject-facts).
-# When `.sonar.match == false` or `.sonar.key_declaration_count > 1`
-# AND no existing prose in the artifact already mentions the issue,
-# append a `[conflict]` row to the build-system / Notes section of
-# onboard.md.
+# This check reads .forge/_session/facts.json (produced by
+# inject-facts.sh). For each kind of issue (mismatch / duplicate),
+# it checks for an idempotency marker; if absent, appends a
+# [conflict]-tagged finding under Notes (or Build System) and stamps
+# the marker on the line so a second run is a no-op.
+#
+# Marker format: `<!-- check8:sonar=<kind> -->` where <kind> is one of
+# `mismatch` or `duplicate`.
 #
 # Append-only mutation: never modifies LLM-authored prose; just adds
-# a single line under the Build System or Notes heading.
+# one or two finding lines with the appropriate marker.
 #
 # Exit code:
-#   0  no Sonar issue OR issue already mentioned
-#   1  appended a finding (warning class)
+#   0  no Sonar issue OR all issues already attested
+#   1  appended one or more findings (warning class)
 #   2  not used
 
 set -euo pipefail
@@ -44,82 +47,104 @@ if [ ! -f "$FACTS" ] || [ ! -f "$ART" ]; then
   exit 0
 fi
 
-# Read sonar verdict.
-SONAR_BUILD=$(jq -r '.sonar.build_file // empty' "$FACTS")
-# Use `tostring` not `// empty`: jq's `//` treats `false` as nullish
-# and would drop the value, defeating the whole point of the check.
-SONAR_MATCH=$(jq -r '.sonar.match | tostring'    "$FACTS" 2>/dev/null || echo "")
-SONAR_NAME=$( jq -r '.sonar.project_name // empty' "$FACTS")
-SONAR_KEY=$(  jq -r '.sonar.project_key  // empty' "$FACTS")
-SONAR_KCNT=$( jq -r '.sonar.key_declaration_count  // 0' "$FACTS")
-SONAR_NCNT=$( jq -r '.sonar.name_declaration_count // 0' "$FACTS")
+# Read sonar verdict. Use `tostring` not `// empty` because jq's `//`
+# treats `false` as nullish and would drop the value.
+SONAR_BUILD=$(jq -r '.sonar.build_file // empty'                  "$FACTS")
+SONAR_MATCH=$(jq -r '.sonar.match | tostring'                     "$FACTS" 2>/dev/null || echo "")
+SONAR_NAME=$( jq -r '.sonar.project_name // empty'                "$FACTS")
+SONAR_KEY=$(  jq -r '.sonar.project_key  // empty'                "$FACTS")
+SONAR_KCNT=$( jq -r '.sonar.key_declaration_count  // 0'          "$FACTS")
+SONAR_NCNT=$( jq -r '.sonar.name_declaration_count // 0'          "$FACTS")
 
 # No sonar config detected at all → nothing to attest.
 if [ -z "$SONAR_NAME" ] && [ -z "$SONAR_KEY" ]; then
   exit 0
 fi
 
-# Build a finding line (or skip if everything is fine).
-finding=""
-if [ "$SONAR_MATCH" = "false" ] && [ -n "$SONAR_NAME" ] && [ -n "$SONAR_KEY" ]; then
-  finding="**Sonar projectKey/projectName mismatch** — \`projectName=\"$SONAR_NAME\"\` vs \`projectKey=\"$SONAR_KEY\"\` — likely typo; SonarQube history matching will not align if this is unintentional. [high] [conflict] [build]"
+# Determine which findings are needed.
+need_mismatch=0
+need_duplicate=0
+[ "$SONAR_MATCH" = "false" ] && [ -n "$SONAR_NAME" ] && [ -n "$SONAR_KEY" ] && need_mismatch=1
+[ "$SONAR_KCNT" -gt 1 ] && need_duplicate=1
+[ "$SONAR_NCNT" -gt 1 ] && need_duplicate=1
+
+# Already-attested? (marker from previous run, OR LLM-original
+# same-line projectKey + [conflict] for the mismatch case).
+attested_mismatch=0
+attested_duplicate=0
+
+if grep -qF '<!-- check8:sonar=mismatch -->'  "$ART" 2>/dev/null; then
+  attested_mismatch=1
 fi
-if [ "$SONAR_KCNT" -gt 1 ]; then
-  if [ -n "$finding" ]; then finding="$finding"$'\n'; fi
-  finding="${finding}**Duplicate \`sonar.projectKey\` declaration** — \`$SONAR_KCNT\` occurrences in \`$(basename "$SONAR_BUILD")\`. SonarQube will use one of them non-deterministically. [high] [conflict] [build]"
+if grep -qF '<!-- check8:sonar=duplicate -->' "$ART" 2>/dev/null; then
+  attested_duplicate=1
 fi
-if [ "$SONAR_NCNT" -gt 1 ]; then
-  if [ -n "$finding" ]; then finding="$finding"$'\n'; fi
-  finding="${finding}**Duplicate \`sonar.projectName\` declaration** — \`$SONAR_NCNT\` occurrences in \`$(basename "$SONAR_BUILD")\`. [high] [conflict] [build]"
+# LLM-original mismatch attestation: same-line projectKey + [conflict].
+if [ "$attested_mismatch" = 0 ] && [ -n "$SONAR_KEY" ] \
+   && grep -F "$SONAR_KEY" "$ART" 2>/dev/null | grep -qE '\[conflict\]'; then
+  attested_mismatch=1
 fi
 
-[ -z "$finding" ] && { exit 0; }
+# Compose the finding lines that still need to be appended.
+findings=()
+if [ "$need_mismatch" = 1 ] && [ "$attested_mismatch" = 0 ]; then
+  findings+=("- <!-- check8:sonar=mismatch --> **Sonar projectKey/projectName mismatch** — \`projectName=\"$SONAR_NAME\"\` vs \`projectKey=\"$SONAR_KEY\"\` — likely typo; SonarQube history matching will not align if this is unintentional. [high] [conflict] [build]")
+fi
+if [ "$need_duplicate" = 1 ] && [ "$attested_duplicate" = 0 ]; then
+  if [ "$SONAR_KCNT" -gt 1 ]; then
+    findings+=("- <!-- check8:sonar=duplicate --> **Duplicate \`sonar.projectKey\` declaration** — \`$SONAR_KCNT\` occurrences in \`$(basename "$SONAR_BUILD")\`. SonarQube will use one of them non-deterministically. [high] [conflict] [build]")
+  fi
+  if [ "$SONAR_NCNT" -gt 1 ]; then
+    findings+=("- <!-- check8:sonar=duplicate --> **Duplicate \`sonar.projectName\` declaration** — \`$SONAR_NCNT\` occurrences in \`$(basename "$SONAR_BUILD")\`. [high] [conflict] [build]")
+  fi
+fi
 
-# Detect whether the artifact already mentions the issue. We use a
-# coarse signal: presence of the literal projectKey value in any
-# existing [conflict]-tagged line. If the LLM already wrote it,
-# skip — we don't double-report.
-if [ -n "$SONAR_KEY" ] && grep -qF "$SONAR_KEY" "$ART" 2>/dev/null \
-   && grep -qE '\[conflict\]' "$ART" 2>/dev/null; then
-  # Sonar key appears AND a [conflict] tag exists somewhere — likely
-  # already attested by the LLM. Conservative: don't append.
+# Nothing to do.
+if [ "${#findings[@]}" = 0 ]; then
   exit 0
 fi
 
-# Append the finding under "## Notes" if present, else under
-# "## Build System". Use perl for in-place insertion before the
-# section closer.
-if grep -qE '^## Notes\b' "$ART"; then
-  HEADER="## Notes"
-elif grep -qE '^## Build System\b' "$ART"; then
-  HEADER="## Build System"
+# Pick insertion target — prefer Notes, then Build System.
+if grep -qE '<!-- /forge:onboard section="notes"' "$ART"; then
+  TARGET_SECTION="notes"
+elif grep -qE '<!-- /forge:onboard section="build-system"' "$ART"; then
+  TARGET_SECTION="build-system"
 else
-  HEADER=""
+  TARGET_SECTION=""
 fi
 
-if [ -z "$HEADER" ]; then
+if [ -z "$TARGET_SECTION" ]; then
   # No suitable section — append at end of file.
-  printf '\n## Sonar Configuration Findings (auto-appended by check8)\n\n%s\n' "$finding" >> "$ART"
+  {
+    printf '\n## Sonar Configuration Findings (auto-appended by check8)\n\n'
+    printf '%s\n' "${findings[@]}"
+  } >> "$ART"
 else
-  HEADER="$HEADER" FINDING="$finding" perl -i -pe '
-    BEGIN { $inserted = 0 }
-    if (!$inserted && /<!-- \/forge:onboard section="(notes|build-system)"/) {
-      print "- " . $ENV{FINDING} . "\n\n";
-      $inserted = 1;
+  TGT="$TARGET_SECTION" perl -i -pe '
+    BEGIN {
+      our @findings = ();
+      while (defined(my $f = <STDIN>)) {
+        chomp $f;
+        push @findings, $f;
+      }
     }
-  ' "$ART"
+    if (/<!-- \/forge:onboard section="$ENV{TGT}"/ && @findings) {
+      for my $f (@findings) { print "$f\n"; }
+      print "\n";
+      @findings = ();
+    }
+  ' "$ART" < <(printf '%s\n' "${findings[@]}")
 fi
 
-ATTESTATIONS=$((ATTESTATIONS + 1))
-echo "ATTESTED $ART: appended Sonar finding under '$HEADER'" >&2
+ATTESTATIONS=${#findings[@]}
+echo "ATTESTED $ART: appended ${ATTESTATIONS} Sonar finding(s) under '$TARGET_SECTION'" >&2
 
 if [ -f "$STATS" ]; then
-  stats_increment "$STATS" sonar_attestations 1
-  stats_record_mutation "$STATS" check8 "$ART" \
-    "sonar=$SONAR_KEY,$SONAR_NAME" "appended $finding"
+  stats_increment "$STATS" sonar_attestations "$ATTESTATIONS"
+  for f in "${findings[@]}"; do
+    stats_record_mutation "$STATS" check8 "$ART" \
+      "sonar=$SONAR_KEY,$SONAR_NAME" "appended ${f:0:80}"
+  done
 fi
 
-if [ "$ATTESTATIONS" -gt 0 ]; then
-  exit 1
-fi
-exit 0
+exit 1
