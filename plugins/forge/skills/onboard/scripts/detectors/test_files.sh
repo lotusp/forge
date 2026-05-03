@@ -53,11 +53,14 @@ count_in_scope() {
 }
 
 UNIT=$(count_in_scope '/src/test/')
-INT=$(count_in_scope  '/src/(integrationTest|intTest|it)/')
+# Integration scope variants observed in the wild:
+#   src/integrationTest/   src/intTest/   src/it/
+#   src/test-integration/  src/itTest/    src/integration/
+INT=$(count_in_scope  '/src/(integrationTest|intTest|it|test-integration|itTest|integration)/')
 API=$(count_in_scope  '/src/(apiTest|contractTest)/')
 TOTAL=$(( UNIT + INT + API ))
 
-EVIDENCE_CMD="find '$ROOT' [excl-build] -type f -name '*.java' | grep -E '/src/(test|intTest|integrationTest|it|apiTest|contractTest)/' | wc -l"
+EVIDENCE_CMD="find '$ROOT' [excl-build] -type f -name '*.java' | grep -E '/src/(test|intTest|integrationTest|it|test-integration|itTest|integration|apiTest|contractTest)/' | wc -l"
 
 jq -n \
   --arg detector "test_files" \
