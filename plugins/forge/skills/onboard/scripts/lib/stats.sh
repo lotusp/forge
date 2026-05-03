@@ -24,6 +24,7 @@ stats_init() {
   "consistency_repairs": 0,
   "drift_warnings": 0,
   "journal_inconsistency": 0,
+  "sentinel_normalizations": 0,
   "mutations": []
 }
 EOF
@@ -76,6 +77,7 @@ stats_summary_line() {
     (.r17_redactions|tostring)       + " R17 / " +
     (.sig_repairs|tostring)          + " sig / " +
     (.count_drifts|tostring)         + " drift / " +
-    (.consistency_repairs|tostring)  + " consistency"
+    (.consistency_repairs|tostring)  + " consistency / " +
+    (.sentinel_normalizations|tostring) + " sentinel-norm"
   ' "$file"
 }
