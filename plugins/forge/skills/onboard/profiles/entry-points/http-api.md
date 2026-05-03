@@ -84,8 +84,10 @@ envelope unless the current codebase proves it.
    MAPPINGS=$(scripts/detectors/spring_mappings.sh "$ROOT" | jq .result)
    ```
 
-   Then anchor each number with an `<!-- ev:id=routes-N -->` evidence
-   comment per Step 6.0 (so check5 can verify it). Eyeballed estimates
+   Then anchor each number with an `<!-- ev:id=routes_total -->` /
+   `<!-- ev:id=controllers_count -->` evidence comment per Step 6.0 (so
+   check5 can verify it). The id MUST match `[a-z0-9_]+` — use
+   underscores, not hyphens. Eyeballed estimates
    like "approximately N controllers" or "371 mappings" without
    detector evidence are now treated as unanchored claims by check5b
    (warning) and as fact-mismatches by future fact-check passes
