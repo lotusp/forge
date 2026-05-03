@@ -70,6 +70,25 @@ token-budget: 1200
    - 3 or more consistent samples → `[high]`
    - a rule inferred from a single file must not exceed `[low]`
 
+8. **Test-file count requires the test_files detector** (Java/Spring
+   stack only). Do NOT estimate a single-number total — multi-source
+   projects commonly mix unit / integration / api / contract scopes
+   under different `src/{xxxTest}/` roots. Invoke:
+
+   ```bash
+   scripts/detectors/test_files.sh "$TARGET" \
+     | tee .forge/_session/test_files.json
+   ```
+
+   The detector returns `result` (grand total) and `by_scope` with
+   `unit / integration / api` keys. Render the breakdown explicitly
+   ("231 unit / 89 integration / 12 contract test files"), not a
+   single total. Anchor each number with an evidence id
+   (`<!-- ev:id=test_unit_count -->` etc.). A prior real-world review
+   found a project claiming "428 test files" while the actual scoped
+   counts were 231 / 89 / 12 (332 total — and that's three numbers,
+   not one).
+
 ## Claim Classification Annotations
 
 | Extracted fact type | Claim category | Target artifact | Target section | Min confidence |
