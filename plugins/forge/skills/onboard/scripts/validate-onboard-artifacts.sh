@@ -138,6 +138,7 @@ run_check check6c_header_marker.sh
 "$SCRIPT_DIR/inject-facts.sh" "$CTX/.." 2>&1 \
   | sed 's/^/  [inject-facts] /' >&2 || true
 run_check check7_inventory_truth.sh
+run_check check8_sonar_attestation.sh
 
 # ─────────────────────────── PASS 2 ───────────────────────────
 # Mutations above may have changed body content; re-derive signatures

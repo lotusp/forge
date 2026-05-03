@@ -169,8 +169,14 @@ PHRASES+=(
   '([0-9]+)[[:space:]]+test[[:space:]]+(Java[[:space:]]+|JUnit[[:space:]]+)?files?'
   '([0-9]+)[[:space:]]+test[[:space:]]+files?[[:space:]]+(observed|in)'
   '([0-9]+)[[:space:]]+unit[[:space:]]+test[[:space:]]+files?'
+  # Common LLM mis-phrasing: "controller test files" — observed in
+  # field testing (a project wrote "453 controller test files
+  # detected" under Route Inventory). Bind to test_unit since that
+  # matches the actual file count.
+  '([0-9]+)[[:space:]]+controller[[:space:]]+test[[:space:]]+files?'
 )
 PHRASES_FACTS+=(
+  test_unit
   test_unit
   test_unit
   test_unit
