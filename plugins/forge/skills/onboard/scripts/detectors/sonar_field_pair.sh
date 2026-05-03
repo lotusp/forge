@@ -35,15 +35,29 @@ if [ ! -d "$ROOT" ]; then
   exit 0
 fi
 
-# Find the most likely Gradle/Maven build file under ROOT.
+# Find the build file that actually carries sonar config. In a
+# multi-module project the root build.gradle often defines the
+# subprojects but the sonar block lives in one of the children.
+# Strategy: scan candidate files in shallow-first order; pick the
+# first one that mentions sonar.projectKey or sonar.projectName.
 BUILD_FILE=""
-for candidate in "$ROOT/build.gradle" "$ROOT/build.gradle.kts" "$ROOT/pom.xml"; do
-  [ -f "$candidate" ] && { BUILD_FILE="$candidate"; break; }
-done
-# Fall back to the first match within depth 4.
+while IFS= read -r candidate; do
+  [ -f "$candidate" ] || continue
+  if grep -qE "sonar[.](projectKey|projectName)" "$candidate" 2>/dev/null; then
+    BUILD_FILE="$candidate"
+    break
+  fi
+done < <(find "$ROOT" -maxdepth 4 -type f \
+  \( -name 'build.gradle' -o -name 'build.gradle.kts' -o -name 'pom.xml' \) \
+  -not -path '*/build/*' -not -path '*/.gradle*' \
+  -print 2>/dev/null)
+
+# Fall back to the shallowest build file even without sonar config —
+# we still want to report 'no sonar declaration' clearly.
 if [ -z "$BUILD_FILE" ]; then
   BUILD_FILE=$(find "$ROOT" -maxdepth 4 -type f \
     \( -name 'build.gradle' -o -name 'build.gradle.kts' -o -name 'pom.xml' \) \
+    -not -path '*/build/*' -not -path '*/.gradle*' \
     -print 2>/dev/null | head -1 || true)
 fi
 
@@ -81,8 +95,13 @@ PROJECT_NAME=$(extract_value 'projectName')
 PROJECT_KEY=$(extract_value 'projectKey')
 
 # Counts of declarations (>1 = duplicate).
-DUP_KEY=$(grep -cE "['\"]sonar\.projectKey['\"]|<sonar\.projectKey>" "$BUILD_FILE" 2>/dev/null || echo 0)
-DUP_NAME=$(grep -cE "['\"]sonar\.projectName['\"]|<sonar\.projectName>" "$BUILD_FILE" 2>/dev/null || echo 0)
+# grep -c always prints a number; exit 1 when zero. Use `|| true`
+# to swallow the exit, NOT `|| echo 0` (which appends a second line
+# and makes the captured value "0\n0", invalid for jq --argjson).
+DUP_KEY=$(grep -cE "['\"]sonar\.projectKey['\"]|<sonar\.projectKey>" "$BUILD_FILE" 2>/dev/null || true)
+DUP_NAME=$(grep -cE "['\"]sonar\.projectName['\"]|<sonar\.projectName>" "$BUILD_FILE" 2>/dev/null || true)
+DUP_KEY=${DUP_KEY:-0}
+DUP_NAME=${DUP_NAME:-0}
 
 # Normalize `:` ↔ `-` before comparing.
 NORM_NAME=$(printf '%s' "$PROJECT_NAME" | tr ':' '-')
@@ -95,7 +114,9 @@ elif [ "$NORM_NAME" != "$NORM_KEY" ]; then
   MATCH=false
 fi
 
-EVIDENCE_CMD="grep -E 'sonar\.(projectKey|projectName)' '$BUILD_FILE'"
+# evidence_cmd is display-only; avoid backslash escapes that some
+# jq versions choke on inside JSON strings.
+EVIDENCE_CMD="grep -E 'sonar[.](projectKey|projectName)' '$BUILD_FILE'"
 
 jq -n \
   --arg detector "sonar_field_pair" \
