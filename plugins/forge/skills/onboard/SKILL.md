@@ -1343,13 +1343,30 @@ its own location to find the SKILL.md ancestor.
 **Two-pass internal flow** (see `scripts/validate-onboard-artifacts.sh`):
 
 1. preflight — tool dependency check (jq / perl / git / sha256)
-2. Pass 1: check4 (resolve `(pending)` + initial sigs) → check1 (regex)
-3. Mutating checks (alpha: check3 R17 redaction; beta/final adds more)
+2. Pass 1: check4 (resolve `(pending)` + initial sigs) → check6e
+   (sentinel + Generator normalize) → check1 (regex)
+3. Mutating checks: check3 (R17 redaction), check2a (R10 tag count),
+   check5 (evidence verify), check6a (cross-stage), check6c (header
+   normalize), then **inject-facts.sh** (runs all detectors → writes
+   `.forge/_session/facts.json`) → **check7** (auto-corrects
+   inventory numbers from facts.json) → **check8** (appends Sonar
+   config findings if `sonar_field_pair` detects a typo or
+   duplicate declaration).
 4. Pass 2: check4 (refresh sigs after mutations) → check1 (re-validate)
 
 Pass 2 closes the v6 E1 gap: any mutation in step 3 invalidates the
 signatures from step 2, so a final recompute is required to guarantee
 the on-disk artifact is internally consistent.
+
+**Why check7 / check8 exist (v0.5.4):** field testing of v0.5.3
+showed that profile-level "MUST invoke <detector>" rules were
+honoured by the LLM only intermittently (1-2 of 4 projects per
+rule). check7 and check8 collect the truth themselves via the
+detector pipeline and rewrite / append findings deterministically,
+so the artifact's inventory numbers and config-conflict reporting
+no longer depend on LLM compliance. The LLM-authored prose is left
+intact except for in-place number swaps and an `<!-- ev:id=... -->`
+anchor on each corrected line.
 
 **Validator does NOT write to JOURNAL.** It writes machine-readable
 summary to `.forge/context/.validation-stats.json`. Step 7 is the SOLE
