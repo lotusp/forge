@@ -50,7 +50,7 @@ but emits a loud warning, and the JOURNAL entry records the override.
 
 ## Runtime snapshot
 
-- Current commit: !`git rev-parse --short HEAD 2>/dev/null || echo "(not a git repo)"`
+- Current commit: !`git rev-parse --short HEAD 2>/dev/null || echo "(no-commit)"`
 - Existing onboard.md: !`test -f .forge/context/onboard.md && echo "FOUND — read header for kind + last verified commit" || echo "(absent — first run)"`
 - Existing context files: !`ls .forge/context/*.md 2>/dev/null | grep -v onboard.md | xargs -n1 basename 2>/dev/null || echo "(none — Stage 3 will produce from scratch)"`
 - Pre-redesign sections: !`if [ -f .forge/context/architecture.md ] && ! grep -q '### Observed Structure' .forge/context/architecture.md; then echo "maybe stale — architecture anchors missing"; else echo "(ok or absent)"; fi`
@@ -242,6 +242,22 @@ every section marker. They encode different signals:
 **`(no-commit)` sentinel:** When the workspace is not a git repository
 (`git rev-parse --short HEAD` fails), the value `(no-commit)` (parentheses
 included) is the only legal non-hex placeholder for `verified-commit`.
+Ad-hoc sentinels invented by the LLM (`(none)`, `no-git`, `no-git-000`,
+`(no git)`, `(not a git repo)`, `unknown`, `n/a`, `tbd`, ...) are R9
+violations. Step 6.5 check6e auto-normalizes any non-spec value, but
+the LLM MUST emit `(no-commit)` directly — relying on the normalizer
+to fix sloppy output is not acceptable practice.
+
+**Cross-target invocation rule (mandatory).** When the skill is
+invoked with a target path that differs from the shell's cwd (e.g.
+`/forge:onboard ./some-target-svc` from a parent directory), the LLM
+MUST run `git -C "$TARGET" rev-parse --short HEAD` to determine the
+commit, NOT a bare `git rev-parse`. A bare invocation reports the
+parent / outer repo's HEAD (or fails entirely), causing every marker
+in the artifact to carry a wrong commit reference. The same `-C`
+discipline applies to all `git ls-files`, `git log`, `git diff` calls
+during the run. Treat `$TARGET` as the only source of truth for
+file-system paths and git operations.
 
 **body-signature MUST be Bash-computed.** LLMs cannot compute SHA-256
 internally; placeholder hex sequences (`a1b2c3d4e5f60001`,
