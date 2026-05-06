@@ -77,11 +77,15 @@ if grep -qF '<!-- check9:capped -->' "$ART" 2>/dev/null; then
   perl -i -pe 's/[[:space:]]*<!-- check9:capped -->//g' "$ART"
 fi
 
-# Rewrite the line.
+# Rewrite the line. CRITICAL: do NOT use [[:space:]] — Perl's
+# character class includes \n, so [[:space:]]*.*$ greedily eats the
+# line terminator and the substituted marker ends up concatenated
+# with the FOLLOWING line. Use [ \t]* (just space and tab) plus an
+# explicit anchor that excludes \n.
 CEILING="$CEILING" perl -i -pe '
-  if (/^> Confidence:[[:space:]]+/) {
+  if (/^> Confidence:[ \t]+/) {
     my $c = $ENV{CEILING};
-    s/^(> Confidence:[[:space:]]+)[0-9.]+([[:space:]]*.*)$/$1$c$2  <!-- check9:capped -->/;
+    s/^(> Confidence:[ \t]+)[0-9.]+([ \t]*)$/$1$c$2  <!-- check9:capped -->/;
   }
 ' "$ART"
 
