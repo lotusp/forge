@@ -163,5 +163,8 @@ run_check check5b_unanchored_numbers.sh
 halt_if_needed
 run_check check6b_intra_file.sh
 run_check check6d_journal_consistency.sh
+# v0.5.5: confidence ceiling — runs LAST so all counter-incrementing
+# checks have already finalized stats.
+run_check check9_confidence_normalize.sh
 
 emit_summary_and_exit

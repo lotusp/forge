@@ -27,6 +27,7 @@ stats_init() {
   "sentinel_normalizations": 0,
   "inventory_corrections": 0,
   "sonar_attestations": 0,
+  "confidence_caps": 0,
   "mutations": []
 }
 EOF
@@ -82,6 +83,7 @@ stats_summary_line() {
     (.consistency_repairs|tostring)  + " consistency / " +
     (.sentinel_normalizations|tostring) + " sentinel-norm / " +
     (.inventory_corrections|tostring) + " inventory-fix / " +
-    (.sonar_attestations|tostring) + " sonar-attest"
+    (.sonar_attestations|tostring) + " sonar-attest / " +
+    (.confidence_caps|tostring) + " conf-cap"
   ' "$file"
 }
