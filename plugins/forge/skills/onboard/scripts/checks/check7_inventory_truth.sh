@@ -125,8 +125,13 @@ declare -a PHRASES=(
   '([0-9]+)[[:space:]]+RestController[[:space:]]+files?'
   '([0-9]+)[[:space:]]+REST[[:space:]]+controllers?'
   '([0-9]+)[[:space:]]+controller[[:space:]]+files?'
+  # Approximation modifiers — LLM commonly writes "around 25 controllers"
+  '(?:around|approximately|about|roughly|some|nearly)[[:space:]]+([0-9]+)[[:space:]]+(?:REST[[:space:]]+)?controller'
+  '~[[:space:]]*([0-9]+)[[:space:]]+(?:REST[[:space:]]+)?controller'
 )
 declare -a PHRASES_FACTS=(
+  rest_controllers
+  rest_controllers
   rest_controllers
   rest_controllers
   rest_controllers
@@ -138,8 +143,12 @@ PHRASES+=(
   '([0-9]+)[[:space:]]+@\*?Mapping[[:space:]]+annotations?'
   '([0-9]+)[[:space:]]+(HTTP[[:space:]]+)?mapping[[:space:]]+annotations?'
   '([0-9]+)[[:space:]]+route[[:space:]]+annotations?'
+  '([0-9]+)\+?[[:space:]]+controller[[:space:]]+route[[:space:]]+annotations?'
+  '([0-9]+)\+?[[:space:]]+HTTP[[:space:]]+route[[:space:]]+annotations?'
 )
 PHRASES_FACTS+=(
+  spring_mappings
+  spring_mappings
   spring_mappings
   spring_mappings
   spring_mappings
@@ -167,7 +176,7 @@ PHRASES_FACTS+=(
 # test_unit — file count
 PHRASES+=(
   '([0-9]+)[[:space:]]+test[[:space:]]+(Java[[:space:]]+|JUnit[[:space:]]+)?files?'
-  '([0-9]+)[[:space:]]+test[[:space:]]+files?[[:space:]]+(observed|in)'
+  '([0-9]+)[[:space:]]+test[[:space:]]+files?[[:space:]]+(observed|in|co-located)'
   '([0-9]+)[[:space:]]+unit[[:space:]]+test[[:space:]]+files?'
   # Common LLM mis-phrasing: "controller test files" — observed in
   # field testing (a project wrote "453 controller test files
@@ -180,6 +189,18 @@ PHRASES_FACTS+=(
   test_unit
   test_unit
   test_unit
+)
+
+# test_integration — file count
+PHRASES+=(
+  '([0-9]+)[[:space:]]+integration[[:space:]]+test[[:space:]]+files?'
+  '([0-9]+)[[:space:]]+files?[[:space:]]+in[[:space:]]+test-integration'
+  '([0-9]+)[[:space:]]+files?[[:space:]]+in[[:space:]]+integrationTest'
+)
+PHRASES_FACTS+=(
+  test_integration
+  test_integration
+  test_integration
 )
 
 # jpa_entities — file count

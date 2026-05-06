@@ -93,12 +93,9 @@ scan_file() {
     if in_range "$lineno" "$wti_start" "$wti_end"; then
       # v0.5.4: auto-rewrite "<N>+ <noun>" forms (e.g. "60+ tables")
       # to qualitative phrasing. The N+ form is the LLM's most common
-      # WTI shape and trivially mechanically recoverable. Anything
-      # without a `+` (a hard count like "60 tables") is still a
-      # FORBIDDEN halt — the author needs to re-think the prose.
+      # WTI shape and trivially mechanically recoverable.
       if [[ "$line" =~ ([0-9]+)\+[[:space:]]+($INVENTORY_KW) ]]; then
         local nplus="${BASH_REMATCH[1]}+"
-        # In-place rewrite of just this line. "60+ tables" → "many tables".
         LINENO="$lineno" NPLUS="$nplus" perl -i -pe '
           if ($. == $ENV{LINENO}) {
             my $np = $ENV{NPLUS};
@@ -106,11 +103,32 @@ scan_file() {
           }
         ' "$file"
         echo "REWROTE $file:$lineno: precise WTI '$nplus' → 'many' (qualitative)" >&2
-        # Rewrites are warning-class (auto-repaired); only HARD COUNTS
-        # without a `+` qualifier escalate to FORBIDDEN/halt below.
         WHATTHISIS_REWRITES=$((WHATTHISIS_REWRITES + 1))
         continue
       fi
+
+      # v0.5.5: hard count "<N> <noun>" without a `+` — also
+      # auto-rewrite, but with a more cautious phrasing and an inline
+      # audit marker so the original number is recoverable from the
+      # comment. Was hard-halt in v0.5.4; field testing showed this
+      # blocked otherwise-fine artifacts when the LLM wrote "60 tables".
+      if [[ "$line" =~ ([0-9]+)[[:space:]]+($INVENTORY_KW) ]]; then
+        local n="${BASH_REMATCH[1]}"
+        local noun="${BASH_REMATCH[2]}"
+        LINENO="$lineno" N="$n" NOUN="$noun" perl -i -pe '
+          if ($. == $ENV{LINENO}) {
+            my $n = $ENV{N};
+            my $noun = $ENV{NOUN};
+            s/\b\Q$n\E\s+\Q$noun\E\b/many $noun <!-- check5b:wti-was=$n -->/;
+          }
+        ' "$file"
+        echo "REWROTE $file:$lineno: precise WTI '$n $noun' → 'many $noun' + audit marker" >&2
+        WHATTHISIS_REWRITES=$((WHATTHISIS_REWRITES + 1))
+        continue
+      fi
+
+      # No mechanical recovery possible — keep the hard halt as a
+      # last resort signal.
       echo "FORBIDDEN $file:$lineno: precise inventory number in What This Is — replace with qualitative wording" >&2
       echo "  > ${line:0:120}" >&2
       WHATTHISIS_VIOLATIONS=$((WHATTHISIS_VIOLATIONS + 1))

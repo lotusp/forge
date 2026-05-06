@@ -35,37 +35,43 @@ if [ ! -d "$ROOT" ]; then
   exit 0
 fi
 
-# Find the build file that actually carries sonar config. In a
-# multi-module project the root build.gradle often defines the
-# subprojects but the sonar block lives in one of the children.
-# Strategy: scan candidate files in shallow-first order; pick the
-# first one that mentions sonar.projectKey or sonar.projectName.
-BUILD_FILE=""
+# Find ALL build files carrying sonar config. v0.5.5: monorepos can
+# have multiple subprojects each with their own sonar block; checks
+# need to attest each module independently. The first entry remains
+# the "primary" reported at the top level (back-compat for check8 /
+# facts.json consumers); additional entries land under
+# `additional_modules[]`.
+BUILD_FILES=()
 while IFS= read -r candidate; do
   [ -f "$candidate" ] || continue
   if grep -qE "sonar[.](projectKey|projectName)" "$candidate" 2>/dev/null; then
-    BUILD_FILE="$candidate"
-    break
+    BUILD_FILES+=("$candidate")
   fi
 done < <(find "$ROOT" -maxdepth 4 -type f \
   \( -name 'build.gradle' -o -name 'build.gradle.kts' -o -name 'pom.xml' \) \
   -not -path '*/build/*' -not -path '*/.gradle*' \
-  -print 2>/dev/null)
+  -print 2>/dev/null | sort)
 
 # Fall back to the shallowest build file even without sonar config —
 # we still want to report 'no sonar declaration' clearly.
-if [ -z "$BUILD_FILE" ]; then
-  BUILD_FILE=$(find "$ROOT" -maxdepth 4 -type f \
+if [ "${#BUILD_FILES[@]}" = 0 ]; then
+  fallback=$(find "$ROOT" -maxdepth 4 -type f \
     \( -name 'build.gradle' -o -name 'build.gradle.kts' -o -name 'pom.xml' \) \
     -not -path '*/build/*' -not -path '*/.gradle*' \
     -print 2>/dev/null | head -1 || true)
+  if [ -n "$fallback" ]; then
+    BUILD_FILES=("$fallback")
+  fi
 fi
 
-if [ -z "$BUILD_FILE" ]; then
+if [ "${#BUILD_FILES[@]}" = 0 ]; then
   jq -n --arg detector "sonar_field_pair" --arg root "$ROOT" \
         '{detector: $detector, root: $root, unit: "object", error: "no build file found"}'
   exit 0
 fi
+
+# The first entry is the "primary" — keep top-level fields back-compat.
+BUILD_FILE="${BUILD_FILES[0]}"
 
 # Extract values; the property line has shape like:
 #   property "sonar.projectKey", "the-key"
@@ -91,27 +97,58 @@ extract_value() {
   printf '%s' "$v"
 }
 
-PROJECT_NAME=$(extract_value 'projectName')
-PROJECT_KEY=$(extract_value 'projectKey')
+# Build one JSON entry per build-file. The first entry's keys are
+# also exposed at the top level for back-compat with check8 etc.
+analyze_one() {
+  local bf="$1"
+  local pn pk dk dn nn nk match
+  BUILD_FILE="$bf" pn=$(extract_value 'projectName')
+  BUILD_FILE="$bf" pk=$(extract_value 'projectKey')
+  dk=$(grep -cE "['\"]sonar\.projectKey['\"]|<sonar\.projectKey>" "$bf" 2>/dev/null || true)
+  dn=$(grep -cE "['\"]sonar\.projectName['\"]|<sonar\.projectName>" "$bf" 2>/dev/null || true)
+  dk=${dk:-0}; dn=${dn:-0}
+  nn=$(printf '%s' "$pn" | tr ':' '-')
+  nk=$(printf '%s' "$pk" | tr ':' '-')
+  match=true
+  if [ -z "$pn" ] || [ -z "$pk" ]; then
+    match=false
+  elif [ "$nn" != "$nk" ]; then
+    match=false
+  fi
+  jq -n \
+    --arg build_file "$bf" \
+    --arg project_name "$pn" \
+    --arg project_key "$pk" \
+    --arg normalized_name "$nn" \
+    --arg normalized_key "$nk" \
+    --argjson match "$match" \
+    --argjson key_declaration_count "$dk" \
+    --argjson name_declaration_count "$dn" \
+    '{build_file: $build_file,
+      project_name: $project_name, project_key: $project_key,
+      normalized_name: $normalized_name, normalized_key: $normalized_key,
+      match: $match,
+      key_declaration_count: $key_declaration_count,
+      name_declaration_count: $name_declaration_count}'
+}
 
-# Counts of declarations (>1 = duplicate).
-# grep -c always prints a number; exit 1 when zero. Use `|| true`
-# to swallow the exit, NOT `|| echo 0` (which appends a second line
-# and makes the captured value "0\n0", invalid for jq --argjson).
-DUP_KEY=$(grep -cE "['\"]sonar\.projectKey['\"]|<sonar\.projectKey>" "$BUILD_FILE" 2>/dev/null || true)
-DUP_NAME=$(grep -cE "['\"]sonar\.projectName['\"]|<sonar\.projectName>" "$BUILD_FILE" 2>/dev/null || true)
-DUP_KEY=${DUP_KEY:-0}
-DUP_NAME=${DUP_NAME:-0}
+# extract_value uses BUILD_FILE — re-bind override above is fine because
+# `BUILD_FILE="..." pn=$(...)` sets it ONLY for the inner $(...).
+# But we also need the original function to honour BUILD_FILE on each call.
+# Re-define extract_value to accept any path — simplest: the function
+# already reads `$BUILD_FILE` so prefixed-env-var binding works.
 
-# Normalize `:` ↔ `-` before comparing.
-NORM_NAME=$(printf '%s' "$PROJECT_NAME" | tr ':' '-')
-NORM_KEY=$(printf '%s' "$PROJECT_KEY"  | tr ':' '-')
+PRIMARY_JSON=$(analyze_one "$BUILD_FILE")
 
-MATCH=true
-if [ -z "$PROJECT_NAME" ] || [ -z "$PROJECT_KEY" ]; then
-  MATCH=false
-elif [ "$NORM_NAME" != "$NORM_KEY" ]; then
-  MATCH=false
+# Additional modules (entries 2..N).
+ADDITIONAL_JSON='[]'
+if [ "${#BUILD_FILES[@]}" -gt 1 ]; then
+  tmp=$(mktemp)
+  for ((i = 1; i < ${#BUILD_FILES[@]}; i++)); do
+    analyze_one "${BUILD_FILES[$i]}" >> "$tmp"
+  done
+  ADDITIONAL_JSON=$(jq -s '.' "$tmp")
+  rm -f "$tmp"
 fi
 
 # evidence_cmd is display-only; avoid backslash escapes that some
@@ -121,19 +158,9 @@ EVIDENCE_CMD="grep -E 'sonar[.](projectKey|projectName)' '$BUILD_FILE'"
 jq -n \
   --arg detector "sonar_field_pair" \
   --arg root "$ROOT" \
-  --arg build_file "$BUILD_FILE" \
-  --arg project_name "$PROJECT_NAME" \
-  --arg project_key "$PROJECT_KEY" \
-  --arg normalized_name "$NORM_NAME" \
-  --arg normalized_key "$NORM_KEY" \
-  --argjson match "$MATCH" \
-  --argjson key_declaration_count "${DUP_KEY:-0}" \
-  --argjson name_declaration_count "${DUP_NAME:-0}" \
+  --argjson primary "$PRIMARY_JSON" \
+  --argjson additional "$ADDITIONAL_JSON" \
   --arg cmd "$EVIDENCE_CMD" \
-  '{detector: $detector, root: $root, unit: "object", build_file: $build_file,
-    project_name: $project_name, project_key: $project_key,
-    normalized_name: $normalized_name, normalized_key: $normalized_key,
-    match: $match,
-    key_declaration_count: $key_declaration_count,
-    name_declaration_count: $name_declaration_count,
-    evidence_cmd: $cmd}'
+  '{detector: $detector, root: $root, unit: "object"}
+   + $primary
+   + {additional_modules: $additional, evidence_cmd: $cmd}'

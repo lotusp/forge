@@ -703,6 +703,18 @@ present in source. The skip was never grep-evidenced, so the
 false-negative wasn't caught. Three-tier makes Tier 2 evidence
 mandatory in JOURNAL.
 
+**1.5c — Inject deterministic facts (v0.5.5)**
+
+Run `scripts/inject-facts.sh "$TARGET"` before emitting the Execution
+Plan. The script writes `.forge/_session/facts.json` with the
+canonical counts of every Java/Spring inventory the detectors can
+measure (rest_controllers, spring_mappings, jpa_entities,
+feign_clients, listeners, flyway migrations, test files, sonar
+config). Stage 2 profiles MUST consult this file before writing any
+inventory number — read the file once at Stage 2 entry and use the
+values verbatim. This eliminates the v0.5.4 pattern where the LLM
+guessed counts and check7 corrected them after the fact.
+
 **1.6 — Emit Execution Plan**
 
 Produce the plan as a fenced text block. This is the handoff to both
