@@ -1,6 +1,6 @@
 {
   "name": "forge",
-  "version": "0.5.5",
+  "version": "0.6.0",
   "description": "AI-driven development workflow for existing codebases. Guides you from requirement to tested code through persistent artifacts.",
   "author": {
     "name": "Gordon"

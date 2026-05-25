@@ -703,17 +703,30 @@ present in source. The skip was never grep-evidenced, so the
 false-negative wasn't caught. Three-tier makes Tier 2 evidence
 mandatory in JOURNAL.
 
-**1.5c — Inject deterministic facts (v0.5.5)**
+**1.5c — Inject deterministic facts (v0.6)**
 
-Run `scripts/inject-facts.sh "$TARGET"` before emitting the Execution
-Plan. The script writes `.forge/_session/facts.json` with the
-canonical counts of every Java/Spring inventory the detectors can
-measure (rest_controllers, spring_mappings, jpa_entities,
-feign_clients, listeners, flyway migrations, test files, sonar
-config). Stage 2 profiles MUST consult this file before writing any
-inventory number — read the file once at Stage 2 entry and use the
-values verbatim. This eliminates the v0.5.4 pattern where the LLM
-guessed counts and check7 corrected them after the fact.
+Run `scripts/inject-facts.sh "$TARGET"` before emitting the
+Execution Plan. The script runs every applicable detector and writes
+`.forge/_session/facts.json` with two pieces of evidence per fact:
+
+  - `samples`: 3–5 `{file, line, snippet}` citations (concrete
+    code locations)
+  - `inferred_size`: one of `none / tiny / small / medium / large /
+    very-large` (qualitative scale; no precise number)
+
+Stage 2 profiles MUST consult this file when describing inventory
+and MUST:
+
+  1. quote 3–5 of the `samples` directly (real file:line, real
+     snippet — concrete and verifiable)
+  2. use the size word matching `inferred_size`, NOT a precise count
+
+The previous v0.5.x pattern (LLM writes a number, check7 corrects
+it) was abandoned because counts can't be reliably produced by the
+LLM+script combo, and wrong counts mislead readers worse than no
+counts. v0.6 commits to "examples + scale word" everywhere. Literal
+fact values (commit hash, version strings, sonar projectKey/Name)
+are exempt — those are facts, not counts.
 
 **1.6 — Emit Execution Plan**
 
@@ -827,71 +840,78 @@ loop over Plan.profiles:
   discard(profile_doc, evidence)                # clear from working context
 ```
 
-**Detector calls (v0.5.2-beta interim — Java/Spring stack only):**
+**Detector contract (v0.6 — Java/Spring stack only):**
 
-For kind `web-backend`, Stage 2 MUST invoke these detectors before
-rendering quantitative claims, and write each result to
-`.forge/context/.evidence/<section>.json`:
+Stage 1.5c invokes `scripts/inject-facts.sh "$TARGET"`, which runs
+every applicable detector and writes the consolidated registry to
+`.forge/_session/facts.json`. Stage 2 profiles consult this file
+when describing inventory.
 
-| Detector script | Used by section |
-|-----------------|-----------------|
-| `scripts/detectors/spring_mappings.sh`       | http-api-surface (annotation count) |
-| `scripts/detectors/rest_controllers.sh`      | http-api-surface (controller class count) |
-| `scripts/detectors/jpa_entities.sh`          | domain-model (`@Entity` count) |
-| `scripts/detectors/feign_clients.sh`         | third-party-integrations (Feign client count) |
-| `scripts/detectors/ms_listeners.sh`          | event-consumers (inbound listener count) |
-| `scripts/detectors/application_listeners.sh` | event-consumers (internal event handler count) |
-| `scripts/detectors/flyway_migrations.sh`     | database-schema (migration file count) |
-| `scripts/detectors/slf4j_classes.sh`         | logging convention (size signal) |
-| `scripts/detectors/transactional_uses.sh`    | database-access (transaction boundary signal) |
-| `scripts/detectors/role_constants.sh`        | authentication (privilege bloat signal) |
-| `scripts/detectors/exception_classes.sh`     | error-handling (hierarchy size signal) |
+The v0.6 detector schema is **samples + size bucket**, NOT precise
+counts. Field testing of v0.5.x showed that counts can't be reliably
+produced by the LLM+script combo, and wrong counts are worse than
+no counts. v0.6 returns:
 
-In the rendered Markdown, anchor each cited number with an HTML
-comment immediately preceding the number:
+  - `samples`: 3–5 representative `{file, line, snippet}` citations
+  - `inferred_size`: one of `none | tiny | small | medium | large |
+    very-large` (based on `1–3 / 4–10 / 11–50 / 51–200 / 201+`)
+
+Profiles use this evidence to write **qualitative claims**:
 
 ```markdown
-- **Route inventory:** <!-- ev:id=routes_total --> 689 mapping annotations
-  across <!-- ev:id=controllers_count --> 75 `@RestController` files
-  [high] [cli] [counted]
+- <!-- ev:id=rest_controllers --> many `@RestController` files —
+  examples: `order/api/OrderController.java:214`,
+  `inventory/api/StockController.java:30`, …
 ```
 
-Numbers without a sidecar entry / `<!-- ev:id=... -->` anchor MUST use
-qualitative wording instead (e.g. "a large API surface", "many Feign
-clients") — see check5b enforcement in Step 6.5.
+NOT this (no numbers, even "approximately"):
 
-**Sidecar schema:** `.forge/context/.evidence/<section>.json`
-
-```json
-{
-  "section": "http-api-surface",
-  "source-file": "onboard.md",
-  "evidence": [
-    {
-      "id": "routes_total",
-      "detector": "spring_mappings",
-      "root": "src/main/java",
-      "result": 689,
-      "evidence_cmd": "grep -rE '@(Get|Post|...)Mapping' -- 'src/main/java' | wc -l"
-    },
-    {
-      "id": "controllers_count",
-      "detector": "rest_controllers",
-      "root": "src/main/java",
-      "result": 75,
-      "evidence_cmd": "grep -rlE '@RestController' -- 'src/main/java' | wc -l"
-    }
-  ]
-}
+```markdown
+- 73 controller files exposing routes        ← stripped by check7
+- approximately 100 controllers              ← stripped by check7
 ```
 
-The `evidence_cmd` field is display-only; never re-executed (see
-detector contract in `scripts/detectors/README.md`). Numbers in
-Markdown are kept in sync with sidecar via Step 6.5 Check 5.
+Size words map from `inferred_size`:
 
-This interim mechanism is replaced in v0.5.2-final when profile
-frontmatter declares `detectors[]` and `must-grep:` directly. Profile
-schema details: `profiles/README.md`.
+| Size bucket | Qualitative word |
+|---|---|
+| `tiny`       | a handful of |
+| `small`      | a few |
+| `medium`     | several |
+| `large`      | many |
+| `very-large` | a large set of |
+
+The 13 detectors (Java/Spring):
+
+| Detector script | Fact id | Used by section |
+|-----------------|---------|-----------------|
+| `rest_controllers.sh`      | `rest_controllers`      | http-api-surface |
+| `spring_mappings.sh`       | `spring_mappings`       | http-api-surface |
+| `jpa_entities.sh`          | `jpa_entities`          | domain-model |
+| `feign_clients.sh`         | `feign_clients`         | third-party-integrations |
+| `ms_listeners.sh`          | `ms_listeners`          | event-consumers |
+| `application_listeners.sh` | `application_listeners` | event-consumers |
+| `flyway_migrations.sh`     | `flyway_migrations`     | database-schema |
+| `slf4j_classes.sh`         | `slf4j_classes`         | logging convention |
+| `transactional_uses.sh`    | `transactional_uses`    | database-access |
+| `role_constants.sh`        | `role_constants`        | authentication |
+| `exception_classes.sh`     | `exception_classes`     | error-handling |
+| `test_files.sh`            | `test_unit`, `test_integration`, `test_api` | testing |
+| `sonar_field_pair.sh`      | (under `sonar` key)     | build-system |
+
+`sonar_field_pair` returns object-shape facts (project name, key,
+match flag, duplicate flags) — these are LITERAL fact values, not
+counts, and are kept verbatim per Decision #3.
+
+**Auto-corrections at Step 6.5:**
+
+- check7 strips numeric inventory claims it can map to a fact-id,
+  replacing with the size word and anchoring with `<!-- ev:id=... -->`
+- check5b flags any remaining unanchored multi-digit number adjacent
+  to an inventory noun (no fact-id mapping → warning, manual review)
+- Sample citations from `facts.json` are referenced by ev:id but not
+  auto-injected into prose — profiles MUST quote 3–5 samples
+  themselves to honour Decision #1 ("3-5 samples suffice")
 
 **Discard discipline (DG1 — save tokens, DG2 — long-context stability):**
 
