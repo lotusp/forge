@@ -47,15 +47,30 @@ Detailed schema analysis lives in onboard Stage 3's `architecture.md`
 1. **Table inventory** — list tables grouped by domain (use module-map categories where
    possible). Cap at ~20 tables; group if more.
 2. **One-line role per table** — what it persists, not columns.
-3. **Migration tool + count** — e.g. "Prisma Migrate, 47 migrations applied".
+3. **Migration tool + scale, with examples (v0.6).** Read the
+   `flyway_migrations` entry from `.forge/_session/facts.json` (or
+   the equivalent for the project's migration tool). Render:
 
-   **Mandatory detector invocation (Flyway / Java/Spring stack only).**
-   Before writing the migration count, invoke
-   `scripts/detectors/flyway_migrations.sh "$RESOURCES_ROOT"` and use
-   `result` verbatim. Anchor with `<!-- ev:id=migrations_total -->`
-   (id must match `[a-z0-9_]+`; underscores, not hyphens).
-   Eyeballed counts of `V*.sql` files (especially when copies also
-   exist under `build/` or `bin/`) are a known LLM trap.
+   - the size word (`many` / `a large set of` / etc.) matching
+     `inferred_size`
+   - 3–5 sample migration filenames from `samples` to convey what
+     the schema evolution looks like
+   - anchor with `<!-- ev:id=flyway_migrations -->`
+
+   Example:
+
+   ```markdown
+   - **Migration tool:** Flyway 4.2.0; <!-- ev:id=flyway_migrations -->
+     a large set of `V*.sql` migration files. Recent examples:
+     - `V2024_05_03__add_payment_table.sql`
+     - `V2024_03_18__alter_order_status.sql`
+     - `V2023_11_02__drop_legacy_index.sql`
+   ```
+
+   No precise counts. Counts are unreliable because copies live in
+   `build/` and `bin/` after compilation; the size bucket is robust
+   to that, and the sample filenames carry the schema-evolution
+   timeline.
 4. **Multi-tenancy note** — if `tenant_id` / `workspace_id` appears in most tables,
    state "multi-tenant by row".
 5. **Soft-delete note** — if `deleted_at` / `is_deleted` is widespread.

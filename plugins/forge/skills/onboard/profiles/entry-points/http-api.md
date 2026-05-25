@@ -70,30 +70,40 @@ envelope unless the current codebase proves it.
 3. **Group by observed path prefixes** only after routes are discovered. Do not
    force resource-style grouping if the project uses action, RPC, webhook, or
    mixed routing.
-4. **Counts require reproducible evidence.** If the scan is sampled, say
-   "representative routes" and omit total counts.
+4. **No precise counts. Cite examples + size word (v0.6).** Read
+   `.forge/_session/facts.json` (produced by Stage 1.5c). For each
+   detected inventory, the LLM MUST:
 
-   **Mandatory detector invocation (Java/Spring stack only).** Before
-   writing any controller-count or route-count number, you MUST invoke
-   the `rest_controllers` and `spring_mappings` detectors and use their
-   `result` fields verbatim:
+   - quote 3–5 of the `samples` directly as concrete examples
+     (real `file:line` and the matching snippet)
+   - render the scale with the size word matching `inferred_size`
+     (`tiny`→a handful of, `small`→a few, `medium`→several,
+     `large`→many, `very-large`→a large set of)
+   - anchor the qualitative claim with `<!-- ev:id=<fact-id> -->`
+     where `<fact-id>` is one of `rest_controllers` / `spring_mappings`
 
-   ```bash
-   ROOT=$(find "$TARGET" -maxdepth 4 -type d -name java | head -1)
-   CONTROLLERS=$(scripts/detectors/rest_controllers.sh "$ROOT" | jq .result)
-   MAPPINGS=$(scripts/detectors/spring_mappings.sh "$ROOT" | jq .result)
+   Example (good):
+
+   ```markdown
+   - **Route inventory:** <!-- ev:id=rest_controllers --> many
+     `@RestController` files. Examples:
+     - `order/api/OrderController.java:214`
+     - `inventory/api/StockController.java:30`
+     - `billing/api/InvoiceController.java:42`
    ```
 
-   Then anchor each number with an `<!-- ev:id=routes_total -->` /
-   `<!-- ev:id=controllers_count -->` evidence comment per Step 6.0 (so
-   check5 can verify it). The id MUST match `[a-z0-9_]+` — use
-   underscores, not hyphens. Eyeballed estimates
-   like "approximately N controllers" or "371 mappings" without
-   detector evidence are now treated as unanchored claims by check5b
-   (warning) and as fact-mismatches by future fact-check passes
-   (hard halt). A prior real-world review found a project claiming
-   `371` mappings when the detector reports `3957` (≈10× off) — that
-   is exactly the failure this rule prevents.
+   Example (bad — will be stripped by check7 or warned by check5b):
+
+   ```markdown
+   - 73 controllers exposing routes
+   - approximately 371 mapping annotations
+   ```
+
+   The v0.5.x policy of "use the detector's `result` number verbatim"
+   was abandoned because counts can't be reliably produced by the
+   LLM+script combo. Sample citations are more useful for
+   understanding the codebase, and the qualitative size word is
+   always correct.
 5. **Version scheme** — record URL/header/media-type/custom versioning only if
    directly evidenced.
 6. **Response envelope** — read actual response types, middleware, serializers,

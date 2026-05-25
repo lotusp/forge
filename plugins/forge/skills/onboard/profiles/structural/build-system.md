@@ -65,19 +65,17 @@ token-budget: 800
    | `name` ↔ `description` | `package.json` | Sanity |
    | `bootJar.archiveBaseName` ↔ `bootJar.archiveFileName` | `build.gradle` | Artifact naming |
 
-   **Mandatory detector for the Sonar pair (Java/Spring stack only).**
-   The `sonar_field_pair` detector parses both values, normalizes
-   `:` ↔ `-`, and returns `match: true|false`. Invoke it before
-   writing the build-system section:
-
-   ```bash
-   scripts/detectors/sonar_field_pair.sh "$TARGET" \
-     | tee .forge/_session/sonar.json
-   ```
+   **Sonar pair (v0.6).** `.forge/_session/facts.json` includes a
+   top-level `sonar` object with `project_name`, `project_key`,
+   `match`, `key_declaration_count`, `name_declaration_count`. These
+   are literal facts (not counts) and are kept verbatim.
 
    When `match: false`, surface a `[conflict]` row in `Notes` quoting
-   both values verbatim — the detector also returns
-   `duplicate_keys` / `duplicate_names` (>1 = duplicate declaration).
+   both projectKey and projectName verbatim. When
+   `key_declaration_count > 1` or `name_declaration_count > 1`,
+   surface a `[conflict]` row about the duplicate declaration. Both
+   findings are also auto-appended by check8 if the LLM omits them.
+
    Eyeballing the comparison is forbidden; a prior real-world review
    missed a one-letter typo because the LLM read both lines as "the
    same thing" without character-level diff.
