@@ -1,33 +1,38 @@
 #!/usr/bin/env bash
 # Detector: application_listeners
-# Counts internal Spring application-event listeners across all three
+# Locates internal Spring application-event listeners across all three
 # tracks:
 #   - implements ApplicationListener<T>      (interface-based)
 #   - @EventListener                         (method annotation)
 #   - @TransactionalEventListener            (transaction-bound variant)
 #
-# Why three tracks: a prior real-world review found 0 ApplicationListener
-# implementations but 7 @EventListener methods; the old profile assumed
-# only the interface form existed and missed the entire family.
+# v0.6 schema: samples + inferred_size.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-# shellcheck source=lib/excludes.sh
-source "$SCRIPT_DIR/lib/excludes.sh"
+# shellcheck source=lib/sampling.sh
+source "$SCRIPT_DIR/lib/sampling.sh"
+
 ROOT="${1:-src/main/java}"
 
 if [ ! -d "$ROOT" ]; then
   jq -n --arg detector "application_listeners" --arg root "$ROOT" \
-        '{detector: $detector, root: $root, result: 0, error: "root not found"}'
+        '{detector: $detector, root: $root,
+          samples: [], inferred_size: "none",
+          error: "root not found"}'
   exit 0
 fi
 
 PATTERN='implements ApplicationListener|@EventListener\b|@TransactionalEventListener\b'
-mapfile -t EXCLUDES < <(detector_grep_excludes)
+COUNT=$(count_from_grep   "$ROOT" '*.java' "$PATTERN")
+SIZE=$(inferred_size_for_count "$COUNT")
+SAMPLES=$(samples_from_grep "$ROOT" '*.java' "$PATTERN" 5)
 
-N=$( { grep -rE --include='*.java' "${EXCLUDES[@]}" "$PATTERN" -- "$ROOT" 2>/dev/null || true; } | wc -l | tr -d ' ')
-EVIDENCE_CMD="grep -rE --include='*.java' "${EXCLUDES[@]}" '$PATTERN' -- '$ROOT' | wc -l"
+EVIDENCE_CMD="grep -rnE --include='*.java' [excl-build-outputs] '$PATTERN' -- '$ROOT' | head -5"
 
 jq -n --arg detector "application_listeners" --arg root "$ROOT" \
-      --argjson result "$N" --arg cmd "$EVIDENCE_CMD" --arg unit "occurrences" \
-      '{detector: $detector, root: $root, result: $result, unit: $unit, evidence_cmd: $cmd}'
+      --arg size "$SIZE" --argjson samples "$SAMPLES" \
+      --arg cmd "$EVIDENCE_CMD" \
+      '{detector: $detector, root: $root,
+        samples: $samples, inferred_size: $size,
+        evidence_cmd: $cmd}'

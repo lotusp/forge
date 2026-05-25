@@ -4,44 +4,42 @@
 # project and write a single fact registry to
 # `.forge/_session/facts.json`.
 #
-# This is the v0.5.4 deterministic fact pipeline. Field testing of
-# v0.5.3 showed that profile-level "MUST invoke <detector>" rules
-# were honoured by the LLM only intermittently (1-2/4 projects per
-# rule). Rather than add more prose, the validator now collects the
-# truth itself and check7 enforces consistency at write time.
+# v0.6 schema (samples + inferred_size). v0.5.x kept precise counts;
+# field testing showed counts can't be reliably produced by the LLM
+# + script combo, and wrong counts are worse than no counts. The new
+# schema gives the LLM 3-5 file:line citations per fact (concrete
+# evidence) and a coarse size bucket (tiny / small / medium / large /
+# very-large). Profiles consume samples directly and qualitative size
+# words instead of numeric claims.
 #
 # Output schema (.forge/_session/facts.json):
 #   {
-#     "generated_at": "2026-05-03T...Z",
-#     "target_root": "<absolute path>",
-#     "source_root": "<src/main/java or equivalent>",
-#     "resources_root": "<src/main/resources or equivalent>",
+#     "generated_at": "2026-05-25T...Z",
+#     "target_root":   "<absolute path>",
+#     "source_root":   "<src/main/java or equivalent>",
+#     "resources_root":"<src/main/resources or equivalent>",
 #     "facts": {
-#       "rest_controllers":   { "value": 25,  "unit": "files",       "detector": "rest_controllers"   },
-#       "spring_mappings":    { "value": 330, "unit": "occurrences", "detector": "spring_mappings"    },
-#       "jpa_entities":       { "value": 80,  "unit": "files",       "detector": "jpa_entities"       },
-#       "feign_clients":      { "value": 15,  "unit": "files",       "detector": "feign_clients"      },
-#       "ms_listeners":       { "value": 2,   "unit": "occurrences", "detector": "ms_listeners"       },
-#       "application_listeners": { "value": 29, "unit": "occurrences", "detector": "application_listeners" },
-#       "flyway_migrations":  { "value": 251, "unit": "files",       "detector": "flyway_migrations"  },
-#       "slf4j_classes":      { "value": 150, "unit": "files",       "detector": "slf4j_classes"      },
-#       "transactional_uses": { "value": 112, "unit": "occurrences", "detector": "transactional_uses" },
-#       "role_constants":     { "value": 181, "unit": "occurrences", "detector": "role_constants"     },
-#       "exception_classes":  { "value": 101, "unit": "files",       "detector": "exception_classes"  },
-#       "test_unit":          { "value": 413, "unit": "files",       "detector": "test_files",      "via": ".by_scope.unit" },
-#       "test_integration":   { "value":   0, "unit": "files",       "detector": "test_files",      "via": ".by_scope.integration" },
-#       "test_api":           { "value":   0, "unit": "files",       "detector": "test_files",      "via": ".by_scope.api" }
+#       "rest_controllers": {
+#         "samples": [{file, line, snippet}, ...],
+#         "inferred_size": "medium",
+#         "detector": "rest_controllers"
+#       },
+#       "spring_mappings": { ... },
+#       ...
+#       "test_unit":        { samples + inferred_size from .by_scope.unit },
+#       "test_integration": { samples + inferred_size from .by_scope.integration },
+#       "test_api":         { samples + inferred_size from .by_scope.api }
 #     },
-#     "sonar": { ... full sonar_field_pair output ... }
+#     "sonar": { ... full sonar_field_pair output (literal facts kept as-is) ... }
 #   }
 #
 # Usage:
 #   inject-facts.sh <target-root>
-#       <target-root> — defaults to the current working directory
+#       <target-root> — defaults to cwd
 #
 # Exit code:
 #   0  — facts written
-#   2  — target not a directory or no roots discoverable
+#   2  — target not a directory
 
 set -euo pipefail
 
@@ -55,12 +53,8 @@ if [ ! -d "$TARGET" ]; then
 fi
 TARGET="$(cd "$TARGET" && pwd)"
 
-# Discover language-specific roots. We do shallow find first (depth 4)
-# to handle multi-module projects without descending into build outputs.
-SOURCE_ROOT=""
-RESOURCES_ROOT=""
-
-# Java/Kotlin/Scala main source.
+# Discover language-specific roots. Shallow find (depth 5) to handle
+# multi-module projects without descending into build outputs.
 SOURCE_ROOT=$(find "$TARGET" -maxdepth 5 -type d -path '*/src/main/java' \
   -not -path '*/build/*' -not -path '*/.gradle*' \
   -print 2>/dev/null | head -1 || true)
@@ -68,77 +62,97 @@ SOURCE_ROOT=$(find "$TARGET" -maxdepth 5 -type d -path '*/src/main/java' \
   -not -path '*/build/*' -not -path '*/.gradle*' \
   -print 2>/dev/null | head -1 || true)
 
-# Resources directory — for Flyway migrations etc.
 RESOURCES_ROOT=$(find "$TARGET" -maxdepth 5 -type d -path '*/src/main/resources' \
   -not -path '*/build/*' -not -path '*/.gradle*' \
   -print 2>/dev/null | head -1 || true)
 
-# Output path. The session dir is created on demand.
 SESSION_DIR="$TARGET/.forge/_session"
 mkdir -p "$SESSION_DIR"
 OUT="$SESSION_DIR/facts.json"
-
-# ─── Run each detector and collect into a working JSON ─────────────
 TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 
-# Helper: run a detector against a root; emit a fact entry (or "absent"
-# if the root doesn't exist). $1 = fact_id, $2 = detector_id, $3 = root.
-fact_from_count() {
+# ─── Helpers ────────────────────────────────────────────────────────
+
+# Run detector with new v0.6 schema; emit a fact entry under $fact_id.
+# Uses temp files (not echo) to preserve backslash-bearing JSON
+# strings — macOS bash strips \ from `echo`-piped output.
+fact_v6() {
   local fact_id="$1" detector="$2" root="$3"
   if [ -z "$root" ] || [ ! -d "$root" ]; then
     jq -n --arg id "$fact_id" --arg det "$detector" \
-          '{($id): {value: null, unit: null, detector: $det, error: "root not found"}}'
+          '{($id): {samples: [], inferred_size: "none", detector: $det,
+                    error: "root not found"}}'
     return
   fi
-  local out
-  out=$("$DETECTORS_DIR/$detector.sh" "$root" 2>/dev/null || echo '{}')
-  local val unit
-  val=$(echo "$out" | jq -r '.result // 0')
-  unit=$(echo "$out" | jq -r '.unit // "unknown"')
-  jq -n --arg id "$fact_id" --arg det "$detector" \
-        --argjson val "${val:-0}" --arg unit "$unit" \
-        '{($id): {value: $val, unit: $unit, detector: $det}}'
+  local tmp
+  tmp=$(mktemp)
+  if "$DETECTORS_DIR/$detector.sh" "$root" >"$tmp" 2>/dev/null; then
+    jq --arg id "$fact_id" --arg det "$detector" \
+       '{($id): {samples: .samples, inferred_size: .inferred_size, detector: $det}}' \
+       "$tmp"
+  else
+    jq -n --arg id "$fact_id" --arg det "$detector" \
+          '{($id): {samples: [], inferred_size: "none", detector: $det,
+                    error: "detector failed"}}'
+  fi
+  rm -f "$tmp"
 }
 
-# Helper: pull a sub-key out of a structured detector (test_files).
-fact_from_path() {
-  local fact_id="$1" detector="$2" root="$3" path="$4"
+# Pull a sub-scope out of test_files structured output ($path = a
+# top-level by_scope key like "unit" / "integration" / "api").
+fact_test_scope() {
+  local fact_id="$1" root="$2" scope="$3"
   if [ -z "$root" ] || [ ! -d "$root" ]; then
-    jq -n --arg id "$fact_id" --arg det "$detector" --arg p "$path" \
-          '{($id): {value: null, unit: null, detector: $det, via: $p, error: "root not found"}}'
+    jq -n --arg id "$fact_id" --arg scope "$scope" \
+          '{($id): {samples: [], inferred_size: "none",
+                    detector: "test_files", via: ("by_scope." + $scope),
+                    error: "root not found"}}'
     return
   fi
-  local out val
-  out=$("$DETECTORS_DIR/$detector.sh" "$root" 2>/dev/null || echo '{}')
-  val=$(echo "$out" | jq -r "$path // 0")
-  jq -n --arg id "$fact_id" --arg det "$detector" --arg p "$path" \
-        --argjson val "${val:-0}" \
-        '{($id): {value: $val, unit: "files", detector: $det, via: $p}}'
+  local tmp
+  tmp=$(mktemp)
+  if "$DETECTORS_DIR/test_files.sh" "$root" >"$tmp" 2>/dev/null; then
+    jq --arg id "$fact_id" --arg scope "$scope" \
+       '{($id): {samples: .by_scope[$scope].samples,
+                 inferred_size: .by_scope[$scope].inferred_size,
+                 detector: "test_files",
+                 via: ("by_scope." + $scope)}}' \
+       "$tmp"
+  else
+    jq -n --arg id "$fact_id" --arg scope "$scope" \
+          '{($id): {samples: [], inferred_size: "none",
+                    detector: "test_files", via: ("by_scope." + $scope),
+                    error: "detector failed"}}'
+  fi
+  rm -f "$tmp"
 }
 
-# Collect all facts (one JSON object per call, then merged at the end).
+# ─── Collect all facts ──────────────────────────────────────────────
 {
-  fact_from_count rest_controllers      rest_controllers      "$SOURCE_ROOT"
-  fact_from_count spring_mappings       spring_mappings       "$SOURCE_ROOT"
-  fact_from_count jpa_entities          jpa_entities          "$SOURCE_ROOT"
-  fact_from_count feign_clients         feign_clients         "$SOURCE_ROOT"
-  fact_from_count ms_listeners          ms_listeners          "$SOURCE_ROOT"
-  fact_from_count application_listeners application_listeners "$SOURCE_ROOT"
-  fact_from_count slf4j_classes         slf4j_classes         "$SOURCE_ROOT"
-  fact_from_count transactional_uses    transactional_uses    "$SOURCE_ROOT"
-  fact_from_count role_constants        role_constants        "$SOURCE_ROOT"
-  fact_from_count exception_classes     exception_classes     "$SOURCE_ROOT"
-  fact_from_count flyway_migrations     flyway_migrations     "$RESOURCES_ROOT"
-  fact_from_path  test_unit             test_files            "$TARGET" '.by_scope.unit'
-  fact_from_path  test_integration      test_files            "$TARGET" '.by_scope.integration'
-  fact_from_path  test_api              test_files            "$TARGET" '.by_scope.api'
+  fact_v6 rest_controllers      rest_controllers      "$SOURCE_ROOT"
+  fact_v6 spring_mappings       spring_mappings       "$SOURCE_ROOT"
+  fact_v6 jpa_entities          jpa_entities          "$SOURCE_ROOT"
+  fact_v6 feign_clients         feign_clients         "$SOURCE_ROOT"
+  fact_v6 ms_listeners          ms_listeners          "$SOURCE_ROOT"
+  fact_v6 application_listeners application_listeners "$SOURCE_ROOT"
+  fact_v6 slf4j_classes         slf4j_classes         "$SOURCE_ROOT"
+  fact_v6 transactional_uses    transactional_uses    "$SOURCE_ROOT"
+  fact_v6 role_constants        role_constants        "$SOURCE_ROOT"
+  fact_v6 exception_classes     exception_classes     "$SOURCE_ROOT"
+  fact_v6 flyway_migrations     flyway_migrations     "$RESOURCES_ROOT"
+  fact_test_scope test_unit        "$TARGET" unit
+  fact_test_scope test_integration "$TARGET" integration
+  fact_test_scope test_api         "$TARGET" api
 } | jq -s 'add' > "$SESSION_DIR/.facts-only.tmp"
 
-# sonar_field_pair has a richer object output; keep the whole thing
-# under a separate "sonar" key.
-"$DETECTORS_DIR/sonar_field_pair.sh" "$TARGET" 2>/dev/null > "$SESSION_DIR/.sonar.tmp" || echo '{}' > "$SESSION_DIR/.sonar.tmp"
+# sonar_field_pair: object-shape facts (project name/key, match flag,
+# duplicate flag). Keep the whole thing verbatim — these are literal
+# fact values, not counts.
+"$DETECTORS_DIR/sonar_field_pair.sh" "$TARGET" 2>/dev/null \
+  > "$SESSION_DIR/.sonar.tmp" \
+  || echo '{}' > "$SESSION_DIR/.sonar.tmp"
 
-# Compose the final document.
+# Compose final document.
 jq -n \
   --arg ts "$TS" \
   --arg target "$TARGET" \

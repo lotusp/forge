@@ -1,25 +1,33 @@
 #!/usr/bin/env bash
 # Detector: transactional_uses
-# Counts @Transactional occurrences (class-level + method-level).
-# Useful as a transaction-boundary scale signal.
+# Locates @Transactional occurrences (class-level + method-level).
+# v0.6 schema.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-# shellcheck source=lib/excludes.sh
-source "$SCRIPT_DIR/lib/excludes.sh"
+# shellcheck source=lib/sampling.sh
+source "$SCRIPT_DIR/lib/sampling.sh"
+
 ROOT="${1:-src/main/java}"
 
 if [ ! -d "$ROOT" ]; then
   jq -n --arg detector "transactional_uses" --arg root "$ROOT" \
-        '{detector: $detector, root: $root, result: 0, error: "root not found"}'
+        '{detector: $detector, root: $root,
+          samples: [], inferred_size: "none",
+          error: "root not found"}'
   exit 0
 fi
 
-mapfile -t EXCLUDES < <(detector_grep_excludes)
+PATTERN='@Transactional\b'
+COUNT=$(count_from_grep   "$ROOT" '*.java' "$PATTERN")
+SIZE=$(inferred_size_for_count "$COUNT")
+SAMPLES=$(samples_from_grep "$ROOT" '*.java' "$PATTERN" 5)
 
-N=$( { grep -rE --include='*.java' "${EXCLUDES[@]}" '@Transactional\b' -- "$ROOT" 2>/dev/null || true; } | wc -l | tr -d ' ')
-EVIDENCE_CMD="grep -rE --include='*.java' "${EXCLUDES[@]}" '@Transactional\b' -- '$ROOT' | wc -l"
+EVIDENCE_CMD="grep -rnE --include='*.java' [excl-build-outputs] '$PATTERN' -- '$ROOT' | head -5"
 
 jq -n --arg detector "transactional_uses" --arg root "$ROOT" \
-      --argjson result "$N" --arg cmd "$EVIDENCE_CMD" --arg unit "occurrences" \
-      '{detector: $detector, root: $root, result: $result, unit: $unit, evidence_cmd: $cmd}'
+      --arg size "$SIZE" --argjson samples "$SAMPLES" \
+      --arg cmd "$EVIDENCE_CMD" \
+      '{detector: $detector, root: $root,
+        samples: $samples, inferred_size: $size,
+        evidence_cmd: $cmd}'

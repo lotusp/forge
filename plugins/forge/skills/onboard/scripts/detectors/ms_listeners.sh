@@ -1,34 +1,36 @@
 #!/usr/bin/env bash
 # Detector: ms_listeners
-# Counts inbound message-listener annotation occurrences.
-# Covers: @MessageListener (Spring + SVC servicebus starter),
-# @KafkaListener, @RabbitListener, @JmsListener, @SqsListener,
-# @StreamListener, @ServiceBusListener (Azure SDK), @EventHubConsumer,
-# bare @Consumer (custom starters that mark handler methods).
+# Locates inbound message-listener annotation occurrences across
+# Kafka / Rabbit / JMS / SQS / Spring Cloud Stream / Spring messaging /
+# Azure Service Bus / Azure Event Hubs / bare @Consumer.
 #
-# Why this exists: v0.5.1 review found SVC projects shipping
-# @MessageListener("queue.*") consumers that the old profile prose
-# missed entirely. This detector closes the data-drift gap between
-# reference/scan-patterns.md and event-consumers.md.
+# v0.6 schema: samples + inferred_size; no precise count.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-# shellcheck source=lib/excludes.sh
-source "$SCRIPT_DIR/lib/excludes.sh"
+# shellcheck source=lib/sampling.sh
+source "$SCRIPT_DIR/lib/sampling.sh"
+
 ROOT="${1:-src/main/java}"
 
 if [ ! -d "$ROOT" ]; then
   jq -n --arg detector "ms_listeners" --arg root "$ROOT" \
-        '{detector: $detector, root: $root, result: 0, error: "root not found"}'
+        '{detector: $detector, root: $root,
+          samples: [], inferred_size: "none",
+          error: "root not found"}'
   exit 0
 fi
 
 PATTERN='@(KafkaListener|RabbitListener|JmsListener|SqsListener|StreamListener|MessageListener|ServiceBusListener|EventHubConsumer|Consumer)\b'
-mapfile -t EXCLUDES < <(detector_grep_excludes)
+COUNT=$(count_from_grep   "$ROOT" '*.java' "$PATTERN")
+SIZE=$(inferred_size_for_count "$COUNT")
+SAMPLES=$(samples_from_grep "$ROOT" '*.java' "$PATTERN" 5)
 
-N=$( { grep -rE --include='*.java' "${EXCLUDES[@]}" "$PATTERN" -- "$ROOT" 2>/dev/null || true; } | wc -l | tr -d ' ')
-EVIDENCE_CMD="grep -rE --include='*.java' "${EXCLUDES[@]}" '$PATTERN' -- '$ROOT' | wc -l"
+EVIDENCE_CMD="grep -rnE --include='*.java' [excl-build-outputs] '$PATTERN' -- '$ROOT' | head -5"
 
 jq -n --arg detector "ms_listeners" --arg root "$ROOT" \
-      --argjson result "$N" --arg cmd "$EVIDENCE_CMD" --arg unit "occurrences" \
-      '{detector: $detector, root: $root, result: $result, unit: $unit, evidence_cmd: $cmd}'
+      --arg size "$SIZE" --argjson samples "$SAMPLES" \
+      --arg cmd "$EVIDENCE_CMD" \
+      '{detector: $detector, root: $root,
+        samples: $samples, inferred_size: $size,
+        evidence_cmd: $cmd}'

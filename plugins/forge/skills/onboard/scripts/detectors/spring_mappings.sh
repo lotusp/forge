@@ -1,43 +1,35 @@
 #!/usr/bin/env bash
-#
 # Detector: spring_mappings
-# Counts Spring MVC HTTP mapping annotations under <root>:
+# Locates Spring MVC HTTP mapping annotations:
 #   @GetMapping / @PostMapping / @PutMapping / @DeleteMapping /
 #   @PatchMapping / @RequestMapping
-#
-# Output: JSON with .result = total annotation count.
-# Read-only. No eval. Safe against arbitrary ROOT inputs.
-#
-# Build outputs (build/ bin/ target/ .gradle/ etc.) are skipped via
-# the shared exclude list in lib/excludes.sh — without this, pointing
-# the detector at the project root inflates the count by ~6%
-# (compiled-class duplicates).
-
+# v0.6 schema: samples + inferred_size; no precise count.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-# shellcheck source=lib/excludes.sh
-source "$SCRIPT_DIR/lib/excludes.sh"
+# shellcheck source=lib/sampling.sh
+source "$SCRIPT_DIR/lib/sampling.sh"
 
 ROOT="${1:-src/main/java}"
 
 if [ ! -d "$ROOT" ]; then
-  jq -n --arg detector "spring_mappings" \
-        --arg root "$ROOT" \
-        '{detector: $detector, root: $root, result: 0, error: "root not found"}'
+  jq -n --arg detector "spring_mappings" --arg root "$ROOT" \
+        '{detector: $detector, root: $root,
+          samples: [], inferred_size: "none",
+          error: "root not found"}'
   exit 0
 fi
 
-mapfile -t EXCLUDES < <(detector_grep_excludes)
+PATTERN='@(Get|Post|Put|Delete|Patch|Request)Mapping'
+COUNT=$(count_from_grep   "$ROOT" '*.java' "$PATTERN")
+SIZE=$(inferred_size_for_count "$COUNT")
+SAMPLES=$(samples_from_grep "$ROOT" '*.java' "$PATTERN" 5)
 
-N=$( { grep -rE --include='*.java' "${EXCLUDES[@]}" '@(Get|Post|Put|Delete|Patch|Request)Mapping' -- "$ROOT" 2>/dev/null || true; } \
-    | wc -l \
-    | tr -d ' ')
+EVIDENCE_CMD="grep -rnE --include='*.java' [excl-build-outputs] '$PATTERN' -- '$ROOT' | head -5"
 
-EVIDENCE_CMD="grep -rE --include='*.java' [excl-build-outputs] '@(Get|Post|Put|Delete|Patch|Request)Mapping' -- '$ROOT' | wc -l"
-
-jq -n --arg detector "spring_mappings" \
-      --arg root "$ROOT" \
-      --argjson result "$N" \
-      --arg cmd "$EVIDENCE_CMD" --arg unit "occurrences" \
-      '{detector: $detector, root: $root, result: $result, unit: $unit, evidence_cmd: $cmd}'
+jq -n --arg detector "spring_mappings" --arg root "$ROOT" \
+      --arg size "$SIZE" --argjson samples "$SAMPLES" \
+      --arg cmd "$EVIDENCE_CMD" \
+      '{detector: $detector, root: $root,
+        samples: $samples, inferred_size: $size,
+        evidence_cmd: $cmd}'
