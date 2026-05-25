@@ -93,10 +93,11 @@ apply_rewrite() {
         my $noun    = $ENV{NOUN};
         my $word    = $ENV{WORD};
         my $anchor  = "<!-- ev:id=$fact_id -->";
-        # Substitute the first occurrence of "<llm><sep><noun>" with
-        # "<word> <noun>". \s+ matches whatever ran between number
-        # and noun (single space, tab, etc.).
-        s/\b\Q$llm\E\s+\Q$noun\E\b/$word $noun/;
+        # Substitute first "<llm><sep><opt-backtick><noun><opt-backtick>"
+        # with "<word> <noun>". [\s`*]+ accepts space + markdown
+        # ornaments (backtick, asterisk) between number and noun;
+        # `?<noun>`? keeps any wrapping backticks on the noun itself.
+        s/\b\Q$llm\E[\s`*]+`?\Q$noun\E`?/$word $noun/;
         # Prepend anchor unless already present.
         unless (/\Q$anchor\E/) {
           s/^(\s*[-*|]?\s*)/$1$anchor /;
@@ -119,46 +120,50 @@ apply_rewrite() {
 # only — false positives from prose must be rare.
 #
 # (POSIX ERE — bash =~ does NOT support \s / \b. Use [[:space:]].)
+# Each pattern uses `[[:space:]`*\``\*]*` as a "soft separator" so the
+# number can be followed by markdown ornaments (backtick, asterisk,
+# space) before the noun. Captures stay: [1] = number, [2] = noun.
 declare -a PHRASES=(
   # rest_controllers ─ file count
-  '([0-9]+)[[:space:]]+(@RestController)'
-  '([0-9]+)[[:space:]]+(RestController[[:space:]]+files?)'
-  '([0-9]+)[[:space:]]+(REST[[:space:]]+controllers?)'
-  '([0-9]+)[[:space:]]+(controller[[:space:]]+files?)'
+  '([0-9]+)[[:space:]`*]+(@RestController)'
+  '([0-9]+)[[:space:]`*]+(RestController[[:space:]]+files?)'
+  '([0-9]+)[[:space:]`*]+(REST[[:space:]]+controllers?)'
+  '([0-9]+)[[:space:]`*]+(controller[[:space:]]+files?)'
 
   # spring_mappings ─ occurrence count
-  '([0-9]+)[[:space:]]+(@\*?Mapping[[:space:]]+annotations?)'
-  '([0-9]+)[[:space:]]+(HTTP[[:space:]]+mapping[[:space:]]+annotations?)'
-  '([0-9]+)[[:space:]]+(mapping[[:space:]]+annotations?)'
-  '([0-9]+)[[:space:]]+(route[[:space:]]+annotations?)'
-  '([0-9]+)[[:space:]]+(HTTP[[:space:]]+route[[:space:]]+annotations?)'
+  '([0-9]+)[[:space:]`*]+(@\*?Mapping[[:space:]]+annotations?)'
+  '([0-9]+)[[:space:]`*]+(HTTP[[:space:]]+mapping[[:space:]]+annotations?)'
+  '([0-9]+)[[:space:]`*]+(mapping[[:space:]]+annotations?)'
+  '([0-9]+)[[:space:]`*]+(route[[:space:]]+annotations?)'
+  '([0-9]+)[[:space:]`*]+(HTTP[[:space:]]+route[[:space:]]+annotations?)'
 
   # flyway_migrations ─ file count
-  '([0-9]+)[[:space:]]+(Flyway[[:space:]]+migration[[:space:]]+files?)'
-  '([0-9]+)[[:space:]]+(migration[[:space:]]+files?)'
-  '([0-9]+)[[:space:]]+(migrations?[[:space:]]+(in|under|applied))'
+  '([0-9]+)[[:space:]`*]+(Flyway[[:space:]`*]+migration[[:space:]]+files?)'
+  '([0-9]+)[[:space:]`*]+(Flyway[[:space:]`*]+`\.sql`?[[:space:]]+files?)'
+  '([0-9]+)[[:space:]`*]+(migration[[:space:]]+files?)'
+  '([0-9]+)[[:space:]`*]+(migrations?[[:space:]]+(in|under|applied))'
 
   # test_unit ─ file count
-  '([0-9]+)[[:space:]]+(test[[:space:]]+(Java[[:space:]]+|JUnit[[:space:]]+)?files?)'
-  '([0-9]+)[[:space:]]+(unit[[:space:]]+test[[:space:]]+files?)'
-  '([0-9]+)[[:space:]]+(controller[[:space:]]+test[[:space:]]+files?)'
+  '([0-9]+)[[:space:]`*]+(test[[:space:]]+(Java[[:space:]]+|JUnit[[:space:]]+)?files?)'
+  '([0-9]+)[[:space:]`*]+(unit[[:space:]]+test[[:space:]]+files?)'
+  '([0-9]+)[[:space:]`*]+(controller[[:space:]]+test[[:space:]]+files?)'
 
   # test_integration ─ file count
-  '([0-9]+)[[:space:]]+(integration[[:space:]]+test[[:space:]]+files?)'
+  '([0-9]+)[[:space:]`*]+(integration[[:space:]]+test[[:space:]]+files?)'
 
   # jpa_entities ─ file count
-  '([0-9]+)[[:space:]]+(@Entity)'
-  '([0-9]+)[[:space:]]+(JPA[[:space:]]+entit(y|ies))'
-  '([0-9]+)[[:space:]]+(entity[[:space:]]+classes?)'
+  '([0-9]+)[[:space:]`*]+(@Entity)'
+  '([0-9]+)[[:space:]`*]+(JPA[[:space:]]+entit(y|ies))'
+  '([0-9]+)[[:space:]`*]+(entity[[:space:]]+classes?)'
 
   # feign_clients ─ file count
-  '([0-9]+)[[:space:]]+(@FeignClient)'
-  '([0-9]+)[[:space:]]+(Feign[[:space:]]+(downstream[[:space:]]+)?(clients?|interfaces?))'
+  '([0-9]+)[[:space:]`*]+(@FeignClient)'
+  '([0-9]+)[[:space:]`*]+(Feign[[:space:]]+(downstream[[:space:]]+)?(clients?|interfaces?))'
 )
 declare -a PHRASE_FACTS=(
   rest_controllers rest_controllers rest_controllers rest_controllers
   spring_mappings spring_mappings spring_mappings spring_mappings spring_mappings
-  flyway_migrations flyway_migrations flyway_migrations
+  flyway_migrations flyway_migrations flyway_migrations flyway_migrations
   test_unit test_unit test_unit
   test_integration
   jpa_entities jpa_entities jpa_entities
