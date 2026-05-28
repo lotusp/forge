@@ -139,9 +139,10 @@ declare -a PHRASES=(
 
   # flyway_migrations ─ file count
   '([0-9]+)[[:space:]`*]+(Flyway[[:space:]`*]+migration[[:space:]]+files?)'
-  '([0-9]+)[[:space:]`*]+(Flyway[[:space:]`*]+`\.sql`?[[:space:]]+files?)'
+  '([0-9]+)[[:space:]`*]+(Flyway[[:space:]`*]+`?\.?sql`?[[:space:]]+(files?|scripts?))'
   '([0-9]+)[[:space:]`*]+(migration[[:space:]]+files?)'
   '([0-9]+)[[:space:]`*]+(migrations?[[:space:]]+(in|under|applied))'
+  '([0-9]+)[[:space:]`*]+(Flyway[[:space:]]+(SQL[[:space:]]+)?(scripts?|files?))'
 
   # test_unit ─ file count
   '([0-9]+)[[:space:]`*]+(test[[:space:]]+(Java[[:space:]]+|JUnit[[:space:]]+)?files?)'
@@ -159,15 +160,48 @@ declare -a PHRASES=(
   # feign_clients ─ file count
   '([0-9]+)[[:space:]`*]+(@FeignClient)'
   '([0-9]+)[[:space:]`*]+(Feign[[:space:]]+(downstream[[:space:]]+)?(clients?|interfaces?))'
+
+  # transactional_uses ─ occurrence count
+  '([0-9]+)[[:space:]`*]+(@Transactional)'
+  '([0-9]+)[[:space:]`*]+(transactional[[:space:]]+(uses?|usages?|methods?))'
+
+  # application_listeners ─ occurrence count
+  '([0-9]+)[[:space:]`*]+(@EventListener)'
+  '([0-9]+)[[:space:]`*]+(@TransactionalEventListener)'
+  '([0-9]+)[[:space:]`*]+(ApplicationListener)'
+
+  # ms_listeners ─ occurrence count
+  '([0-9]+)[[:space:]`*]+(@KafkaListener)'
+  '([0-9]+)[[:space:]`*]+(@RabbitListener)'
+  '([0-9]+)[[:space:]`*]+(@MessageListener)'
+  '([0-9]+)[[:space:]`*]+(@JmsListener)'
+  '([0-9]+)[[:space:]`*]+(@ServiceBusListener)'
+
+  # slf4j_classes ─ file count
+  '([0-9]+)[[:space:]`*]+(@Slf4j)'
+
+  # role_constants ─ occurrence count
+  '([0-9]+)[[:space:]`*]+(ROLE_[A-Z_]+)'
+  '([0-9]+)[[:space:]`*]+(role[[:space:]]+constants?)'
+
+  # exception_classes ─ file count
+  '([0-9]+)[[:space:]`*]+(exception[[:space:]]+classes?)'
+  '([0-9]+)[[:space:]`*]+(\*Exception)'
 )
 declare -a PHRASE_FACTS=(
   rest_controllers rest_controllers rest_controllers rest_controllers
   spring_mappings spring_mappings spring_mappings spring_mappings spring_mappings
-  flyway_migrations flyway_migrations flyway_migrations flyway_migrations
+  flyway_migrations flyway_migrations flyway_migrations flyway_migrations flyway_migrations
   test_unit test_unit test_unit
   test_integration
   jpa_entities jpa_entities jpa_entities
   feign_clients feign_clients
+  transactional_uses transactional_uses
+  application_listeners application_listeners application_listeners
+  ms_listeners ms_listeners ms_listeners ms_listeners ms_listeners
+  slf4j_classes
+  role_constants role_constants
+  exception_classes exception_classes
 )
 
 process_file() {
